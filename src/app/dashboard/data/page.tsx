@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -9,6 +10,9 @@ import {
   QrCode,
   Upload,
   Loader2,
+  Search,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +27,6 @@ import {
 } from "@/components/ui/card";
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -56,9 +59,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Image from "next/image";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, writeBatch, query, where } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 
@@ -81,6 +85,11 @@ export default function DataManagementPage() {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = React.useState(false);
   const [uploadFile, setUploadFile] = React.useState<File | null>(null);
   const { toast } = useToast();
+
+  // Pagination and search state
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [itemsPerPage, setItemsPerPage] = React.useState(10);
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -112,12 +121,12 @@ export default function DataManagementPage() {
 
   const handleUpload = async () => {
     if (!uploadFile) {
-        toast({
-            variant: "destructive",
-            title: "Ningún Archivo Seleccionado",
-            description: "Por favor, seleccione un archivo de Excel para cargar.",
-        });
-        return;
+      toast({
+        variant: "destructive",
+        title: "Ningún Archivo Seleccionado",
+        description: "Por favor, seleccione un archivo de Excel para cargar.",
+      });
+      return;
     }
 
     setIsUploading(true);
@@ -125,94 +134,99 @@ export default function DataManagementPage() {
 
     const reader = new FileReader();
     reader.onload = async (e) => {
-        try {
-            const data = e.target?.result;
-            const workbook = XLSX.read(data, { type: "array" });
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            const newProductsData = XLSX.utils.sheet_to_json(worksheet) as Product[];
-            
-            if (newProductsData.length === 0) {
-                toast({
-                    variant: "destructive",
-                    title: "Archivo Vacío",
-                    description: "El archivo de Excel no contiene datos.",
-                });
-                setIsUploading(false);
-                return;
-            }
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const newProductsData = XLSX.utils.sheet_to_json(worksheet) as Product[];
 
-            // Fetch existing products to compare
-            const productsCollection = collection(db, "products");
-            const querySnapshot = await getDocs(productsCollection);
-            const existingProductsMap = new Map<string, {firebaseId: string, data: Product}>();
-            querySnapshot.docs.forEach(doc => {
-              const productData = doc.data() as Product;
-              if (productData.id) {
-                existingProductsMap.set(productData.id, { firebaseId: doc.id, data: productData });
-              }
-            });
-            
-            const batch = writeBatch(db);
-            let updatedCount = 0;
-            let newCount = 0;
-
-            const totalSteps = newProductsData.length;
-            let completedSteps = 0;
-
-            const updateProgress = () => {
-              completedSteps++;
-              const currentProgress = Math.min(Math.round((completedSteps / totalSteps) * 100), 90);
-              setProgress(currentProgress);
-            };
-
-            newProductsData.forEach((newProduct) => {
-                if (newProduct.id && existingProductsMap.has(newProduct.id)) {
-                    // Product exists, update it
-                    const existing = existingProductsMap.get(newProduct.id)!;
-                    const docRef = doc(db, "products", existing.firebaseId);
-                    batch.update(docRef, newProduct);
-                    updatedCount++;
-                } else {
-                    // Product is new, add it
-                    const docRef = doc(collection(db, "products"));
-                    batch.set(docRef, newProduct);
-                    newCount++;
-                }
-                updateProgress();
-            });
-
-
-            await batch.commit();
-
-            setProgress(100);
-
-            toast({
-                title: "Carga Exitosa",
-                description: `${newCount} productos nuevos añadidos y ${updatedCount} productos actualizados.`,
-            });
-
-            setTimeout(() => {
-                setIsUploading(false);
-                setIsUploadDialogOpen(false);
-                setUploadFile(null);
-                fetchProducts();
-                setProgress(0);
-            }, 1000);
-
-        } catch (error) {
-            console.error("Error uploading products: ", error);
-            toast({
-                variant: "destructive",
-                title: "Error de Carga",
-                description: "No se pudieron procesar o guardar los datos del archivo.",
-            });
-            setIsUploading(false);
+        if (newProductsData.length === 0) {
+          toast({
+            variant: "destructive",
+            title: "Archivo Vacío",
+            description: "El archivo de Excel no contiene datos.",
+          });
+          setIsUploading(false);
+          return;
         }
+
+        const productsCollection = collection(db, "products");
+        const querySnapshot = await getDocs(productsCollection);
+        const existingProductsMap = new Map<string, { firebaseId: string, data: Product }>();
+        querySnapshot.docs.forEach(doc => {
+          const productData = doc.data() as Product;
+          if (productData.id) {
+            existingProductsMap.set(productData.id, { firebaseId: doc.id, data: productData });
+          }
+        });
+
+        const batch = writeBatch(db);
+        let updatedCount = 0;
+        let newCount = 0;
+
+        const totalSteps = newProductsData.length;
+        let completedSteps = 0;
+
+        const updateProgress = () => {
+          completedSteps++;
+          const currentProgress = Math.min(Math.round((completedSteps / totalSteps) * 100), 90);
+          setProgress(currentProgress);
+        };
+
+        newProductsData.forEach((newProduct) => {
+          if (!newProduct.id) {
+              // Si no hay ID, lo tratamos como nuevo pero registramos un aviso
+              console.warn("Producto sin ID encontrado en el archivo Excel, será tratado como nuevo:", newProduct);
+              const docRef = doc(collection(db, "products"));
+              batch.set(docRef, newProduct);
+              newCount++;
+          } else if (existingProductsMap.has(newProduct.id)) {
+            // Product exists, update it
+            const existing = existingProductsMap.get(newProduct.id)!;
+            const docRef = doc(db, "products", existing.firebaseId);
+            batch.update(docRef, newProduct);
+            updatedCount++;
+          } else {
+            // Product is new, add it
+            const docRef = doc(collection(db, "products"));
+            batch.set(docRef, newProduct);
+            newCount++;
+          }
+          updateProgress();
+        });
+
+
+        await batch.commit();
+
+        setProgress(100);
+
+        toast({
+          title: "Carga Exitosa",
+          description: `${newCount} productos nuevos añadidos y ${updatedCount} productos actualizados.`,
+        });
+
+        setTimeout(() => {
+          setIsUploading(false);
+          setIsUploadDialogOpen(false);
+          setUploadFile(null);
+          fetchProducts();
+          setProgress(0);
+        }, 1000);
+
+      } catch (error) {
+        console.error("Error uploading products: ", error);
+        toast({
+          variant: "destructive",
+          title: "Error de Carga",
+          description: "No se pudieron procesar o guardar los datos del archivo.",
+        });
+        setIsUploading(false);
+      }
     };
     reader.readAsArrayBuffer(uploadFile);
   };
-  
+
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
   }
@@ -245,7 +259,23 @@ export default function DataManagementPage() {
     const { id, value } = e.target;
     setEditingProduct({ ...editingProduct, [id]: e.target.type === 'number' ? Number(value) : value });
   };
-  
+
+  const filteredProducts = React.useMemo(() => {
+    setCurrentPage(1); // Reset to first page on search
+    return products.filter(product =>
+      Object.values(product).some(value =>
+        String(value).toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
+  }, [products, searchTerm]);
+
+  const paginatedProducts = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredProducts, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+
   const tableHeaders = React.useMemo(() => {
     if (products.length === 0) {
       return ["id", "name", "status", "location", "quantity"];
@@ -258,7 +288,6 @@ export default function DataManagementPage() {
       });
       return keys;
     }, [] as string[]);
-    // Prioritize specific columns
     const prioritized = ["id", "name", "status", "location", "quantity"];
     return [...prioritized.filter(h => allKeys.includes(h)), ...allKeys.filter(h => !prioritized.includes(h))];
   }, [products]);
@@ -267,7 +296,7 @@ export default function DataManagementPage() {
   return (
     <>
       <Tabs defaultValue="all">
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
           <TabsList>
             <TabsTrigger value="all">Todo</TabsTrigger>
             <TabsTrigger value="en-stock">En Stock</TabsTrigger>
@@ -319,10 +348,24 @@ export default function DataManagementPage() {
         <TabsContent value="all">
           <Card>
             <CardHeader>
-              <CardTitle>Productos</CardTitle>
-              <CardDescription>
-                Gestiona tus productos y visualiza su inventario. Los datos se guardan en Firebase.
-              </CardDescription>
+              <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Productos</CardTitle>
+                    <CardDescription>
+                        Gestiona tus productos y visualiza su inventario.
+                    </CardDescription>
+                  </div>
+                  <div className="relative w-full max-w-sm">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        type="search" 
+                        placeholder="Buscar productos..." 
+                        className="pl-8 sm:w-[300px]" 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                  </div>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -341,20 +384,20 @@ export default function DataManagementPage() {
                         <Loader2 className="mx-auto h-8 w-8 animate-spin" />
                       </TableCell>
                     </TableRow>
-                  ) : products.length === 0 ? (
+                  ) : paginatedProducts.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={tableHeaders.length + 1} className="h-24 text-center">
-                        No se encontraron productos. Intente cargar datos desde un archivo Excel.
+                        {searchTerm ? "No se encontraron productos con ese criterio." : "No hay productos. Cargue datos desde Excel."}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    products.map((product) => (
+                    paginatedProducts.map((product) => (
                       <TableRow key={product.firebaseId}>
                         {tableHeaders.map(header => (
                           <TableCell key={header}>
                             {header === 'status' ? (
                               <Badge variant={product.status === 'Agotado' ? 'destructive' : product.status === 'Bajo Stock' ? 'secondary' : 'default'}
-                                     style={product.status === 'En Stock' ? { backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' } : {}}>
+                                style={product.status === 'En Stock' ? { backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' } : {}}>
                                 {product.status}
                               </Badge>
                             ) : (
@@ -364,30 +407,30 @@ export default function DataManagementPage() {
                         ))}
                         <TableCell>
                           <div className="flex items-center justify-end gap-2">
-                             <Dialog>
+                            <Dialog>
                               <DialogTrigger asChild>
-                                 <Button variant="ghost" size="icon">
-                                   <QrCode className="h-4 w-4" />
-                                 </Button>
+                                <Button variant="ghost" size="icon">
+                                  <QrCode className="h-4 w-4" />
+                                </Button>
                               </DialogTrigger>
-                               <DialogContent>
-                                 <DialogHeader>
-                                   <DialogTitle>Código QR para {product.name}</DialogTitle>
-                                   <DialogDescription>
-                                     Escanea este código para acceder a la información del producto.
-                                   </DialogDescription>
-                                 </DialogHeader>
-                                 <div className="flex justify-center p-4">
-                                    <Image 
-                                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${product.id}`}
-                                      alt={`Código QR para ${product.id}`}
-                                      width={200}
-                                      height={200}
-                                      data-ai-hint="qr code"
-                                    />
-                                 </div>
-                               </DialogContent>
-                             </Dialog>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Código QR para {product.name}</DialogTitle>
+                                  <DialogDescription>
+                                    Escanea este código para acceder a la información del producto.
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="flex justify-center p-4">
+                                  <Image
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${product.id}`}
+                                    alt={`Código QR para ${product.id}`}
+                                    width={200}
+                                    height={200}
+                                    data-ai-hint="qr code"
+                                  />
+                                </div>
+                              </DialogContent>
+                            </Dialog>
 
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -415,14 +458,54 @@ export default function DataManagementPage() {
               </Table>
             </CardContent>
             <CardFooter>
-              <div className="text-xs text-muted-foreground">
-                Mostrando <strong>1-{products.length}</strong> de <strong>{products.length}</strong> productos
+              <div className="flex w-full items-center justify-between">
+                <div className="text-xs text-muted-foreground">
+                  Mostrando <strong>{paginatedProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-{(currentPage - 1) * itemsPerPage + paginatedProducts.length}</strong> de <strong>{filteredProducts.length}</strong> productos
+                </div>
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="items-per-page" className="text-xs">Filas por página</Label>
+                      <Select value={String(itemsPerPage)} onValueChange={(value) => setItemsPerPage(Number(value))}>
+                          <SelectTrigger id="items-per-page" className="h-8 w-[70px]">
+                              <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent side="top">
+                              <SelectItem value="10">10</SelectItem>
+                              <SelectItem value="20">20</SelectItem>
+                              <SelectItem value="50">50</SelectItem>
+                          </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="text-xs font-semibold">Página {currentPage} de {totalPages}</div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                            <span className="sr-only">Página anterior</span>
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            disabled={currentPage === totalPages}
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                            <span className="sr-only">Página siguiente</span>
+                        </Button>
+                    </div>
+                </div>
               </div>
             </CardFooter>
           </Card>
         </TabsContent>
       </Tabs>
-      
+
       {editingProduct && (
         <Dialog open={!!editingProduct} onOpenChange={() => setEditingProduct(null)}>
           <DialogContent>
@@ -430,21 +513,21 @@ export default function DataManagementPage() {
               <DialogTitle>Editar Producto: {editingProduct.id}</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-                {Object.keys(editingProduct).filter(key => key !== 'firebaseId').map(key => (
-                  <div key={key} className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor={key} className="text-right">{key.charAt(0).toUpperCase() + key.slice(1)}</Label>
-                    <Input 
-                      id={key}
-                      type={typeof editingProduct[key] === 'number' ? 'number' : 'text'}
-                      value={editingProduct[key]} 
-                      onChange={handleInputChange} 
-                      className="col-span-3" />
-                  </div>
-                ))}
+              {Object.keys(editingProduct).filter(key => key !== 'firebaseId').map(key => (
+                <div key={key} className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor={key} className="text-right">{key.charAt(0).toUpperCase() + key.slice(1)}</Label>
+                  <Input
+                    id={key}
+                    type={typeof editingProduct[key] === 'number' ? 'number' : 'text'}
+                    value={editingProduct[key]}
+                    onChange={handleInputChange}
+                    className="col-span-3" />
+                </div>
+              ))}
             </div>
             <DialogFooter>
-                <Button variant="outline" onClick={() => setEditingProduct(null)}>Cancelar</Button>
-                <Button onClick={handleSaveEdit}>Guardar Cambios</Button>
+              <Button variant="outline" onClick={() => setEditingProduct(null)}>Cancelar</Button>
+              <Button onClick={handleSaveEdit}>Guardar Cambios</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -452,3 +535,5 @@ export default function DataManagementPage() {
     </>
   );
 }
+
+    
