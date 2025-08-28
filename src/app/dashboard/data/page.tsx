@@ -58,17 +58,9 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import Image from "next/image";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, addDoc, writeBatch } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-
-const dummyDataForUpload = [
-  { id: "PROD-001", name: "Laptop Gamer X-1", quantity: 25, location: "Almacén A", status: "En Stock" },
-  { id: "PROD-002", name: "Monitor Curvo 27\"", quantity: 50, location: "Almacén B", status: "En Stock" },
-  { id: "PROD-003", name: "Teclado Mecánico RGB", quantity: 10, location: "Almacén A", status: "Bajo Stock" },
-  { id: "PROD-004", name: "Mouse Inalámbrico Pro", quantity: 0, location: "Almacén C", status: "Agotado" },
-  { id: "PROD-005", name: "Auriculares con Micrófono", quantity: 75, location: "Almacén B", status: "En Stock" },
-  { id: "PROD-006", name: "Webcam 4K", quantity: 5, location: "Almacén C", status: "Bajo Stock" },
-];
+import * as XLSX from "xlsx";
 
 interface Product {
   id: string;
@@ -77,6 +69,7 @@ interface Product {
   location: string;
   status: string;
   firebaseId?: string;
+  [key: string]: any; // Allow any other columns
 }
 
 export default function DataManagementPage() {
@@ -86,6 +79,7 @@ export default function DataManagementPage() {
   const [progress, setProgress] = React.useState(0);
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = React.useState(false);
+  const [uploadFile, setUploadFile] = React.useState<File | null>(null);
   const { toast } = useToast();
 
   const fetchProducts = async () => {
@@ -110,50 +104,87 @@ export default function DataManagementPage() {
     fetchProducts();
   }, []);
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setUploadFile(e.target.files[0]);
+    }
+  };
+
   const handleUpload = async () => {
+    if (!uploadFile) {
+        toast({
+            variant: "destructive",
+            title: "Ningún Archivo Seleccionado",
+            description: "Por favor, seleccione un archivo de Excel para cargar.",
+        });
+        return;
+    }
+
     setIsUploading(true);
     setProgress(0);
 
-    try {
-        const batch = writeBatch(db);
-        dummyDataForUpload.forEach((product) => {
-            const docRef = doc(collection(db, "products"));
-            batch.set(docRef, product);
-        });
-        
-        // Simulate progress for visual feedback
-        const interval = setInterval(() => {
-            setProgress((prev) => {
-                if (prev >= 90) return 90;
-                return prev + 10;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const data = e.target?.result;
+            const workbook = XLSX.read(data, { type: "array" });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const json = XLSX.utils.sheet_to_json(worksheet);
+            
+            if (json.length === 0) {
+                toast({
+                    variant: "destructive",
+                    title: "Archivo Vacío",
+                    description: "El archivo de Excel no contiene datos.",
+                });
+                setIsUploading(false);
+                return;
+            }
+
+            const batch = writeBatch(db);
+            json.forEach((row: any) => {
+                const docRef = doc(collection(db, "products"));
+                batch.set(docRef, row);
             });
-        }, 200);
 
-        await batch.commit();
+            const totalSteps = json.length;
+            let completedSteps = 0;
 
-        clearInterval(interval);
-        setProgress(100);
+            const interval = setInterval(() => {
+                completedSteps += Math.ceil(totalSteps / 10);
+                const currentProgress = Math.min(Math.round((completedSteps / totalSteps) * 100), 90);
+                setProgress(currentProgress);
+            }, 200);
 
-        toast({
-            title: "Carga Exitosa",
-            description: "Los productos de demostración se han cargado en Firebase.",
-        });
+            await batch.commit();
 
-        setTimeout(() => {
+            clearInterval(interval);
+            setProgress(100);
+
+            toast({
+                title: "Carga Exitosa",
+                description: `${json.length} registros se han cargado en Firebase.`,
+            });
+
+            setTimeout(() => {
+                setIsUploading(false);
+                setIsUploadDialogOpen(false);
+                setUploadFile(null);
+                fetchProducts();
+            }, 1000);
+
+        } catch (error) {
+            console.error("Error uploading products: ", error);
+            toast({
+                variant: "destructive",
+                title: "Error de Carga",
+                description: "No se pudieron procesar o guardar los datos del archivo.",
+            });
             setIsUploading(false);
-            setIsUploadDialogOpen(false);
-            fetchProducts();
-        }, 1000);
-
-    } catch (error) {
-        console.error("Error uploading products: ", error);
-        toast({
-            variant: "destructive",
-            title: "Error de Carga",
-            description: "No se pudieron guardar los productos en Firebase.",
-        });
-        setIsUploading(false);
-    }
+        }
+    };
+    reader.readAsArrayBuffer(uploadFile);
   };
   
   const handleEdit = (product: Product) => {
@@ -165,11 +196,8 @@ export default function DataManagementPage() {
 
     try {
       const productDocRef = doc(db, "products", editingProduct.firebaseId);
-      await updateDoc(productDocRef, {
-        name: editingProduct.name,
-        quantity: editingProduct.quantity,
-        location: editingProduct.location,
-      });
+      const { firebaseId, ...productData } = editingProduct;
+      await updateDoc(productDocRef, productData);
       toast({
         title: "Producto Actualizado",
         description: "Los cambios se han guardado correctamente.",
@@ -189,8 +217,26 @@ export default function DataManagementPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!editingProduct) return;
     const { id, value } = e.target;
-    setEditingProduct({ ...editingProduct, [id]: id === 'quantity' ? Number(value) : value });
+    setEditingProduct({ ...editingProduct, [id]: e.target.type === 'number' ? Number(value) : value });
   };
+  
+  const tableHeaders = React.useMemo(() => {
+    if (products.length === 0) {
+      return ["ID de Producto", "Nombre", "Estado", "Ubicación", "Cantidad"];
+    }
+    const allKeys = products.reduce((keys, product) => {
+      Object.keys(product).forEach(key => {
+        if (!keys.includes(key) && key !== 'firebaseId') {
+          keys.push(key);
+        }
+      });
+      return keys;
+    }, [] as string[]);
+    // Prioritize specific columns
+    const prioritized = ["id", "name", "status", "location", "quantity"];
+    return [...prioritized.filter(h => allKeys.includes(h)), ...allKeys.filter(h => !prioritized.includes(h))];
+  }, [products]);
+
 
   return (
     <>
@@ -214,9 +260,9 @@ export default function DataManagementPage() {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Carga de Datos</DialogTitle>
+                  <DialogTitle>Carga de Datos desde Excel</DialogTitle>
                   <DialogDescription>
-                    Esto cargará un conjunto de datos de demostración en su base de datos de Firebase.
+                    Seleccione un archivo .xlsx o .xls para cargar los datos de sus productos en Firebase. La primera hoja del archivo será procesada.
                   </DialogDescription>
                 </DialogHeader>
                 {isUploading ? (
@@ -227,11 +273,18 @@ export default function DataManagementPage() {
                   </div>
                 ) : (
                   <div className="grid gap-4 py-4">
-                    <p>Haga clic en el botón de abajo para iniciar la carga de datos de demostración a la colección 'products' en Firestore.</p>
+                    <Label htmlFor="excel-file">Archivo de Excel</Label>
+                    <Input id="excel-file" type="file" onChange={handleFileUpload} accept=".xlsx, .xls" />
+                    {uploadFile && <p className="text-sm text-muted-foreground">Archivo seleccionado: {uploadFile.name}</p>}
                   </div>
                 )}
                 <DialogFooter>
-                  {!isUploading && <Button onClick={handleUpload}>Cargar Datos de Demo</Button>}
+                  {!isUploading && (
+                    <>
+                      <Button variant="outline" onClick={() => { setIsUploadDialogOpen(false); setUploadFile(null); }}>Cancelar</Button>
+                      <Button onClick={handleUpload} disabled={!uploadFile}>Cargar y Procesar</Button>
+                    </>
+                  )}
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -249,11 +302,7 @@ export default function DataManagementPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>ID de Producto</TableHead>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Ubicación</TableHead>
-                    <TableHead className="text-right">Cantidad</TableHead>
+                    {tableHeaders.map(header => <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>)}
                     <TableHead>
                       <span className="sr-only">Acciones</span>
                     </TableHead>
@@ -262,29 +311,31 @@ export default function DataManagementPage() {
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
+                      <TableCell colSpan={tableHeaders.length + 1} className="h-24 text-center">
                         <Loader2 className="mx-auto h-8 w-8 animate-spin" />
                       </TableCell>
                     </TableRow>
                   ) : products.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
-                        No se encontraron productos. Intente cargar datos.
+                      <TableCell colSpan={tableHeaders.length + 1} className="h-24 text-center">
+                        No se encontraron productos. Intente cargar datos desde un archivo Excel.
                       </TableCell>
                     </TableRow>
                   ) : (
                     products.map((product) => (
                       <TableRow key={product.firebaseId}>
-                        <TableCell className="font-medium">{product.id}</TableCell>
-                        <TableCell>{product.name}</TableCell>
-                        <TableCell>
-                          <Badge variant={product.status === 'Agotado' ? 'destructive' : product.status === 'Bajo Stock' ? 'secondary' : 'default'}
-                                 style={product.status === 'En Stock' ? { backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' } : {}}>
-                            {product.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{product.location}</TableCell>
-                        <TableCell className="text-right">{product.quantity}</TableCell>
+                        {tableHeaders.map(header => (
+                          <TableCell key={header}>
+                            {header === 'status' ? (
+                              <Badge variant={product.status === 'Agotado' ? 'destructive' : product.status === 'Bajo Stock' ? 'secondary' : 'default'}
+                                     style={product.status === 'En Stock' ? { backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' } : {}}>
+                                {product.status}
+                              </Badge>
+                            ) : (
+                              product[header]
+                            )}
+                          </TableCell>
+                        ))}
                         <TableCell>
                           <div className="flex items-center justify-end gap-2">
                              <Dialog>
@@ -353,18 +404,17 @@ export default function DataManagementPage() {
               <DialogTitle>Editar Producto: {editingProduct.id}</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">Nombre</Label>
-                    <Input id="name" value={editingProduct.name} onChange={handleInputChange} className="col-span-3" />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="quantity" className="text-right">Cantidad</Label>
-                    <Input id="quantity" type="number" value={editingProduct.quantity} onChange={handleInputChange} className="col-span-3" />
-                </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="location" className="text-right">Ubicación</Label>
-                    <Input id="location" value={editingProduct.location} onChange={handleInputChange} className="col-span-3" />
-                </div>
+                {Object.keys(editingProduct).filter(key => key !== 'firebaseId').map(key => (
+                  <div key={key} className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor={key} className="text-right">{key.charAt(0).toUpperCase() + key.slice(1)}</Label>
+                    <Input 
+                      id={key}
+                      type={typeof editingProduct[key] === 'number' ? 'number' : 'text'}
+                      value={editingProduct[key]} 
+                      onChange={handleInputChange} 
+                      className="col-span-3" />
+                  </div>
+                ))}
             </div>
             <DialogFooter>
                 <Button variant="outline" onClick={() => setEditingProduct(null)}>Cancelar</Button>
