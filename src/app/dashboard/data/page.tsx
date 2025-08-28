@@ -197,7 +197,7 @@ export default function DataManagementPage() {
                                <div className="flex justify-center p-4">
                                   <Image 
                                     src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${product.id}`}
-                                    alt={`QR Code for ${product.id}`}
+                                    alt={`Código QR para ${product.id}`}
                                     width={200}
                                     height={200}
                                     data-ai-hint="qr code"
@@ -214,7 +214,7 @@ export default function DataManagementPage() {
                                 variant="ghost"
                               >
                                 <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
+                                <span className="sr-only">Menú</span>
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">

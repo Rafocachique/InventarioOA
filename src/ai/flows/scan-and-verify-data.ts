@@ -1,23 +1,23 @@
 'use server';
 /**
- * @fileOverview Flow for scanning and verifying data against loaded data.
+ * @fileOverview Flow para escanear y verificar datos contra datos cargados.
  *
- * - scanAndVerifyData - A function that handles the scanning and verification process.
- * - ScanAndVerifyDataInput - The input type for the scanAndVerifyData function.
- * - ScanAndVerifyDataOutput - The return type for the scanAndVerifyData function.
+ * - scanAndVerifyData - Una función que maneja el proceso de escaneo y verificación.
+ * - ScanAndVerifyDataInput - El tipo de entrada para la función scanAndVerifyData.
+ * - ScanAndVerifyDataOutput - El tipo de retorno para la función scanAndVerifyData.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const ScanAndVerifyDataInputSchema = z.object({
-  scannedData: z.string().describe('The data scanned from the device camera.'),
+  scannedData: z.string().describe('Los datos escaneados desde la cámara del dispositivo.'),
 });
 export type ScanAndVerifyDataInput = z.infer<typeof ScanAndVerifyDataInputSchema>;
 
 const ScanAndVerifyDataOutputSchema = z.object({
-  isValid: z.boolean().describe('Whether the scanned data is valid against loaded data.'),
-  relatedInformation: z.record(z.any()).optional().describe('Related information if the scan is successful.'),
+  isValid: z.boolean().describe('Si los datos escaneados son válidos contra los datos cargados.'),
+  relatedInformation: z.record(z.any()).optional().describe('Información relacionada si el escaneo es exitoso.'),
 });
 export type ScanAndVerifyDataOutput = z.infer<typeof ScanAndVerifyDataOutputSchema>;
 
@@ -29,9 +29,9 @@ const scanAndVerifyDataPrompt = ai.definePrompt({
   name: 'scanAndVerifyDataPrompt',
   input: {schema: ScanAndVerifyDataInputSchema},
   output: {schema: ScanAndVerifyDataOutputSchema},
-  prompt: `You are an expert data validator. You will determine if the scanned data is valid against loaded data. If the scan is successful, return related information.
+  prompt: `Eres un experto validador de datos. Determinarás si los datos escaneados son válidos contra los datos cargados. Si el escaneo es exitoso, devuelve información relacionada.
 
-Scanned Data: {{{scannedData}}}
+Datos Escaneados: {{{scannedData}}}
 `,
 });
 
@@ -42,20 +42,20 @@ const scanAndVerifyDataFlow = ai.defineFlow(
     outputSchema: ScanAndVerifyDataOutputSchema,
   },
   async input => {
-    // In a real application, this is where you would check the scanned data
-    // against your loaded data.  Since we don't have access to the loaded data,
-    // we will just return a dummy response.
+    // En una aplicación real, aquí es donde verificarías los datos escaneados
+    // contra tus datos cargados. Como no tenemos acceso a los datos cargados,
+    // simplemente devolveremos una respuesta ficticia.
 
     const {output} = await scanAndVerifyDataPrompt(input);
 
-    // Simulate checking against loaded data.
-    const isValid = Math.random() < 0.5; // 50% chance of being valid for demonstration
+    // Simula la verificación contra datos cargados.
+    const isValid = Math.random() < 0.5; // 50% de probabilidad de ser válido para demostración
     let relatedInformation = undefined;
 
     if (isValid) {
-      relatedInformation = { // Dummy related information
-        field1: 'value1',
-        field2: 'value2',
+      relatedInformation = { // Información relacionada ficticia
+        campo1: 'valor1',
+        campo2: 'valor2',
       };
     }
 
