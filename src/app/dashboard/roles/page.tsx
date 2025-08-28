@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, PlusCircle } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Loader2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,17 +26,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { useToast } from "@/hooks/use-toast";
 
-const initialUsers = [
-  { id: "USR-001", name: "Admin General", email: "admin@stockcheck.pro", role: "Administrador" },
-  { id: "USR-002", name: "Juan Pérez", email: "jperez@supervisor.pro", role: "Supervisor" },
-  { id: "USR-003", name: "Maria García", email: "mgarcia@supervisor.pro", role: "Supervisor" },
-];
 
-type User = typeof initialUsers[0];
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
 
 export default function RolesPage() {
-  const [users, setUsers] = React.useState(initialUsers);
+  const [users, setUsers] = React.useState<User[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
   const [isAddUserOpen, setIsAddUserOpen] = React.useState(false);
   const [managingUser, setManagingUser] = React.useState<User | null>(null);
 
@@ -45,33 +49,114 @@ export default function RolesPage() {
   const [newUserPassword, setNewUserPassword] = React.useState("");
   const [newUserRole, setNewUserRole] = React.useState("Supervisor");
 
+  const { toast } = useToast();
 
-  const handleSaveRole = () => {
-    // Logic to save the new role
-    setManagingUser(null);
-  }
+  const fetchUsers = async () => {
+    setIsLoading(true);
+    try {
+      const querySnapshot = await getDocs(collection(db, "users"));
+      const usersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+      setUsers(usersData);
+    } catch (error) {
+      console.error("Error fetching users: ", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudieron cargar los usuarios.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const handleCreateUser = () => {
+  React.useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const handleCreateUser = async () => {
     if (!newUserName || !newUserEmail || !newUserPassword) {
-      // Basic validation
-      alert("Por favor, complete todos los campos.");
+      toast({
+        variant: "destructive",
+        title: "Campos Incompletos",
+        description: "Por favor, complete todos los campos.",
+      });
       return;
     }
-    const newUser: User = {
-      id: `USR-00${users.length + 1}`,
-      name: newUserName,
-      email: newUserEmail,
-      role: newUserRole,
-    };
-    setUsers([...users, newUser]);
     
-    // Reset form and close dialog
-    setNewUserName("");
-    setNewUserEmail("");
-    setNewUserPassword("");
-    setNewUserRole("Supervisor");
-    setIsAddUserOpen(false);
+    try {
+      // Note: In a real app, you would use Firebase Auth to create a user
+      // and then store their role information in Firestore.
+      // This is a simplified version.
+      await addDoc(collection(db, "users"), {
+        name: newUserName,
+        email: newUserEmail,
+        role: newUserRole,
+      });
+
+      toast({
+        title: "Usuario Creado",
+        description: "El nuevo usuario ha sido añadido con éxito.",
+      });
+      
+      // Reset form and close dialog
+      setNewUserName("");
+      setNewUserEmail("");
+      setNewUserPassword("");
+      setNewUserRole("Supervisor");
+      setIsAddUserOpen(false);
+      fetchUsers(); // Refresh users list
+    } catch (error) {
+      console.error("Error creating user: ", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo crear el usuario.",
+      });
+    }
   };
+  
+  const handleSaveRole = async (newRole: string) => {
+    if (!managingUser || !newRole) return;
+
+    try {
+        const userDocRef = doc(db, "users", managingUser.id);
+        await updateDoc(userDocRef, {
+            role: newRole
+        });
+        toast({
+            title: "Rol Actualizado",
+            description: `El rol de ${managingUser.name} ha sido actualizado.`,
+        });
+        setManagingUser(null);
+        fetchUsers();
+    } catch (error) {
+        console.error("Error updating role: ", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "No se pudo actualizar el rol.",
+        });
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+      try {
+          await deleteDoc(doc(db, "users", userId));
+          toast({
+              title: "Usuario Eliminado",
+              description: "El usuario ha sido eliminado correctamente.",
+          });
+          fetchUsers();
+      } catch (error) {
+          console.error("Error deleting user: ", error);
+          toast({
+              variant: "destructive",
+              title: "Error",
+              description: "No se pudo eliminar el usuario.",
+          });
+      }
+  }
+
 
   return (
     <>
@@ -86,7 +171,7 @@ export default function RolesPage() {
         <CardHeader>
           <CardTitle>Lista de Usuarios</CardTitle>
           <CardDescription>
-            Administra los usuarios del sistema y sus roles asignados.
+            Administra los usuarios del sistema y sus roles asignados. Los datos se guardan en Firebase.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -102,32 +187,46 @@ export default function RolesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>
-                    <Badge variant={user.role === 'Administrador' ? 'default' : 'secondary'}>{user.role}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button size="icon" variant="ghost">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                        <DropdownMenuItem onSelect={() => setManagingUser(user)}>
-                          Cambiar Rol
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-500">Eliminar Usuario</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-24 text-center">
+                    <Loader2 className="mx-auto h-8 w-8 animate-spin" />
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : users.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-24 text-center">
+                    No se encontraron usuarios.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">{user.name}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>
+                      <Badge variant={user.role === 'Administrador' ? 'default' : 'secondary'}>{user.role}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="icon" variant="ghost">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                          <DropdownMenuItem onSelect={() => setManagingUser(user)}>
+                            Cambiar Rol
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-red-500" onSelect={() => handleDeleteUser(user.id)}>Eliminar Usuario</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -184,7 +283,7 @@ export default function RolesPage() {
                     <p>Email: <span className="font-semibold">{managingUser.email}</span></p>
                     <div className="space-y-2">
                         <Label htmlFor="manage-role">Rol Actual</Label>
-                        <Select defaultValue={managingUser.role}>
+                        <Select defaultValue={managingUser.role} onValueChange={(value) => setManagingUser({...managingUser, role: value})}>
                             <SelectTrigger id="manage-role">
                                 <SelectValue />
                             </SelectTrigger>
@@ -197,7 +296,7 @@ export default function RolesPage() {
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setManagingUser(null)}>Cancelar</Button>
-                    <Button onClick={handleSaveRole}>Guardar Cambios</Button>
+                    <Button onClick={() => handleSaveRole(managingUser.role)}>Guardar Cambios</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
