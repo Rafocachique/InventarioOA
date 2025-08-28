@@ -1,5 +1,8 @@
 import { PanelLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -19,6 +22,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DashboardNav } from '@/components/dashboard-nav';
+import { useToast } from '@/hooks/use-toast';
 
 function CheckSquareIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -34,6 +38,28 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({
+        title: "Sesión Cerrada",
+        description: "Has cerrado sesión correctamente.",
+      });
+      router.push('/');
+    } catch (error) {
+      console.error("Error al cerrar sesión: ", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo cerrar la sesión.",
+      });
+    }
+  };
+
+
   return (
     <SidebarProvider>
       <Sidebar side="left" collapsible="icon">
@@ -71,8 +97,8 @@ export default function DashboardLayout({
                 <DropdownMenuItem>Mi Perfil</DropdownMenuItem>
                 <DropdownMenuItem>Ajustes</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                    <Link href="/">Cerrar Sesión</Link>
+                <DropdownMenuItem onSelect={handleLogout}>
+                    Cerrar Sesión
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

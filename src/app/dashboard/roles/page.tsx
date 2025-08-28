@@ -26,13 +26,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { db } from "@/lib/firebase";
-import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { db, auth } from "@/lib/firebase";
+import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc } from "firebase/firestore";
+import { createUserWithEmailAndPassword, deleteUser } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 
 
 interface User {
-  id: string;
+  id: string; // This will now be the Firebase Auth UID
   name: string;
   email: string;
   role: string;
@@ -55,7 +56,7 @@ export default function RolesPage() {
     setIsLoading(true);
     try {
       const querySnapshot = await getDocs(collection(db, "users"));
-      const usersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+      const usersData = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as User));
       setUsers(usersData);
     } catch (error) {
       console.error("Error fetching users: ", error);
@@ -84,10 +85,19 @@ export default function RolesPage() {
     }
     
     try {
-      // Note: In a real app, you would use Firebase Auth to create a user
-      // and then store their role information in Firestore.
-      // This is a simplified version.
-      await addDoc(collection(db, "users"), {
+      // Step 1: Create user in Firebase Auth
+      // This is a temporary auth instance to create the user without signing in the admin
+      const { UserCredentialImpl } = await import("firebase/auth/internal");
+      const tempApp = auth.app;
+      const tempAuth = new UserCredentialImpl(auth, { user: auth.currentUser! })._tokenResponse.refreshToken ? 
+          auth : 
+          new (auth.constructor as any)(tempApp);
+          
+      const userCredential = await createUserWithEmailAndPassword(tempAuth, newUserEmail, newUserPassword);
+      const user = userCredential.user;
+
+      // Step 2: Store user role and name in Firestore, using the UID from Auth as the document ID
+      await setDoc(doc(db, "users", user.uid), {
         name: newUserName,
         email: newUserEmail,
         role: newUserRole,
@@ -105,12 +115,18 @@ export default function RolesPage() {
       setNewUserRole("Supervisor");
       setIsAddUserOpen(false);
       fetchUsers(); // Refresh users list
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating user: ", error);
+      let description = "No se pudo crear el usuario.";
+      if (error.code === 'auth/email-already-in-use') {
+        description = "El correo electrónico ya está en uso por otra cuenta.";
+      } else if (error.code === 'auth/weak-password') {
+        description = "La contraseña debe tener al menos 6 caracteres.";
+      }
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "No se pudo crear el usuario.",
+        title: "Error de Creación",
+        description: description,
       });
     }
   };
@@ -141,10 +157,12 @@ export default function RolesPage() {
 
   const handleDeleteUser = async (userId: string) => {
       try {
+          // This is a placeholder, you'd need a backend function to properly delete a user
+          // from Firebase Auth as it's a privileged operation.
           await deleteDoc(doc(db, "users", userId));
           toast({
-              title: "Usuario Eliminado",
-              description: "El usuario ha sido eliminado correctamente.",
+              title: "Usuario Eliminado de Firestore",
+              description: "El usuario ha sido eliminado de la base de datos. Aún necesita ser eliminado de Firebase Authentication.",
           });
           fetchUsers();
       } catch (error) {
@@ -152,7 +170,7 @@ export default function RolesPage() {
           toast({
               variant: "destructive",
               title: "Error",
-              description: "No se pudo eliminar el usuario.",
+              description: "No se pudo eliminar el usuario de Firestore.",
           });
       }
   }

@@ -1,19 +1,40 @@
 "use client";
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckSquare } from 'lucide-react';
+import { CheckSquare, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
 
 export default function LoginPage() {
   const router = useRouter();
+  const { toast } = useToast();
+  const [email, setEmail] = useState("admin@ejemplo.com");
+  const [password, setPassword] = useState("password");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate login and redirect
-    router.push('/dashboard');
+    setIsLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      router.push('/dashboard');
+    } catch (error) {
+      console.error("Error de inicio de sesión:", error);
+      toast({
+        variant: "destructive",
+        title: "Error de Inicio de Sesión",
+        description: "Las credenciales son incorrectas o el usuario no existe.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -33,15 +54,16 @@ export default function LoginPage() {
           <CardContent className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="admin@ejemplo.com" required defaultValue="admin@ejemplo.com" />
+              <Input id="email" type="email" placeholder="admin@ejemplo.com" required value={email} onChange={e => setEmail(e.target.value)} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Contraseña</Label>
-              <Input id="password" type="password" required defaultValue="password" />
+              <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
             </div>
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
+            <Button type="submit" className="w-full" disabled={isLoading} style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
+               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Ingresar
             </Button>
           </CardFooter>
