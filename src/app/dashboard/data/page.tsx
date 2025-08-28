@@ -58,7 +58,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import Image from "next/image";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, writeBatch } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, writeBatch, query, where } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 
@@ -130,9 +130,9 @@ export default function DataManagementPage() {
             const workbook = XLSX.read(data, { type: "array" });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
-            const json = XLSX.utils.sheet_to_json(worksheet);
+            const newProductsData = XLSX.utils.sheet_to_json(worksheet) as Product[];
             
-            if (json.length === 0) {
+            if (newProductsData.length === 0) {
                 toast({
                     variant: "destructive",
                     title: "Archivo Vacío",
@@ -142,29 +142,54 @@ export default function DataManagementPage() {
                 return;
             }
 
-            const batch = writeBatch(db);
-            json.forEach((row: any) => {
-                const docRef = doc(collection(db, "products"));
-                batch.set(docRef, row);
+            // Fetch existing products to compare
+            const productsCollection = collection(db, "products");
+            const querySnapshot = await getDocs(productsCollection);
+            const existingProductsMap = new Map<string, {firebaseId: string, data: Product}>();
+            querySnapshot.docs.forEach(doc => {
+              const productData = doc.data() as Product;
+              if (productData.id) {
+                existingProductsMap.set(productData.id, { firebaseId: doc.id, data: productData });
+              }
             });
+            
+            const batch = writeBatch(db);
+            let updatedCount = 0;
+            let newCount = 0;
 
-            const totalSteps = json.length;
+            const totalSteps = newProductsData.length;
             let completedSteps = 0;
 
-            const interval = setInterval(() => {
-                completedSteps += Math.ceil(totalSteps / 10);
-                const currentProgress = Math.min(Math.round((completedSteps / totalSteps) * 100), 90);
-                setProgress(currentProgress);
-            }, 200);
+            const updateProgress = () => {
+              completedSteps++;
+              const currentProgress = Math.min(Math.round((completedSteps / totalSteps) * 100), 90);
+              setProgress(currentProgress);
+            };
+
+            newProductsData.forEach((newProduct) => {
+                if (newProduct.id && existingProductsMap.has(newProduct.id)) {
+                    // Product exists, update it
+                    const existing = existingProductsMap.get(newProduct.id)!;
+                    const docRef = doc(db, "products", existing.firebaseId);
+                    batch.update(docRef, newProduct);
+                    updatedCount++;
+                } else {
+                    // Product is new, add it
+                    const docRef = doc(collection(db, "products"));
+                    batch.set(docRef, newProduct);
+                    newCount++;
+                }
+                updateProgress();
+            });
+
 
             await batch.commit();
 
-            clearInterval(interval);
             setProgress(100);
 
             toast({
                 title: "Carga Exitosa",
-                description: `${json.length} registros se han cargado en Firebase.`,
+                description: `${newCount} productos nuevos añadidos y ${updatedCount} productos actualizados.`,
             });
 
             setTimeout(() => {
@@ -172,6 +197,7 @@ export default function DataManagementPage() {
                 setIsUploadDialogOpen(false);
                 setUploadFile(null);
                 fetchProducts();
+                setProgress(0);
             }, 1000);
 
         } catch (error) {
@@ -222,7 +248,7 @@ export default function DataManagementPage() {
   
   const tableHeaders = React.useMemo(() => {
     if (products.length === 0) {
-      return ["ID de Producto", "Nombre", "Estado", "Ubicación", "Cantidad"];
+      return ["id", "name", "status", "location", "quantity"];
     }
     const allKeys = products.reduce((keys, product) => {
       Object.keys(product).forEach(key => {
