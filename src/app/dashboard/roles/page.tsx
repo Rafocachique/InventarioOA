@@ -1,0 +1,174 @@
+"use client";
+
+import * as React from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { MoreHorizontal, PlusCircle } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const users = [
+  { id: "USR-001", name: "Admin General", email: "admin@stockcheck.pro", role: "Administrador" },
+  { id: "USR-002", name: "Juan Pérez", email: "jperez@supervisor.pro", role: "Supervisor" },
+  { id: "USR-003", name: "Maria García", email: "mgarcia@supervisor.pro", role: "Supervisor" },
+];
+
+type User = typeof users[0];
+
+export default function RolesPage() {
+  const [isAddUserOpen, setIsAddUserOpen] = React.useState(false);
+  const [managingUser, setManagingUser] = React.useState<User | null>(null);
+
+  const handleSaveRole = () => {
+    // Logic to save the new role
+    setManagingUser(null);
+  }
+
+  return (
+    <>
+      <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Gestión de Roles y Usuarios</h1>
+          <Button onClick={() => setIsAddUserOpen(true)} size="sm" className="h-8 gap-1" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
+              <PlusCircle className="h-3.5 w-3.5" />
+              <span className="sr-only sm:not-sr-only">Añadir Usuario</span>
+          </Button>
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de Usuarios</CardTitle>
+          <CardDescription>
+            Administra los usuarios del sistema y sus roles asignados.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Rol</TableHead>
+                <TableHead>
+                  <span className="sr-only">Acciones</span>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">{user.name}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    <Badge variant={user.role === 'Administrador' ? 'default' : 'secondary'}>{user.role}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="icon" variant="ghost">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                        <DropdownMenuItem onSelect={() => setManagingUser(user)}>
+                          Cambiar Rol
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-red-500">Eliminar Usuario</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Add User Dialog */}
+      <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Añadir Nuevo Usuario</DialogTitle>
+                <DialogDescription>Complete los datos para crear un nuevo usuario.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                    <Label htmlFor="new-name">Nombre Completo</Label>
+                    <Input id="new-name" placeholder="Ej: Carlos Ruiz" />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="new-email">Email</Label>
+                    <Input id="new-email" type="email" placeholder="ejemplo@dominio.com" />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="new-role">Rol</Label>
+                    <Select>
+                        <SelectTrigger id="new-role">
+                            <SelectValue placeholder="Seleccionar rol" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Administrador">Administrador</SelectItem>
+                            <SelectItem value="Supervisor">Supervisor</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAddUserOpen(false)}>Cancelar</Button>
+                <Button>Crear Usuario</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Manage Role Dialog */}
+      {managingUser && (
+        <Dialog open={!!managingUser} onOpenChange={() => setManagingUser(null)}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Gestionar Rol de {managingUser.name}</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <p>Email: <span className="font-semibold">{managingUser.email}</span></p>
+                    <div className="space-y-2">
+                        <Label htmlFor="manage-role">Rol Actual</Label>
+                        <Select defaultValue={managingUser.role}>
+                            <SelectTrigger id="manage-role">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Administrador">Administrador</SelectItem>
+                                <SelectItem value="Supervisor">Supervisor</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setManagingUser(null)}>Cancelar</Button>
+                    <Button onClick={handleSaveRole}>Guardar Cambios</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+      )}
+    </>
+  );
+}
