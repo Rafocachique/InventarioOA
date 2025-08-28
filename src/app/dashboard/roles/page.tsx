@@ -120,6 +120,10 @@ export default function RolesPage() {
                     <Label htmlFor="new-email">Email</Label>
                     <Input id="new-email" type="email" placeholder="ejemplo@dominio.com" />
                 </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="new-password">Contraseña</Label>
+                    <Input id="new-password" type="password" placeholder="••••••••" />
+                </div>
                 <div className="space-y-2">
                     <Label htmlFor="new-role">Rol</Label>
                     <Select>
