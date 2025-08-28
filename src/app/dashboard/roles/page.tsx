@@ -27,22 +27,51 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const users = [
+const initialUsers = [
   { id: "USR-001", name: "Admin General", email: "admin@stockcheck.pro", role: "Administrador" },
   { id: "USR-002", name: "Juan Pérez", email: "jperez@supervisor.pro", role: "Supervisor" },
   { id: "USR-003", name: "Maria García", email: "mgarcia@supervisor.pro", role: "Supervisor" },
 ];
 
-type User = typeof users[0];
+type User = typeof initialUsers[0];
 
 export default function RolesPage() {
+  const [users, setUsers] = React.useState(initialUsers);
   const [isAddUserOpen, setIsAddUserOpen] = React.useState(false);
   const [managingUser, setManagingUser] = React.useState<User | null>(null);
+
+  const [newUserName, setNewUserName] = React.useState("");
+  const [newUserEmail, setNewUserEmail] = React.useState("");
+  const [newUserPassword, setNewUserPassword] = React.useState("");
+  const [newUserRole, setNewUserRole] = React.useState("Supervisor");
+
 
   const handleSaveRole = () => {
     // Logic to save the new role
     setManagingUser(null);
   }
+
+  const handleCreateUser = () => {
+    if (!newUserName || !newUserEmail || !newUserPassword) {
+      // Basic validation
+      alert("Por favor, complete todos los campos.");
+      return;
+    }
+    const newUser: User = {
+      id: `USR-00${users.length + 1}`,
+      name: newUserName,
+      email: newUserEmail,
+      role: newUserRole,
+    };
+    setUsers([...users, newUser]);
+    
+    // Reset form and close dialog
+    setNewUserName("");
+    setNewUserEmail("");
+    setNewUserPassword("");
+    setNewUserRole("Supervisor");
+    setIsAddUserOpen(false);
+  };
 
   return (
     <>
@@ -114,19 +143,19 @@ export default function RolesPage() {
             <div className="grid gap-4 py-4">
                 <div className="space-y-2">
                     <Label htmlFor="new-name">Nombre Completo</Label>
-                    <Input id="new-name" placeholder="Ej: Carlos Ruiz" />
+                    <Input id="new-name" placeholder="Ej: Carlos Ruiz" value={newUserName} onChange={(e) => setNewUserName(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="new-email">Email</Label>
-                    <Input id="new-email" type="email" placeholder="ejemplo@dominio.com" />
+                    <Input id="new-email" type="email" placeholder="ejemplo@dominio.com" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} />
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="new-password">Contraseña</Label>
-                    <Input id="new-password" type="password" placeholder="••••••••" />
+                    <Input id="new-password" type="password" placeholder="••••••••" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="new-role">Rol</Label>
-                    <Select>
+                    <Select onValueChange={setNewUserRole} defaultValue={newUserRole}>
                         <SelectTrigger id="new-role">
                             <SelectValue placeholder="Seleccionar rol" />
                         </SelectTrigger>
@@ -139,7 +168,7 @@ export default function RolesPage() {
             </div>
             <DialogFooter>
                 <Button variant="outline" onClick={() => setIsAddUserOpen(false)}>Cancelar</Button>
-                <Button>Crear Usuario</Button>
+                <Button onClick={handleCreateUser}>Crear Usuario</Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>
