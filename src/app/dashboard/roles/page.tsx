@@ -86,14 +86,8 @@ export default function RolesPage() {
     
     try {
       // Step 1: Create user in Firebase Auth
-      // This is a temporary auth instance to create the user without signing in the admin
-      const { UserCredentialImpl } = await import("firebase/auth/internal");
-      const tempApp = auth.app;
-      const tempAuth = new UserCredentialImpl(auth, { user: auth.currentUser! })._tokenResponse.refreshToken ? 
-          auth : 
-          new (auth.constructor as any)(tempApp);
-          
-      const userCredential = await createUserWithEmailAndPassword(tempAuth, newUserEmail, newUserPassword);
+      // This will sign in the new user, which is acceptable in this admin dashboard flow.
+      const userCredential = await createUserWithEmailAndPassword(auth, newUserEmail, newUserPassword);
       const user = userCredential.user;
 
       // Step 2: Store user role and name in Firestore, using the UID from Auth as the document ID
