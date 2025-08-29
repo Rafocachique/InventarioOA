@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Flow para escanear y verificar datos contra datos cargados.
@@ -10,7 +11,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, DocumentData } from 'firebase/firestore';
 
 
 const ScanAndVerifyDataInputSchema = z.object({
@@ -35,24 +36,30 @@ const scanAndVerifyDataFlow = ai.defineFlow(
     outputSchema: ScanAndVerifyDataOutputSchema,
   },
   async ({ scannedData }) => {
-    // Buscar en la colección "products" de Firestore un documento donde el campo "id" coincida con scannedData
     const productsRef = collection(db, "products");
-    const q = query(productsRef, where("id", "==", scannedData));
+    
+    // Intenta convertir a número si es posible, si no, usa el string
+    const scannedNumber = /^\d+$/.test(scannedData) ? parseInt(scannedData, 10) : null;
+
+    let q;
+    // Si es un número válido, creamos una consulta que busque tanto el número como el string
+    if (scannedNumber !== null) {
+      q = query(productsRef, where("id", "in", [scannedData, scannedNumber]));
+    } else {
+      // Si no es un número, solo busca el string
+      q = query(productsRef, where("id", "==", scannedData));
+    }
     
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
-      // No se encontró ningún producto con ese ID
       return {
         isValid: false,
-        relatedInformation: undefined,
       };
     } else {
-      // Se encontró el producto, se devuelve su información
-      const productData = querySnapshot.docs[0].data();
-      // Eliminar campos que no queremos mostrar, si los hubiera
-      delete productData.firebaseId;
-
+      const productData = querySnapshot.docs[0].data() as DocumentData;
+      // El firebaseId no es un campo del documento, es el ID del doc.
+      // Se obtendrá en el frontend para la actualización.
       return {
         isValid: true,
         relatedInformation: productData,

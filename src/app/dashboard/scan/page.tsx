@@ -10,7 +10,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { scanAndVerifyData, ScanAndVerifyDataOutput } from "@/ai/flows/scan-and-verify-data";
 import { extractTextFromImage } from "@/ai/flows/extract-text-from-image";
 import { Loader2, CheckCircle, XCircle, Camera, Save } from "lucide-react";
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { doc, getDocs, updateDoc, collection, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -55,7 +54,7 @@ export default function ScanPage() {
         setHasCameraPermission(false);
         if (err.name === "NotAllowedError") {
              setError("Permiso de cámara denegado. Por favor, habilite el acceso a la cámara en la configuración de su navegador.");
-        } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+        } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError" || err.name === "OverconstrainedError") {
              setError("No se encontró una cámara trasera. Intentando con la cámara frontal.");
              try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -113,24 +112,28 @@ export default function ScanPage() {
         setIsLoading(false);
         return;
       }
-
-      toast({ title: "Texto Extraído", description: `Texto reconocido: "${extractedText}"` });
+      
+      const trimmedText = extractedText.trim();
+      toast({ title: "Texto Extraído", description: `Verificando código: "${trimmedText}"` });
       
       setIsVerifying(true);
-      const trimmedText = extractedText.trim();
       const response = await scanAndVerifyData({ scannedData: trimmedText });
       setResult(response);
 
       if (response.isValid && response.relatedInformation) {
+        // Now, find the document in Firestore to get its firebaseId for editing
         const productsRef = collection(db, "products");
-        const q = query(productsRef, where("id", "==", trimmedText));
+        const scannedId = response.relatedInformation.id;
+        
+        // Handle both string and number types for the ID
+        const q = query(productsRef, where("id", "in", [String(scannedId), Number(scannedId)]));
         const querySnapshot = await getDocs(q);
         
         if (!querySnapshot.empty) {
-          const doc = querySnapshot.docs[0];
-          setEditableProduct({ firebaseId: doc.id, ...doc.data() });
+          const docSnapshot = querySnapshot.docs[0];
+          setEditableProduct({ firebaseId: docSnapshot.id, ...docSnapshot.data() });
         } else {
-           setError("Se encontró una coincidencia pero no se pudo recuperar el documento de la base de datos.");
+           setError("Se encontró una coincidencia pero no se pudo recuperar el documento de la base de datos para editar.");
         }
       }
 
