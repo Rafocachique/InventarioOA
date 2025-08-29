@@ -152,8 +152,7 @@ export default function RolesPage() {
   const handleDeleteUser = async (userToDelete: User) => {
       try {
           // This is a privileged operation and would typically be handled by a backend function
-          // For this app, we'll call it from the client, which requires the user to be recently signed in.
-          // Since we can't reauthenticate easily here, we'll just show a message.
+          // For this app, we'll just show a message.
           
           await deleteDoc(doc(db, "users", userToDelete.id));
 
@@ -319,3 +318,4 @@ export default function RolesPage() {
       )}
     </>
   );
+}
