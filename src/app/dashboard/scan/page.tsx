@@ -40,15 +40,19 @@ export default function ScanPage() {
         return;
       }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } } });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
         setHasCameraPermission(true);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error al acceder a la cámara:", err);
         setHasCameraPermission(false);
-        setError("Permiso de cámara denegado. Por favor, habilite el acceso a la cámara en la configuración de su navegador.");
+        if (err.name === "NotAllowedError") {
+             setError("Permiso de cámara denegado. Por favor, habilite el acceso a la cámara en la configuración de su navegador.");
+        } else {
+             setError(`Error de cámara: ${err.message}`);
+        }
       }
     };
 
@@ -245,5 +249,3 @@ export default function ScanPage() {
     </div>
   );
 }
-
-    
