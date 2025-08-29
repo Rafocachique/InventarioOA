@@ -85,38 +85,67 @@ export default function ScanPage() {
     };
   }, []);
 
-  const performVerification = async (code: string) => {
-      setIsVerifying(true);
-      setResult(null);
-      setError(null);
-      setEditableProduct(null);
+  const performVerification = async (code: string): Promise<boolean> => {
+    if (!code) return false;
+  
+    setIsVerifying(true);
+    setResult(null);
+    setError(null);
+    setEditableProduct(null);
 
-      try {
-        toast({ title: "Verificando...", description: `Buscando código: "${code}"` });
-        const response = await scanAndVerifyData({ scannedData: code });
-        setResult(response);
+    try {
+      toast({ title: "Verificando...", description: `Buscando código: "${code}"` });
+      const response = await scanAndVerifyData({ scannedData: code });
+      setResult(response);
 
-        if (response.isValid && response.relatedInformation) {
-          const productsRef = collection(db, "products");
-          const scannedId = response.relatedInformation.id;
-          const q = query(productsRef, where("id", "in", [String(scannedId), Number(scannedId)]));
-          const querySnapshot = await getDocs(q);
-          
-          if (!querySnapshot.empty) {
-            const docSnapshot = querySnapshot.docs[0];
-            setEditableProduct({ firebaseId: docSnapshot.id, ...docSnapshot.data() });
-          } else {
-            setError("Se encontró una coincidencia pero no se pudo recuperar el documento de la base de datos para editar.");
-          }
+      if (response.isValid && response.relatedInformation) {
+        const productsRef = collection(db, "products");
+        const scannedId = response.relatedInformation.id;
+        // Ensure we search for both string and numeric types
+        const q = query(productsRef, where("id", "in", [String(scannedId), Number(scannedId)].filter(v => !isNaN(Number(v)))));
+
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const docSnapshot = querySnapshot.docs[0];
+          setEditableProduct({ firebaseId: docSnapshot.id, ...docSnapshot.data() });
+          setIsVerifying(false);
+          return true; // Match found
+        } else {
+          setError("Se encontró una coincidencia pero no se pudo recuperar el documento de la base de datos para editar.");
         }
-      } catch (err) {
-        setError("Ocurrió un error durante el proceso de verificación.");
-        console.error(err);
-      } finally {
-        setIsVerifying(false);
-        setIsLoading(false);
       }
+    } catch (err) {
+      setError("Ocurrió un error durante el proceso de verificación.");
+      console.error(err);
+    }
+    
+    setIsVerifying(false);
+    return false; // No match found or error occurred
   };
+
+  const processAndVerifyCodes = async (codes: string) => {
+    setIsLoading(true);
+    setError(null);
+    setEditableProduct(null);
+    setResult(null);
+
+    const individualCodes = codes.split(/\s+/).filter(Boolean); // Split by whitespace and remove empty strings
+
+    for (const code of individualCodes) {
+      const found = await performVerification(code);
+      if (found) {
+        setIsLoading(false);
+        return; // Stop searching if a match is found
+      }
+    }
+
+    // If loop completes without finding a match
+    setError("No se encontró ningún producto con los códigos escaneados.");
+    setResult({ isValid: false });
+    setIsLoading(false);
+  };
+
 
   const captureAndScan = async () => {
     if (!videoRef.current || !canvasRef.current) return;
@@ -149,7 +178,7 @@ export default function ScanPage() {
       }
       
       const trimmedText = extractedText.trim();
-      await performVerification(trimmedText);
+      await processAndVerifyCodes(trimmedText);
 
     } catch (err) {
       setError("Ocurrió un error durante el proceso de escaneo y verificación.");
@@ -159,7 +188,8 @@ export default function ScanPage() {
   };
 
   const handleManualVerify = async () => {
-      if (!manualCode.trim()) {
+      const codeToVerify = manualCode.trim();
+      if (!codeToVerify) {
         toast({
             variant: "destructive",
             title: "Código Vacío",
@@ -167,8 +197,7 @@ export default function ScanPage() {
         });
         return;
       }
-      setIsLoading(true);
-      await performVerification(manualCode.trim());
+      await processAndVerifyCodes(codeToVerify);
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -256,13 +285,13 @@ export default function ScanPage() {
           <CardDescription>Aquí se mostrará el resultado y la información del producto.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {(isLoading || isVerifying) && (
+          {(isLoading || isVerifying) && !editableProduct && (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           )}
-          {error && !isLoading && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-          {result && !isLoading && (
+          {error && !isLoading && !editableProduct && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+          {result && !isLoading && !editableProduct && (
             <div>
               {result.isValid ? (
                 <Alert className="border-green-500 text-green-500">
@@ -279,7 +308,14 @@ export default function ScanPage() {
               )}
             </div>
           )}
-          {editableProduct && !isLoading && (
+          {editableProduct && !isVerifying &&(
+             <Alert className="border-green-500 text-green-500 mb-4">
+                <CheckCircle className="h-4 w-4 !text-green-500" />
+                <AlertTitle>Verificación Exitosa</AlertTitle>
+                <AlertDescription>Producto encontrado. Puede editar la información a continuación.</AlertDescription>
+            </Alert>
+          )}
+          {editableProduct && (
             <Card className="mt-4">
                 <CardHeader>
                     <CardTitle>Información y Edición del Producto</CardTitle>
@@ -312,5 +348,3 @@ export default function ScanPage() {
     </div>
   );
 }
-
-    
