@@ -549,19 +549,19 @@ export default function DataManagementPage() {
       </div>
       <Card className="mt-4">
         <CardHeader>
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                 <CardTitle>Productos</CardTitle>
                 <CardDescription>
                     Gestiona tus productos y visualiza su inventario.
                 </CardDescription>
                 </div>
-                <div className="relative w-full max-w-sm">
+                <div className="relative w-full sm:w-auto">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input 
                     type="search" 
                     placeholder="Buscar productos..." 
-                    className="pl-8 sm:w-[300px]" 
+                    className="pl-8 sm:w-[300px] w-full" 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -656,11 +656,11 @@ export default function DataManagementPage() {
             </ScrollArea>
         </CardContent>
         <CardFooter>
-            <div className="flex w-full items-center justify-between">
+            <div className="flex w-full flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-xs text-muted-foreground">
                 Mostrando <strong>{paginatedProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-{(currentPage - 1) * itemsPerPage + paginatedProducts.length}</strong> de <strong>{filteredProducts.length}</strong> productos
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
                 <div className="flex items-center gap-2">
                     <Label htmlFor="items-per-page" className="text-xs">Filas por página</Label>
                     <Select value={String(itemsPerPage)} onValueChange={(value) => setItemsPerPage(Number(value))}>
@@ -748,4 +748,6 @@ export default function DataManagementPage() {
       )}
     </>
   );
+    
+
     

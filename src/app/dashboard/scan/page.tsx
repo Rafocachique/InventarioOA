@@ -142,7 +142,7 @@ export default function ScanPage() {
       }
       unsubscribe();
     };
-  }, [toast]);
+  }, [toast, visibleScanHistoryHeaders.size]);
 
  const performVerification = async (code: string): Promise<boolean> => {
     if (!code) return false;
@@ -348,12 +348,12 @@ export default function ScanPage() {
 
 
   return (
-    <div className="grid gap-8 xl:grid-cols-2">
+    <div className="grid gap-8 lg:grid-cols-2">
       <div className="flex flex-col gap-8">
         <Card>
             <CardHeader>
             <CardTitle>Escanear y Verificar</CardTitle>
-            <CardDescription>Use la cámara para escanear un código o ingréselo manualmente.</CardDescription>
+            <CardDescription>Use la cámara para escanear un código o ingréselo manually.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Tabs defaultValue="camera">
@@ -557,3 +557,5 @@ export default function ScanPage() {
     </div>
   );
 }
+
+    
