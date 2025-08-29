@@ -8,15 +8,20 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { scanAndVerifyData, ScanAndVerifyDataOutput } from "@/ai/flows/scan-and-verify-data";
 import { Loader2, CheckCircle, XCircle, ScanLine, Save } from "lucide-react";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 
 export default function ScanPage() {
-  const [scannedInput, setScannedInput] = useState("PROD-001");
+  const [scannedInput, setScannedInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ScanAndVerifyDataOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleScan = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!scannedInput.trim()) {
+        setError("Por favor ingrese un dato para verificar.");
+        return;
+    }
     setIsLoading(true);
     setResult(null);
     setError(null);
@@ -94,19 +99,19 @@ export default function ScanPage() {
           {result?.isValid && result.relatedInformation && (
             <Card className="mt-4">
                 <CardHeader>
-                    <CardTitle>Actualizar Información</CardTitle>
+                    <CardTitle>Información del Producto</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    {Object.entries(result.relatedInformation).map(([key, value]) => (
-                        <div className="space-y-2" key={key}>
-                            <Label htmlFor={key}>{key}</Label>
-                            <Input id={key} defaultValue={value as string} />
-                        </div>
-                    ))}
-                    <Button className="w-full">
-                        <Save className="mr-2 h-4 w-4" />
-                        Guardar Cambios
-                    </Button>
+                <CardContent>
+                    <Table>
+                      <TableBody>
+                        {Object.entries(result.relatedInformation).map(([key, value]) => (
+                          <TableRow key={key}>
+                            <TableCell className="font-medium capitalize">{key.replace(/_/g, ' ')}</TableCell>
+                            <TableCell>{String(value)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                 </CardContent>
             </Card>
           )}

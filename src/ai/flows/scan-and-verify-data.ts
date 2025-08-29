@@ -9,6 +9,9 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+
 
 const ScanAndVerifyDataInputSchema = z.object({
   scannedData: z.string().describe('Los datos escaneados desde la cámara del dispositivo.'),
@@ -25,43 +28,35 @@ export async function scanAndVerifyData(input: ScanAndVerifyDataInput): Promise<
   return scanAndVerifyDataFlow(input);
 }
 
-const scanAndVerifyDataPrompt = ai.definePrompt({
-  name: 'scanAndVerifyDataPrompt',
-  input: {schema: ScanAndVerifyDataInputSchema},
-  output: {schema: ScanAndVerifyDataOutputSchema},
-  prompt: `Eres un experto validador de datos. Determinarás si los datos escaneados son válidos contra los datos cargados. Si el escaneo es exitoso, devuelve información relacionada.
-
-Datos Escaneados: {{{scannedData}}}
-`,
-});
-
 const scanAndVerifyDataFlow = ai.defineFlow(
   {
     name: 'scanAndVerifyDataFlow',
     inputSchema: ScanAndVerifyDataInputSchema,
     outputSchema: ScanAndVerifyDataOutputSchema,
   },
-  async input => {
-    // En una aplicación real, aquí es donde verificarías los datos escaneados
-    // contra tus datos cargados. Como no tenemos acceso a los datos cargados,
-    // simplemente devolveremos una respuesta ficticia.
+  async ({ scannedData }) => {
+    // Buscar en la colección "products" de Firestore un documento donde el campo "id" coincida con scannedData
+    const productsRef = collection(db, "products");
+    const q = query(productsRef, where("id", "==", scannedData));
+    
+    const querySnapshot = await getDocs(q);
 
-    const {output} = await scanAndVerifyDataPrompt(input);
+    if (querySnapshot.empty) {
+      // No se encontró ningún producto con ese ID
+      return {
+        isValid: false,
+        relatedInformation: undefined,
+      };
+    } else {
+      // Se encontró el producto, se devuelve su información
+      const productData = querySnapshot.docs[0].data();
+      // Eliminar campos que no queremos mostrar, si los hubiera
+      delete productData.firebaseId;
 
-    // Simula la verificación contra datos cargados.
-    const isValid = Math.random() < 0.5; // 50% de probabilidad de ser válido para demostración
-    let relatedInformation = undefined;
-
-    if (isValid) {
-      relatedInformation = { // Información relacionada ficticia
-        campo1: 'valor1',
-        campo2: 'valor2',
+      return {
+        isValid: true,
+        relatedInformation: productData,
       };
     }
-
-    return {
-      isValid: isValid,
-      relatedInformation: relatedInformation,
-    };
   }
 );
