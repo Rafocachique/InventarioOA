@@ -234,6 +234,7 @@ export default function DataManagementPage() {
           // After upload, reset visible headers based on the new data
           const headers = Object.keys(newProductsData[0] || {});
           const filteredHeaders = headers.filter(key => key !== 'firebaseId');
+          setAllHeaders(filteredHeaders)
           setVisibleHeaders(new Set(filteredHeaders));
           fetchProducts();
           setProgress(0);
