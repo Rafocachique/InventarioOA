@@ -39,33 +39,43 @@ const scanAndVerifyDataFlow = ai.defineFlow(
     const productsRef = collection(db, "products");
     
     // Intenta convertir a número si es posible, si no, usa el string
-    const scannedNumber = isNaN(Number(scannedData)) ? null : Number(scannedData);
-
-    let q;
-    // Si es un número válido, creamos una consulta que busque tanto el número como el string
-    if (scannedNumber !== null) {
-      q = query(productsRef, where("id", "in", [scannedData, scannedNumber]));
-    } else {
-      // Si no es un número, solo busca el string
-      q = query(productsRef, where("id", "==", scannedData));
+    const scannedValue = scannedData.trim();
+    const scannedNumber = isNaN(Number(scannedValue)) ? null : Number(scannedValue);
+    
+    const valuesToSearch = [scannedValue];
+    if (scannedNumber !== null && String(scannedNumber) !== scannedValue) {
+        valuesToSearch.push(scannedNumber);
     }
     
-    const querySnapshot = await getDocs(q);
+    const idQuery = query(productsRef, where("id", "in", valuesToSearch));
+    const codbienQuery = query(productsRef, where("Codbien", "in", valuesToSearch));
 
-    if (querySnapshot.empty) {
-      return {
-        isValid: false,
-      };
+    const [idSnapshot, codbienSnapshot] = await Promise.all([
+        getDocs(idQuery),
+        getDocs(codbienQuery)
+    ]);
+
+    let foundDoc: DocumentData | null = null;
+    
+    if (!idSnapshot.empty) {
+        foundDoc = idSnapshot.docs[0];
+    } else if (!codbienSnapshot.empty) {
+        foundDoc = codbienSnapshot.docs[0];
+    }
+
+    if (foundDoc) {
+        const productData = foundDoc.data() as DocumentData;
+        return {
+            isValid: true,
+            relatedInformation: {
+            ...productData,
+            firebaseId: foundDoc.id, // Devolver el ID del documento de Firebase
+            },
+        };
     } else {
-      const doc = querySnapshot.docs[0];
-      const productData = doc.data() as DocumentData;
-      return {
-        isValid: true,
-        relatedInformation: {
-          ...productData,
-          firebaseId: doc.id, // Devolver el ID del documento de Firebase
-        },
-      };
+        return {
+            isValid: false,
+        };
     }
   }
 );
