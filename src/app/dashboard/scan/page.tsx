@@ -12,7 +12,7 @@ import { extractTextFromImage } from "@/ai/flows/extract-text-from-image";
 import { Loader2, CheckCircle, XCircle, Camera, Save } from "lucide-react";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, getDocs, updateDoc, collection, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface EditableProduct {
@@ -40,7 +40,7 @@ export default function ScanPage() {
         return;
       }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } } });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
@@ -55,7 +55,6 @@ export default function ScanPage() {
     getCameraPermission();
 
     return () => {
-      // Cleanup: stop video stream when component unmounts
       if (videoRef.current && videoRef.current.srcObject) {
         const stream = videoRef.current.srcObject as MediaStream;
         stream.getTracks().forEach(track => track.stop());
@@ -76,7 +75,12 @@ export default function ScanPage() {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const context = canvas.getContext("2d");
-    context?.drawImage(video, 0, 0, canvas.width, canvas.height);
+    if (!context) {
+        setError("No se pudo obtener el contexto del canvas.");
+        setIsLoading(false);
+        return;
+    }
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     const imageDataUri = canvas.toDataURL("image/jpeg");
 
@@ -92,14 +96,20 @@ export default function ScanPage() {
       toast({ title: "Texto Extraído", description: `Texto reconocido: "${extractedText}"` });
       
       setIsVerifying(true);
-      const response = await scanAndVerifyData({ scannedData: extractedText.trim() });
+      const trimmedText = extractedText.trim();
+      const response = await scanAndVerifyData({ scannedData: trimmedText });
       setResult(response);
+
       if (response.isValid && response.relatedInformation) {
-        const productData = response.relatedInformation;
-        const querySnapshot = await db.collection("products").where("id", "==", productData.id).get();
+        const productsRef = collection(db, "products");
+        const q = query(productsRef, where("id", "==", trimmedText));
+        const querySnapshot = await getDocs(q);
+        
         if (!querySnapshot.empty) {
           const doc = querySnapshot.docs[0];
           setEditableProduct({ firebaseId: doc.id, ...doc.data() });
+        } else {
+           setError("Se encontró una coincidencia pero no se pudo recuperar el documento de la base de datos.");
         }
       }
 
@@ -154,16 +164,16 @@ export default function ScanPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="aspect-video bg-card-foreground/10 rounded-lg flex items-center justify-center p-4">
-            {hasCameraPermission === null ? (
+            {hasCameraPermission === null && (
               <Loader2 className="h-16 w-16 text-muted-foreground animate-spin" />
-            ) : hasCameraPermission === false ? (
+            )}
+            <video ref={videoRef} className={`w-full h-full object-cover rounded-md ${hasCameraPermission === null || hasCameraPermission === false ? 'hidden' : ''}`} autoPlay muted playsInline />
+            {hasCameraPermission === false && (
               <div className="text-center text-destructive">
                 <Camera className="h-16 w-16 mx-auto" />
                 <p className="mt-2">No se pudo acceder a la cámara.</p>
                 <p className="text-sm text-muted-foreground">{error}</p>
               </div>
-            ) : (
-              <video ref={videoRef} className="w-full h-full object-cover rounded-md" autoPlay muted playsInline />
             )}
           </div>
           <Button onClick={captureAndScan} className="w-full" disabled={isLoading || !hasCameraPermission} style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
@@ -235,3 +245,5 @@ export default function ScanPage() {
     </div>
   );
 }
+
+    
