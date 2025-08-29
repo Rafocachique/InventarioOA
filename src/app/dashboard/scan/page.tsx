@@ -271,7 +271,7 @@ export default function ScanPage() {
       await processAndVerifyCodes(codeToVerify);
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, record: EditableProduct | null, setRecord: Function) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, record: EditableProduct | null, setRecord: React.Dispatch<React.SetStateAction<EditableProduct | null>>) => {
     if (!record) return;
     const { id, value } = e.target;
     setRecord({ ...record, [id]: e.target.type === 'number' ? Number(value) : value });
@@ -353,7 +353,7 @@ export default function ScanPage() {
         <Card>
             <CardHeader>
             <CardTitle>Escanear y Verificar</CardTitle>
-            <CardDescription>Use la cámara para escanear un código o ingréselo manually.</CardDescription>
+            <CardDescription>Use la cámara para escanear un código o ingréselo manualmente.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Tabs defaultValue="camera">
@@ -473,8 +473,8 @@ export default function ScanPage() {
             </div>
         </CardHeader>
         <CardContent>
-            <ScrollArea className="h-[600px] w-full whitespace-nowrap">
-            <Table>
+            <ScrollArea className="h-[600px]">
+            <Table className="whitespace-nowrap">
                 <TableHeader>
                 <TableRow>
                     {displayedHistoryHeaders.map(header => <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>)}
@@ -501,7 +501,7 @@ export default function ScanPage() {
                     <TableRow key={scan.firebaseId}>
                         {displayedHistoryHeaders.map(header => (
                             <TableCell key={header}>
-                               {scan[header]}
+                               {String(scan[header])}
                             </TableCell>
                         ))}
                         <TableCell>{scan.scannedAt.toDate().toLocaleString('es-ES')}</TableCell>
