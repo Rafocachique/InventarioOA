@@ -41,7 +41,7 @@ const extractTextFromImageFlow = ai.defineFlow(
         { text: 'Extract all text content from the following image. Focus on identifiers, codes, or numbers. Respond only with the extracted text, with no extra formatting or labels.' },
         { media: { url: input.photoDataUri } },
       ],
-      model: 'googleai/gemini-pro-vision',
+      model: 'googleai/gemini-1.5-flash-latest',
     });
 
     return {
