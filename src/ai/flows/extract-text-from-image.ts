@@ -45,7 +45,7 @@ const extractTextFromImageFlow = ai.defineFlow(
     });
 
     return {
-      text: llmResponse.text(),
+      text: llmResponse.text,
     };
   }
 );
