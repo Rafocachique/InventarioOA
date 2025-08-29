@@ -348,7 +348,7 @@ export default function ScanPage() {
 
 
   return (
-    <div className="grid gap-8 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
       <div className="flex flex-col gap-8">
         <Card>
             <CardHeader>
@@ -473,7 +473,7 @@ export default function ScanPage() {
             </div>
         </CardHeader>
         <CardContent>
-            <ScrollArea className="h-[600px]">
+            <ScrollArea className="h-[600px] w-full whitespace-nowrap">
             <Table>
                 <TableHeader>
                 <TableRow>
