@@ -40,7 +40,12 @@ export default function ScanPage() {
         return;
       }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const constraints = {
+          video: {
+            facingMode: { ideal: "environment" }
+          }
+        };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
@@ -50,6 +55,18 @@ export default function ScanPage() {
         setHasCameraPermission(false);
         if (err.name === "NotAllowedError") {
              setError("Permiso de cámara denegado. Por favor, habilite el acceso a la cámara en la configuración de su navegador.");
+        } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+             setError("No se encontró una cámara trasera. Intentando con la cámara frontal.");
+             try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                }
+                setHasCameraPermission(true);
+                setError(null);
+             } catch (fallbackError: any) {
+                setError(`Error al acceder a cualquier cámara: ${fallbackError.message}`);
+             }
         } else {
              setError(`Error de cámara: ${err.message}`);
         }
@@ -172,7 +189,7 @@ export default function ScanPage() {
               <Loader2 className="h-16 w-16 text-muted-foreground animate-spin" />
             )}
             <video ref={videoRef} className={`w-full h-full object-cover rounded-md ${hasCameraPermission === null || hasCameraPermission === false ? 'hidden' : ''}`} autoPlay muted playsInline />
-            {hasCameraPermission === false && (
+            {hasCameraPermission === false && !error?.includes("Intentando") && ( // Don't show this if we are trying to fallback
               <div className="text-center text-destructive">
                 <Camera className="h-16 w-16 mx-auto" />
                 <p className="mt-2">No se pudo acceder a la cámara.</p>
