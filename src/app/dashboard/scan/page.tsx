@@ -10,7 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { scanAndVerifyData, ScanAndVerifyDataOutput } from "@/ai/flows/scan-and-verify-data";
 import { extractTextFromImage } from "@/ai/flows/extract-text-from-image";
 import { saveScan, SaveScanInput } from "@/ai/flows/save-scan";
-import { Loader2, CheckCircle, XCircle, Camera, Save, ScanLine, Download, MoreHorizontal } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Camera, Save, ScanLine, Download, MoreHorizontal, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { doc, getDocs, updateDoc, collection, query, where, Timestamp, onSnapshot, orderBy } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
@@ -19,6 +19,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import * as XLSX from "xlsx";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
 
 
 interface EditableProduct {
@@ -42,6 +51,8 @@ export default function ScanPage() {
   const [scanHistory, setScanHistory] = useState<ScanRecord[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [editingScanRecord, setEditingScanRecord] = useState<EditableProduct | null>(null);
+  const [scanHistoryHeaders, setScanHistoryHeaders] = useState<string[]>([]);
+  const [visibleScanHistoryHeaders, setVisibleScanHistoryHeaders] = useState<Set<string>>(new Set());
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -97,6 +108,21 @@ export default function ScanPage() {
             history.push({ firebaseId: doc.id, ...doc.data() } as ScanRecord);
         });
         setScanHistory(history);
+        
+        if(history.length > 0) {
+            const headers = Array.from(history.reduce((acc, curr) => {
+                Object.keys(curr).forEach(key => acc.add(key));
+                return acc;
+            }, new Set<string>()));
+            
+            const filteredHeaders = headers.filter(key => key !== 'firebaseId' && key !== 'scannedAt' && key !== 'scannedBy');
+            setScanHistoryHeaders(filteredHeaders);
+
+            if (visibleScanHistoryHeaders.size === 0 && filteredHeaders.length > 0) { 
+                setVisibleScanHistoryHeaders(new Set(filteredHeaders));
+            }
+        }
+
         setIsHistoryLoading(false);
     }, (error) => {
         console.error("Error fetching scan history: ", error);
@@ -302,6 +328,22 @@ export default function ScanPage() {
     setEditingScanRecord({ ...record });
   };
 
+  const handleColumnVisibilityChange = (header: string) => {
+    setVisibleScanHistoryHeaders(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(header)) {
+            newSet.delete(header);
+        } else {
+            newSet.add(header);
+        }
+        return newSet;
+    });
+  };
+
+  const displayedHistoryHeaders = React.useMemo(() => {
+    return scanHistoryHeaders.filter(h => visibleScanHistoryHeaders.has(h));
+  }, [scanHistoryHeaders, visibleScanHistoryHeaders]);
+
 
 
   return (
@@ -398,21 +440,43 @@ export default function ScanPage() {
                 <CardTitle>Historial de Escaneos</CardTitle>
                 <CardDescription>Aquí se muestran los escaneos registrados.</CardDescription>
             </div>
-            <Button onClick={handleExportHistory} size="sm" variant="outline" className="h-8 gap-1">
-                <Download className="h-3.5 w-3.5" />
-                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                    Exportar
-                </span>
-            </Button>
+            <div className="flex items-center gap-2">
+                <Button onClick={handleExportHistory} size="sm" variant="outline" className="h-8 gap-1">
+                    <Download className="h-3.5 w-3.5" />
+                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                        Exportar
+                    </span>
+                </Button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-8 w-8">
+                        <Settings className="h-4 w-4" />
+                        <span className="sr-only">Configurar Columnas</span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Columnas Visibles</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {scanHistoryHeaders.map(header => (
+                        <DropdownMenuCheckboxItem
+                            key={header}
+                            checked={visibleScanHistoryHeaders.has(header)}
+                            onSelect={(e) => e.preventDefault()}
+                            onCheckedChange={() => handleColumnVisibilityChange(header)}
+                        >
+                            {header.charAt(0).toUpperCase() + header.slice(1)}
+                        </DropdownMenuCheckboxItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
         </CardHeader>
         <CardContent>
             <ScrollArea className="h-[600px]">
             <Table>
                 <TableHeader>
                 <TableRow>
-                    <TableHead>Codbien</TableHead>
-                    <TableHead>Descripción</TableHead>
-                    <TableHead>Responsable</TableHead>
+                    {displayedHistoryHeaders.map(header => <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>)}
                     <TableHead>Fecha Escaneo</TableHead>
                     <TableHead>Usuario</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
@@ -421,22 +485,24 @@ export default function ScanPage() {
                 <TableBody>
                 {isHistoryLoading ? (
                     <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={displayedHistoryHeaders.length + 3} className="h-24 text-center">
                         <Loader2 className="mx-auto h-8 w-8 animate-spin" />
                     </TableCell>
                     </TableRow>
                 ) : scanHistory.length === 0 ? (
                     <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={displayedHistoryHeaders.length + 3} className="h-24 text-center">
                         No hay registros de escaneo.
                     </TableCell>
                     </TableRow>
                 ) : (
                     scanHistory.map((scan) => (
                     <TableRow key={scan.firebaseId}>
-                        <TableCell className="font-medium">{scan.Codbien || 'N/A'}</TableCell>
-                        <TableCell>{scan.Descrip || scan.Descripcion || 'N/A'}</TableCell>
-                        <TableCell>{scan.Responsabl || 'N/A'}</TableCell>
+                        {displayedHistoryHeaders.map(header => (
+                            <TableCell key={header}>
+                               {scan[header]}
+                            </TableCell>
+                        ))}
                         <TableCell>{scan.scannedAt.toDate().toLocaleString('es-ES')}</TableCell>
                         <TableCell>{scan.scannedBy}</TableCell>
                         <TableCell className="text-right">

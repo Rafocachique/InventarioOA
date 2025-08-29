@@ -94,6 +94,8 @@ export default function DataManagementPage() {
   const [uploadFile, setUploadFile] = React.useState<File | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [deletePassword, setDeletePassword] = React.useState("");
+  const [productToDelete, setProductToDelete] = React.useState<Product | null>(null);
+
 
   const { toast } = useToast();
 
@@ -361,6 +363,28 @@ export default function DataManagementPage() {
     setEditingProduct(product);
   }
 
+  const handleDeleteProduct = async () => {
+    if (!productToDelete || !productToDelete.firebaseId) return;
+
+    try {
+        await deleteDoc(doc(db, "products", productToDelete.firebaseId));
+        toast({
+            title: "Producto Eliminado",
+            description: `El producto ${productToDelete.name || productToDelete.id} ha sido eliminado.`,
+        });
+        setProductToDelete(null);
+        fetchProducts();
+    } catch (error) {
+        console.error("Error deleting product: ", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "No se pudo eliminar el producto.",
+        });
+    }
+  };
+
+
   const handleSaveEdit = async () => {
     if (!editingProduct || !editingProduct.firebaseId) return;
 
@@ -619,7 +643,7 @@ export default function DataManagementPage() {
                             <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                                 <DropdownMenuItem onSelect={() => handleEdit(product)}>Editar</DropdownMenuItem>
-                                <DropdownMenuItem>Eliminar</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => setProductToDelete(product)}>Eliminar</DropdownMenuItem>
                             </DropdownMenuContent>
                             </DropdownMenu>
                         </div>
@@ -704,7 +728,24 @@ export default function DataManagementPage() {
           </DialogContent>
         </Dialog>
       )}
+
+      {productToDelete && (
+          <AlertDialog open={!!productToDelete} onOpenChange={() => setProductToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>¿Está seguro de que desea eliminar este producto?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta acción no se puede deshacer. Se eliminará permanentemente el producto
+                        <span className="font-bold"> {productToDelete.name || productToDelete.id}</span>.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteProduct}>Confirmar</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+      )}
     </>
   );
-
     
