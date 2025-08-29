@@ -10,9 +10,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { scanAndVerifyData, ScanAndVerifyDataOutput } from "@/ai/flows/scan-and-verify-data";
 import { extractTextFromImage } from "@/ai/flows/extract-text-from-image";
 import { saveScan, SaveScanInput } from "@/ai/flows/save-scan";
-import { Loader2, CheckCircle, XCircle, Camera, Save, ScanLine, Download, MoreHorizontal, Trash2 } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Camera, Save, ScanLine, Download, MoreHorizontal } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { doc, getDocs, updateDoc, collection, query, where, getDoc, writeBatch, Timestamp, onSnapshot, orderBy } from "firebase/firestore";
+import { doc, getDocs, updateDoc, collection, query, where, Timestamp, onSnapshot, orderBy } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -255,14 +255,7 @@ export default function ScanPage() {
 
     setIsLoading(true);
     try {
-        const productCollectionRef = collection(db, "products");
-        const q = query(productCollectionRef, where("Codbien", "==", productToSave.Codbien));
-        const querySnapshot = await getDocs(q);
-
-        if (querySnapshot.empty) {
-            throw new Error("No se encontró el producto original para actualizarlo.");
-        }
-        const productDocRef = querySnapshot.docs[0].ref;
+        const productDocRef = doc(db, "products", productToSave.firebaseId);
 
         const { firebaseId, ...productData } = productToSave;
         await updateDoc(productDocRef, productData);
@@ -305,21 +298,8 @@ export default function ScanPage() {
       XLSX.writeFile(workbook, "historial_escaneos.xlsx");
   };
 
-  const handleEditRecord = (record: ScanRecord) => {
-    // We need to fetch the original product firebaseId to allow updates
-    const getOriginalProduct = async () => {
-        const productsRef = collection(db, "products");
-        // Assuming Codbien is the unique identifier to find the original product
-        const q = query(productsRef, where("Codbien", "==", record.Codbien));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-            const productDoc = querySnapshot.docs[0];
-            setEditingScanRecord({ firebaseId: productDoc.id, ...record });
-        } else {
-            toast({ variant: "destructive", title: "Error", description: "No se pudo encontrar el producto original para editarlo." });
-        }
-    };
-    getOriginalProduct();
+  const handleEditRecord = async (record: ScanRecord) => {
+    setEditingScanRecord({ ...record });
   };
 
 
@@ -430,8 +410,10 @@ export default function ScanPage() {
             <Table>
                 <TableHeader>
                 <TableRow>
-                    <TableHead>Producto</TableHead>
-                    <TableHead>Fecha</TableHead>
+                    <TableHead>Codbien</TableHead>
+                    <TableHead>Descripción</TableHead>
+                    <TableHead>Responsable</TableHead>
+                    <TableHead>Fecha Escaneo</TableHead>
                     <TableHead>Usuario</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -439,20 +421,22 @@ export default function ScanPage() {
                 <TableBody>
                 {isHistoryLoading ? (
                     <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center">
                         <Loader2 className="mx-auto h-8 w-8 animate-spin" />
                     </TableCell>
                     </TableRow>
                 ) : scanHistory.length === 0 ? (
                     <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center">
                         No hay registros de escaneo.
                     </TableCell>
                     </TableRow>
                 ) : (
                     scanHistory.map((scan) => (
                     <TableRow key={scan.firebaseId}>
-                        <TableCell className="font-medium">{scan.Descripcion || scan.Codbien || 'N/A'}</TableCell>
+                        <TableCell className="font-medium">{scan.Codbien || 'N/A'}</TableCell>
+                        <TableCell>{scan.Descrip || scan.Descripcion || 'N/A'}</TableCell>
+                        <TableCell>{scan.Responsabl || 'N/A'}</TableCell>
                         <TableCell>{scan.scannedAt.toDate().toLocaleString('es-ES')}</TableCell>
                         <TableCell>{scan.scannedBy}</TableCell>
                         <TableCell className="text-right">
@@ -506,4 +490,3 @@ export default function ScanPage() {
     </div>
   );
 }
-
