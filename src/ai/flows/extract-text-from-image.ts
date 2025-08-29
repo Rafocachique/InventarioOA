@@ -38,7 +38,7 @@ const extractTextFromImageFlow = ai.defineFlow(
   async (input) => {
     const llmResponse = await ai.generate({
       prompt: [
-        { text: 'Extract all text content from the following image. Focus on identifiers, codes, or numbers. Respond only with the extracted text, with no extra formatting or labels.' },
+        { text: 'Extract all text content from the following image. Focus on identifiers, codes, or numbers. If you find a code with a label (e.g., "Pat: 12345" or "ID: ABC-987"), return only the code itself ("12345" or "ABC-987"). Respond only with the extracted code, with no extra formatting or labels.' },
         { media: { url: input.photoDataUri } },
       ],
       model: 'googleai/gemini-1.5-flash-latest',
