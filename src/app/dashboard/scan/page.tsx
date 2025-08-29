@@ -99,21 +99,10 @@ export default function ScanPage() {
       setResult(response);
 
       if (response.isValid && response.relatedInformation) {
-        const productsRef = collection(db, "products");
-        const scannedId = response.relatedInformation.id;
-        // Ensure we search for both string and numeric types
-        const q = query(productsRef, where("id", "in", [String(scannedId), Number(scannedId)].filter(v => !isNaN(Number(v)))));
-
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-          const docSnapshot = querySnapshot.docs[0];
-          setEditableProduct({ firebaseId: docSnapshot.id, ...docSnapshot.data() });
+          // El firebaseId ahora viene directamente en la respuesta.
+          setEditableProduct(response.relatedInformation as EditableProduct);
           setIsVerifying(false);
           return true; // Match found
-        } else {
-          setError("Se encontró una coincidencia pero no se pudo recuperar el documento de la base de datos para editar.");
-        }
       }
     } catch (err) {
       setError("Ocurrió un error durante el proceso de verificación.");
@@ -133,6 +122,7 @@ export default function ScanPage() {
     const individualCodes = codes.split(/\s+/).filter(Boolean); // Split by whitespace and remove empty strings
 
     for (const code of individualCodes) {
+      toast({ title: `Intentando con el código: ${code}`});
       const found = await performVerification(code);
       if (found) {
         setIsLoading(false);
@@ -174,6 +164,7 @@ export default function ScanPage() {
       if (!extractedText || extractedText.trim() === "") {
         setError("No se pudo extraer texto de la imagen. Intente de nuevo con una imagen más clara.");
         setIsLoading(false);
+        setResult({ isValid: false });
         return;
       }
       
@@ -270,8 +261,8 @@ export default function ScanPage() {
                     <div className="space-y-4">
                         <Label htmlFor="manual-code">Código del Producto</Label>
                         <Input id="manual-code" placeholder="Ingrese el código a verificar" value={manualCode} onChange={(e) => setManualCode(e.target.value)} />
-                        <Button onClick={handleManualVerify} className="w-full" disabled={isLoading}>
-                             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ScanLine className="mr-2 h-4 w-4" />}
+                        <Button onClick={handleManualVerify} className="w-full" disabled={isLoading || isVerifying}>
+                             {isLoading || isVerifying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ScanLine className="mr-2 h-4 w-4" />}
                              Verificar Código
                         </Button>
                     </div>
@@ -290,17 +281,12 @@ export default function ScanPage() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           )}
-          {error && !isLoading && !editableProduct && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-          {result && !isLoading && !editableProduct && (
+          {error && !isLoading && !isVerifying && !editableProduct && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+          
+          {result && !isLoading && !isVerifying && !editableProduct && (
             <div>
-              {result.isValid ? (
-                <Alert className="border-green-500 text-green-500">
-                  <CheckCircle className="h-4 w-4 !text-green-500" />
-                  <AlertTitle>Verificación Exitosa</AlertTitle>
-                  <AlertDescription>El producto se encuentra en la base de datos.</AlertDescription>
-                </Alert>
-              ) : (
-                <Alert variant="destructive">
+              {!result.isValid && (
+                 <Alert variant="destructive">
                   <XCircle className="h-4 w-4" />
                   <AlertTitle>Verificación Fallida</AlertTitle>
                   <AlertDescription>El producto no se encontró o el código es inválido.</AlertDescription>
@@ -308,6 +294,7 @@ export default function ScanPage() {
               )}
             </div>
           )}
+
           {editableProduct && !isVerifying &&(
              <Alert className="border-green-500 text-green-500 mb-4">
                 <CheckCircle className="h-4 w-4 !text-green-500" />

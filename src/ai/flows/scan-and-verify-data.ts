@@ -39,7 +39,7 @@ const scanAndVerifyDataFlow = ai.defineFlow(
     const productsRef = collection(db, "products");
     
     // Intenta convertir a número si es posible, si no, usa el string
-    const scannedNumber = /^\d+$/.test(scannedData) ? parseInt(scannedData, 10) : null;
+    const scannedNumber = isNaN(Number(scannedData)) ? null : Number(scannedData);
 
     let q;
     // Si es un número válido, creamos una consulta que busque tanto el número como el string
@@ -57,12 +57,14 @@ const scanAndVerifyDataFlow = ai.defineFlow(
         isValid: false,
       };
     } else {
-      const productData = querySnapshot.docs[0].data() as DocumentData;
-      // El firebaseId no es un campo del documento, es el ID del doc.
-      // Se obtendrá en el frontend para la actualización.
+      const doc = querySnapshot.docs[0];
+      const productData = doc.data() as DocumentData;
       return {
         isValid: true,
-        relatedInformation: productData,
+        relatedInformation: {
+          ...productData,
+          firebaseId: doc.id, // Devolver el ID del documento de Firebase
+        },
       };
     }
   }
