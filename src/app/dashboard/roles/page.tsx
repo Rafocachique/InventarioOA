@@ -149,22 +149,26 @@ export default function RolesPage() {
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
+  const handleDeleteUser = async (userToDelete: User) => {
       try {
-          // This is a placeholder, you'd need a backend function to properly delete a user
-          // from Firebase Auth as it's a privileged operation.
-          await deleteDoc(doc(db, "users", userId));
+          // This is a privileged operation and would typically be handled by a backend function
+          // For this app, we'll call it from the client, which requires the user to be recently signed in.
+          // Since we can't reauthenticate easily here, we'll just show a message.
+          
+          await deleteDoc(doc(db, "users", userToDelete.id));
+
           toast({
               title: "Usuario Eliminado de Firestore",
-              description: "El usuario ha sido eliminado de la base de datos. Aún necesita ser eliminado de Firebase Authentication.",
+              description: `Se eliminó a ${userToDelete.name} de la lista. Para completar la eliminación, borre el usuario de Firebase Authentication.`,
           });
+          
           fetchUsers();
       } catch (error) {
           console.error("Error deleting user: ", error);
           toast({
               variant: "destructive",
               title: "Error",
-              description: "No se pudo eliminar el usuario de Firestore.",
+              description: "No se pudo eliminar el usuario de Firestore. La eliminación de la autenticación debe hacerse por separado.",
           });
       }
   }
@@ -232,7 +236,7 @@ export default function RolesPage() {
                             Cambiar Rol
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-500" onSelect={() => handleDeleteUser(user.id)}>Eliminar Usuario</DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-500" onSelect={() => handleDeleteUser(user)}>Eliminar Usuario</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -315,4 +319,3 @@ export default function RolesPage() {
       )}
     </>
   );
-}
