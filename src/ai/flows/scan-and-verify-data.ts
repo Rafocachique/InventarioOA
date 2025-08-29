@@ -11,7 +11,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, DocumentData } from 'firebase/firestore';
+import { collection, getDocs, DocumentData } from 'firebase/firestore';
 
 
 const ScanAndVerifyDataInputSchema = z.object({
@@ -37,45 +37,44 @@ const scanAndVerifyDataFlow = ai.defineFlow(
   },
   async ({ scannedData }) => {
     const productsRef = collection(db, "products");
+    const querySnapshot = await getDocs(productsRef);
     
-    // Intenta convertir a número si es posible, si no, usa el string
     const scannedValue = scannedData.trim();
     const scannedNumber = isNaN(Number(scannedValue)) ? null : Number(scannedValue);
-    
-    const valuesToSearch = [scannedValue];
-    if (scannedNumber !== null && String(scannedNumber) !== scannedValue) {
-        valuesToSearch.push(scannedNumber);
-    }
-    
-    const idQuery = query(productsRef, where("id", "in", valuesToSearch));
-    const codbienQuery = query(productsRef, where("Codbien", "in", valuesToSearch));
 
-    const [idSnapshot, codbienSnapshot] = await Promise.all([
-        getDocs(idQuery),
-        getDocs(codbienQuery)
-    ]);
-
-    let foundDoc: DocumentData | null = null;
-    
-    if (!idSnapshot.empty) {
-        foundDoc = idSnapshot.docs[0];
-    } else if (!codbienSnapshot.empty) {
-        foundDoc = codbienSnapshot.docs[0];
+    for (const doc of querySnapshot.docs) {
+        const productData = doc.data() as DocumentData;
+        
+        for (const key in productData) {
+            const fieldValue = productData[key];
+            const fieldValueStr = String(fieldValue);
+            
+            // Comprobar coincidencia exacta como string
+            if (fieldValueStr === scannedValue) {
+                return {
+                    isValid: true,
+                    relatedInformation: {
+                        ...productData,
+                        firebaseId: doc.id,
+                    },
+                };
+            }
+            // Comprobar coincidencia exacta como número si aplica
+            if (scannedNumber !== null && typeof fieldValue === 'number' && fieldValue === scannedNumber) {
+                 return {
+                    isValid: true,
+                    relatedInformation: {
+                        ...productData,
+                        firebaseId: doc.id,
+                    },
+                };
+            }
+        }
     }
 
-    if (foundDoc) {
-        const productData = foundDoc.data() as DocumentData;
-        return {
-            isValid: true,
-            relatedInformation: {
-            ...productData,
-            firebaseId: foundDoc.id, // Devolver el ID del documento de Firebase
-            },
-        };
-    } else {
-        return {
-            isValid: false,
-        };
-    }
+    // Si no se encuentra ninguna coincidencia después de revisar todos los documentos y campos
+    return {
+        isValid: false,
+    };
   }
 );
