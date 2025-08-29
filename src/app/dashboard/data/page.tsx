@@ -14,6 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings,
+  Download,
+  Trash2,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -44,12 +46,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -58,16 +54,28 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Image from "next/image";
-import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, writeBatch } from "firebase/firestore";
+import { db, auth } from "@/lib/firebase";
+import { collection, getDocs, doc, updateDoc, writeBatch, deleteDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
+import { EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 
 interface Product {
   id: string;
@@ -87,6 +95,9 @@ export default function DataManagementPage() {
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = React.useState(false);
   const [uploadFile, setUploadFile] = React.useState<File | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [deletePassword, setDeletePassword] = React.useState("");
+
   const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -234,6 +245,101 @@ export default function DataManagementPage() {
     };
     reader.readAsArrayBuffer(uploadFile);
   };
+  
+  const handleDownloadExcel = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "products"));
+        const allProducts = querySnapshot.docs.map(doc => {
+            const { firebaseId, ...data } = doc.data(); // Exclude firebaseId
+            return data;
+        });
+
+        if (allProducts.length === 0) {
+            toast({
+                title: "No hay datos",
+                description: "No hay productos en la base de datos para exportar.",
+            });
+            return;
+        }
+
+        const worksheet = XLSX.utils.json_to_sheet(allProducts);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Productos");
+        XLSX.writeFile(workbook, "productos.xlsx");
+      } catch (error) {
+          console.error("Error downloading excel: ", error);
+          toast({
+              variant: "destructive",
+              title: "Error de Descarga",
+              description: "No se pudieron descargar los datos.",
+          });
+      }
+  };
+
+  const handleDeleteAllData = async () => {
+    const user = auth.currentUser;
+    if (!user || !user.email) {
+      toast({
+        variant: "destructive",
+        title: "Error de Autenticación",
+        description: "No se pudo verificar el usuario. Por favor, inicie sesión de nuevo.",
+      });
+      return;
+    }
+     if (!deletePassword) {
+      toast({
+        variant: "destructive",
+        title: "Contraseña Requerida",
+        description: "Debe ingresar su contraseña para confirmar.",
+      });
+      return;
+    }
+
+
+    try {
+      // Re-authenticate user to confirm their identity
+      const credential = EmailAuthProvider.credential(user.email, deletePassword);
+      await reauthenticateWithCredential(user, credential);
+      
+      // If re-authentication is successful, proceed with deletion
+      toast({
+        title: "Eliminando datos...",
+        description: "Este proceso puede tardar unos momentos.",
+      });
+
+      const productsRef = collection(db, "products");
+      const querySnapshot = await getDocs(productsRef);
+      const batch = writeBatch(db);
+      
+      querySnapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+      
+      await batch.commit();
+
+      toast({
+        title: "Eliminación Completa",
+        description: "Todos los productos han sido eliminados de la base de datos.",
+      });
+
+      fetchProducts(); // Refresh the table
+      setIsDeleteDialogOpen(false);
+      setDeletePassword("");
+
+    } catch (error: any) {
+        let description = "Ocurrió un error inesperado.";
+        if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+            description = "La contraseña ingresada es incorrecta. Por favor, inténtelo de nuevo.";
+        }
+        console.error("Error deleting all data:", error);
+        toast({
+            variant: "destructive",
+            title: "Error de Eliminación",
+            description: description,
+        });
+    }
+};
+
 
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
@@ -303,240 +409,263 @@ export default function DataManagementPage() {
 
   return (
     <>
-      <Tabs defaultValue="all">
-        <div className="flex items-center gap-2">
-          <TabsList>
-            <TabsTrigger value="all">Todo</TabsTrigger>
-            <TabsTrigger value="en-stock">En Stock</TabsTrigger>
-            <TabsTrigger value="bajo-stock">Bajo Stock</TabsTrigger>
-            <TabsTrigger value="agotado">Agotado</TabsTrigger>
-          </TabsList>
-          <div className="ml-auto flex items-center gap-2">
+      <div className="flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2">
             <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
-              <DialogTrigger asChild>
+            <DialogTrigger asChild>
                 <Button size="sm" className="h-8 gap-1" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
-                  <Upload className="h-3.5 w-3.5" />
-                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                <Upload className="h-3.5 w-3.5" />
+                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                     Cargar Datos
-                  </span>
+                </span>
                 </Button>
-              </DialogTrigger>
-              <DialogContent>
+            </DialogTrigger>
+            <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Carga de Datos desde Excel</DialogTitle>
-                  <DialogDescription>
+                <DialogTitle>Carga de Datos desde Excel</DialogTitle>
+                <DialogDescription>
                     Seleccione un archivo .xlsx o .xls para cargar los datos de sus productos en Firebase. La primera hoja del archivo será procesada.
-                  </DialogDescription>
+                </DialogDescription>
                 </DialogHeader>
                 {isUploading ? (
-                  <div className="flex flex-col gap-4 py-4">
+                <div className="flex flex-col gap-4 py-4">
                     <p>Procesando y guardando en Firebase...</p>
                     <Progress value={progress} />
                     <p className="text-center text-sm text-muted-foreground">{progress}% completado</p>
-                  </div>
+                </div>
                 ) : (
-                  <div className="grid gap-4 py-4">
+                <div className="grid gap-4 py-4">
                     <Label htmlFor="excel-file">Archivo de Excel</Label>
                     <Input id="excel-file" type="file" onChange={handleFileUpload} accept=".xlsx, .xls" />
                     {uploadFile && <p className="text-sm text-muted-foreground">Archivo seleccionado: {uploadFile.name}</p>}
-                  </div>
+                </div>
                 )}
                 <DialogFooter>
-                  {!isUploading && (
+                {!isUploading && (
                     <>
-                      <Button variant="outline" onClick={() => { setIsUploadDialogOpen(false); setUploadFile(null); }}>Cancelar</Button>
-                      <Button onClick={handleUpload} disabled={!uploadFile}>Cargar y Procesar</Button>
+                    <Button variant="outline" onClick={() => { setIsUploadDialogOpen(false); setUploadFile(null); }}>Cancelar</Button>
+                    <Button onClick={handleUpload} disabled={!uploadFile}>Cargar y Procesar</Button>
                     </>
-                  )}
+                )}
                 </DialogFooter>
-              </DialogContent>
+            </DialogContent>
             </Dialog>
-             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8">
-                  <Settings className="h-4 w-4" />
-                  <span className="sr-only">Configurar Columnas</span>
+            <Button size="sm" variant="outline" className="h-8 gap-1" onClick={handleDownloadExcel}>
+                <Download className="h-3.5 w-3.5" />
+                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                    Descargar
+                </span>
+            </Button>
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="destructive" className="h-8 gap-1">
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                    Eliminar Todo
+                  </span>
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta acción es irreversible y eliminará **todos** los productos de la base de datos.
+                    Para confirmar, por favor ingrese su contraseña de administrador.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                 <div className="grid gap-4 py-4">
+                    <Label htmlFor="delete-password">Contraseña</Label>
+                    <Input id="delete-password" type="password" value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)} placeholder="••••••••" />
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setDeletePassword("")}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteAllData} disabled={!deletePassword}>Confirmar y Eliminar Todo</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-8 w-8">
+                <Settings className="h-4 w-4" />
+                <span className="sr-only">Configurar Columnas</span>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Columnas Visibles</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {allHeaders.map(header => (
-                  <DropdownMenuCheckboxItem
+                <DropdownMenuCheckboxItem
                     key={header}
                     checked={visibleHeaders.has(header)}
                     onSelect={(e) => e.preventDefault()}
                     onCheckedChange={() => handleColumnVisibilityChange(header)}
-                  >
+                >
                     {header.charAt(0).toUpperCase() + header.slice(1)}
-                  </DropdownMenuCheckboxItem>
+                </DropdownMenuCheckboxItem>
                 ))}
-              </DropdownMenuContent>
+            </DropdownMenuContent>
             </DropdownMenu>
-          </div>
         </div>
-        <TabsContent value="all">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                  <div>
-                    <CardTitle>Productos</CardTitle>
-                    <CardDescription>
-                        Gestiona tus productos y visualiza su inventario.
-                    </CardDescription>
-                  </div>
-                  <div className="relative w-full max-w-sm">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        type="search" 
-                        placeholder="Buscar productos..." 
-                        className="pl-8 sm:w-[300px]" 
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                  </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="w-full whitespace-nowrap">
-                <Table>
-                  <TableHeader>
+      </div>
+      <Card className="mt-4">
+        <CardHeader>
+            <div className="flex justify-between items-center">
+                <div>
+                <CardTitle>Productos</CardTitle>
+                <CardDescription>
+                    Gestiona tus productos y visualiza su inventario.
+                </CardDescription>
+                </div>
+                <div className="relative w-full max-w-sm">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                    type="search" 
+                    placeholder="Buscar productos..." 
+                    className="pl-8 sm:w-[300px]" 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+            </div>
+        </CardHeader>
+        <CardContent>
+            <ScrollArea className="w-full whitespace-nowrap">
+            <Table>
+                <TableHeader>
+                <TableRow>
+                    {displayedHeaders.map(header => <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>)}
+                    <TableHead>
+                    <span className="sr-only">Acciones</span>
+                    </TableHead>
+                </TableRow>
+                </TableHeader>
+                <TableBody>
+                {isLoading ? (
                     <TableRow>
-                      {displayedHeaders.map(header => <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>)}
-                      <TableHead>
-                        <span className="sr-only">Acciones</span>
-                      </TableHead>
+                    <TableCell colSpan={displayedHeaders.length + 1} className="h-24 text-center">
+                        <Loader2 className="mx-auto h-8 w-8 animate-spin" />
+                    </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={displayedHeaders.length + 1} className="h-24 text-center">
-                          <Loader2 className="mx-auto h-8 w-8 animate-spin" />
+                ) : paginatedProducts.length === 0 ? (
+                    <TableRow>
+                    <TableCell colSpan={displayedHeaders.length + 1} className="h-24 text-center">
+                        {searchTerm ? "No se encontraron productos con ese criterio." : "No hay productos. Cargue datos desde Excel."}
+                    </TableCell>
+                    </TableRow>
+                ) : (
+                    paginatedProducts.map((product) => (
+                    <TableRow key={product.firebaseId}>
+                        {displayedHeaders.map(header => (
+                        <TableCell key={header}>
+                            {header === 'status' ? (
+                            <Badge variant={product.status === 'Agotado' ? 'destructive' : product.status === 'Bajo Stock' ? 'secondary' : 'default'}
+                                style={product.status === 'En Stock' ? { backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' } : {}}>
+                                {product.status}
+                            </Badge>
+                            ) : (
+                            product[header]
+                            )}
                         </TableCell>
-                      </TableRow>
-                    ) : paginatedProducts.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={displayedHeaders.length + 1} className="h-24 text-center">
-                          {searchTerm ? "No se encontraron productos con ese criterio." : "No hay productos. Cargue datos desde Excel."}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      paginatedProducts.map((product) => (
-                        <TableRow key={product.firebaseId}>
-                          {displayedHeaders.map(header => (
-                            <TableCell key={header}>
-                              {header === 'status' ? (
-                                <Badge variant={product.status === 'Agotado' ? 'destructive' : product.status === 'Bajo Stock' ? 'secondary' : 'default'}
-                                  style={product.status === 'En Stock' ? { backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' } : {}}>
-                                  {product.status}
-                                </Badge>
-                              ) : (
-                                product[header]
-                              )}
-                            </TableCell>
-                          ))}
-                          <TableCell>
-                            <div className="flex items-center justify-end gap-2">
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button variant="ghost" size="icon">
-                                    <QrCode className="h-4 w-4" />
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>Código QR para {product.name}</DialogTitle>
-                                    <DialogDescription>
-                                      Escanea este código para acceder a la información del producto.
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                  <div className="flex justify-center p-4">
-                                    <Image
-                                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${product.id}`}
-                                      alt={`Código QR para ${product.id}`}
-                                      width={200}
-                                      height={200}
-                                      data-ai-hint="qr code"
-                                    />
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
+                        ))}
+                        <TableCell>
+                        <div className="flex items-center justify-end gap-2">
+                            <Dialog>
+                            <DialogTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                <QrCode className="h-4 w-4" />
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                <DialogTitle>Código QR para {product.name}</DialogTitle>
+                                <DialogDescription>
+                                    Escanea este código para acceder a la información del producto.
+                                </DialogDescription>
+                                </DialogHeader>
+                                <div className="flex justify-center p-4">
+                                <Image
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${product.id}`}
+                                    alt={`Código QR para ${product.id}`}
+                                    width={200}
+                                    height={200}
+                                    data-ai-hint="qr code"
+                                />
+                                </div>
+                            </DialogContent>
+                            </Dialog>
 
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    aria-haspopup="true"
-                                    size="icon"
-                                    variant="ghost"
-                                  >
-                                    <MoreHorizontal className="h-4 w-4" />
-                                    <span className="sr-only">Menú</span>
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                  <DropdownMenuItem onSelect={() => handleEdit(product)}>Editar</DropdownMenuItem>
-                                  <DropdownMenuItem>Eliminar</DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-            </CardContent>
-            <CardFooter>
-              <div className="flex w-full items-center justify-between">
-                <div className="text-xs text-muted-foreground">
-                  Mostrando <strong>{paginatedProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-{(currentPage - 1) * itemsPerPage + paginatedProducts.length}</strong> de <strong>{filteredProducts.length}</strong> productos
+                            <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                aria-haspopup="true"
+                                size="icon"
+                                variant="ghost"
+                                >
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Menú</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                <DropdownMenuItem onSelect={() => handleEdit(product)}>Editar</DropdownMenuItem>
+                                <DropdownMenuItem>Eliminar</DropdownMenuItem>
+                            </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                        </TableCell>
+                    </TableRow>
+                    ))
+                )}
+                </TableBody>
+            </Table>
+            </ScrollArea>
+        </CardContent>
+        <CardFooter>
+            <div className="flex w-full items-center justify-between">
+            <div className="text-xs text-muted-foreground">
+                Mostrando <strong>{paginatedProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-{(currentPage - 1) * itemsPerPage + paginatedProducts.length}</strong> de <strong>{filteredProducts.length}</strong> productos
+            </div>
+            <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                    <Label htmlFor="items-per-page" className="text-xs">Filas por página</Label>
+                    <Select value={String(itemsPerPage)} onValueChange={(value) => setItemsPerPage(Number(value))}>
+                        <SelectTrigger id="items-per-page" className="h-8 w-[70px]">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent side="top">
+                            <SelectItem value="10">10</SelectItem>
+                            <SelectItem value="20">20</SelectItem>
+                            <SelectItem value="50">50</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor="items-per-page" className="text-xs">Filas por página</Label>
-                      <Select value={String(itemsPerPage)} onValueChange={(value) => setItemsPerPage(Number(value))}>
-                          <SelectTrigger id="items-per-page" className="h-8 w-[70px]">
-                              <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent side="top">
-                              <SelectItem value="10">10</SelectItem>
-                              <SelectItem value="20">20</SelectItem>
-                              <SelectItem value="50">50</SelectItem>
-                          </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="text-xs font-semibold">Página {currentPage} de {totalPages}</div>
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                            disabled={currentPage === 1}
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                            <span className="sr-only">Página anterior</span>
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                            disabled={currentPage === totalPages}
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                            <span className="sr-only">Página siguiente</span>
-                        </Button>
-                    </div>
+                <div className="text-xs font-semibold">Página {currentPage} de {totalPages}</div>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                        <span className="sr-only">Página anterior</span>
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                    >
+                        <ChevronRight className="h-4 w-4" />
+                        <span className="sr-only">Página siguiente</span>
+                    </Button>
                 </div>
-              </div>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </div>
+            </div>
+        </CardFooter>
+        </Card>
 
       {editingProduct && (
         <Dialog open={!!editingProduct} onOpenChange={() => setEditingProduct(null)}>
@@ -567,3 +696,6 @@ export default function DataManagementPage() {
     </>
   );
 }
+
+
+    
