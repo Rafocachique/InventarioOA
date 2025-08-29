@@ -9,10 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { scanAndVerifyData, ScanAndVerifyDataOutput } from "@/ai/flows/scan-and-verify-data";
 import { extractTextFromImage } from "@/ai/flows/extract-text-from-image";
-import { Loader2, CheckCircle, XCircle, Camera, Save } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Camera, Save, ScanLine } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { doc, getDocs, updateDoc, collection, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 interface EditableProduct {
   firebaseId: string;
@@ -26,6 +28,7 @@ export default function ScanPage() {
   const [error, setError] = useState<string | null>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [editableProduct, setEditableProduct] = useState<EditableProduct | null>(null);
+  const [manualCode, setManualCode] = useState("");
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -82,11 +85,43 @@ export default function ScanPage() {
     };
   }, []);
 
+  const performVerification = async (code: string) => {
+      setIsVerifying(true);
+      setResult(null);
+      setError(null);
+      setEditableProduct(null);
+
+      try {
+        toast({ title: "Verificando...", description: `Buscando código: "${code}"` });
+        const response = await scanAndVerifyData({ scannedData: code });
+        setResult(response);
+
+        if (response.isValid && response.relatedInformation) {
+          const productsRef = collection(db, "products");
+          const scannedId = response.relatedInformation.id;
+          const q = query(productsRef, where("id", "in", [String(scannedId), Number(scannedId)]));
+          const querySnapshot = await getDocs(q);
+          
+          if (!querySnapshot.empty) {
+            const docSnapshot = querySnapshot.docs[0];
+            setEditableProduct({ firebaseId: docSnapshot.id, ...docSnapshot.data() });
+          } else {
+            setError("Se encontró una coincidencia pero no se pudo recuperar el documento de la base de datos para editar.");
+          }
+        }
+      } catch (err) {
+        setError("Ocurrió un error durante el proceso de verificación.");
+        console.error(err);
+      } finally {
+        setIsVerifying(false);
+        setIsLoading(false);
+      }
+  };
+
   const captureAndScan = async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
     setIsLoading(true);
-    setResult(null);
     setError(null);
     setEditableProduct(null);
 
@@ -114,37 +149,27 @@ export default function ScanPage() {
       }
       
       const trimmedText = extractedText.trim();
-      toast({ title: "Texto Extraído", description: `Verificando código: "${trimmedText}"` });
-      
-      setIsVerifying(true);
-      const response = await scanAndVerifyData({ scannedData: trimmedText });
-      setResult(response);
-
-      if (response.isValid && response.relatedInformation) {
-        // Now, find the document in Firestore to get its firebaseId for editing
-        const productsRef = collection(db, "products");
-        const scannedId = response.relatedInformation.id;
-        
-        // Handle both string and number types for the ID
-        const q = query(productsRef, where("id", "in", [String(scannedId), Number(scannedId)]));
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-          const docSnapshot = querySnapshot.docs[0];
-          setEditableProduct({ firebaseId: docSnapshot.id, ...docSnapshot.data() });
-        } else {
-           setError("Se encontró una coincidencia pero no se pudo recuperar el documento de la base de datos para editar.");
-        }
-      }
+      await performVerification(trimmedText);
 
     } catch (err) {
       setError("Ocurrió un error durante el proceso de escaneo y verificación.");
       console.error(err);
-    } finally {
       setIsLoading(false);
-      setIsVerifying(false);
     }
   };
+
+  const handleManualVerify = async () => {
+      if (!manualCode.trim()) {
+        toast({
+            variant: "destructive",
+            title: "Código Vacío",
+            description: "Por favor, ingrese un código para verificar."
+        });
+        return;
+      }
+      setIsLoading(true);
+      await performVerification(manualCode.trim());
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!editableProduct) return;
@@ -184,33 +209,51 @@ export default function ScanPage() {
       <Card>
         <CardHeader>
           <CardTitle>Escanear y Verificar</CardTitle>
-          <CardDescription>Use la cámara para escanear un código de producto y verificarlo en la base de datos.</CardDescription>
+          <CardDescription>Use la cámara para escanear un código o ingréselo manualmente.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="aspect-video bg-card-foreground/10 rounded-lg flex items-center justify-center p-4">
-            {hasCameraPermission === null && (
-              <Loader2 className="h-16 w-16 text-muted-foreground animate-spin" />
-            )}
-            <video ref={videoRef} className={`w-full h-full object-cover rounded-md ${hasCameraPermission === null || hasCameraPermission === false ? 'hidden' : ''}`} autoPlay muted playsInline />
-            {hasCameraPermission === false && !error?.includes("Intentando") && ( // Don't show this if we are trying to fallback
-              <div className="text-center text-destructive">
-                <Camera className="h-16 w-16 mx-auto" />
-                <p className="mt-2">No se pudo acceder a la cámara.</p>
-                <p className="text-sm text-muted-foreground">{error}</p>
-              </div>
-            )}
-          </div>
-          <Button onClick={captureAndScan} className="w-full" disabled={isLoading || !hasCameraPermission} style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Camera className="mr-2 h-4 w-4" />}
-            {isVerifying ? "Verificando dato..." : (isLoading ? "Escaneando..." : "Escanear y Verificar")}
-          </Button>
-          <canvas ref={canvasRef} style={{ display: "none" }} />
+        <CardContent>
+            <Tabs defaultValue="camera">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="camera">Escanear con Cámara</TabsTrigger>
+                    <TabsTrigger value="manual">Ingreso Manual</TabsTrigger>
+                </TabsList>
+                <TabsContent value="camera" className="mt-4">
+                     <div className="aspect-video bg-card-foreground/10 rounded-lg flex items-center justify-center p-4">
+                        {hasCameraPermission === null && (
+                        <Loader2 className="h-16 w-16 text-muted-foreground animate-spin" />
+                        )}
+                        <video ref={videoRef} className={`w-full h-full object-cover rounded-md ${hasCameraPermission === null || hasCameraPermission === false ? 'hidden' : ''}`} autoPlay muted playsInline />
+                        {hasCameraPermission === false && !error?.includes("Intentando") && ( 
+                        <div className="text-center text-destructive">
+                            <Camera className="h-16 w-16 mx-auto" />
+                            <p className="mt-2">No se pudo acceder a la cámara.</p>
+                            <p className="text-sm text-muted-foreground">{error}</p>
+                        </div>
+                        )}
+                    </div>
+                    <Button onClick={captureAndScan} className="w-full mt-4" disabled={isLoading || !hasCameraPermission} style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Camera className="mr-2 h-4 w-4" />}
+                        {isVerifying ? "Verificando..." : (isLoading ? "Escaneando..." : "Escanear y Verificar")}
+                    </Button>
+                    <canvas ref={canvasRef} style={{ display: "none" }} />
+                </TabsContent>
+                <TabsContent value="manual" className="mt-4">
+                    <div className="space-y-4">
+                        <Label htmlFor="manual-code">Código del Producto</Label>
+                        <Input id="manual-code" placeholder="Ingrese el código a verificar" value={manualCode} onChange={(e) => setManualCode(e.target.value)} />
+                        <Button onClick={handleManualVerify} className="w-full" disabled={isLoading}>
+                             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ScanLine className="mr-2 h-4 w-4" />}
+                             Verificar Código
+                        </Button>
+                    </div>
+                </TabsContent>
+            </Tabs>
         </CardContent>
       </Card>
       <Card>
         <CardHeader>
           <CardTitle>Resultados de Verificación</CardTitle>
-          <CardDescription>Aquí se mostrará el resultado del escaneo y la información relacionada.</CardDescription>
+          <CardDescription>Aquí se mostrará el resultado y la información del producto.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {(isLoading || isVerifying) && (
@@ -269,3 +312,5 @@ export default function ScanPage() {
     </div>
   );
 }
+
+    
