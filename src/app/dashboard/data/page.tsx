@@ -13,6 +13,7 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  Settings,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
 import {
   Table,
@@ -60,6 +62,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import Image from "next/image";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, doc, updateDoc, writeBatch } from "firebase/firestore";
@@ -86,10 +89,11 @@ export default function DataManagementPage() {
   const [uploadFile, setUploadFile] = React.useState<File | null>(null);
   const { toast } = useToast();
 
-  // Pagination and search state
   const [searchTerm, setSearchTerm] = React.useState("");
   const [currentPage, setCurrentPage] = React.useState(1);
   const [itemsPerPage, setItemsPerPage] = React.useState(10);
+  const [allHeaders, setAllHeaders] = React.useState<string[]>([]);
+  const [visibleHeaders, setVisibleHeaders] = React.useState<Set<string>>(new Set());
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -97,6 +101,13 @@ export default function DataManagementPage() {
       const querySnapshot = await getDocs(collection(db, "products"));
       const productsData = querySnapshot.docs.map(doc => ({ firebaseId: doc.id, ...doc.data() } as Product));
       setProducts(productsData);
+
+      if (productsData.length > 0) {
+        const headers = Object.keys(productsData.reduce((acc, curr) => ({...acc, ...curr}), {}));
+        const filteredHeaders = headers.filter(key => key !== 'firebaseId');
+        setAllHeaders(filteredHeaders);
+        setVisibleHeaders(new Set(filteredHeaders));
+      }
     } catch (error) {
       console.error("Error fetching products: ", error);
       toast({
@@ -176,19 +187,16 @@ export default function DataManagementPage() {
 
         newProductsData.forEach((newProduct) => {
           if (!newProduct.id) {
-              // Si no hay ID, lo tratamos como nuevo pero registramos un aviso
               console.warn("Producto sin ID encontrado en el archivo Excel, será tratado como nuevo:", newProduct);
               const docRef = doc(collection(db, "products"));
               batch.set(docRef, newProduct);
               newCount++;
           } else if (existingProductsMap.has(newProduct.id)) {
-            // Product exists, update it
             const existing = existingProductsMap.get(newProduct.id)!;
             const docRef = doc(db, "products", existing.firebaseId);
             batch.update(docRef, newProduct);
             updatedCount++;
           } else {
-            // Product is new, add it
             const docRef = doc(collection(db, "products"));
             batch.set(docRef, newProduct);
             newCount++;
@@ -261,7 +269,7 @@ export default function DataManagementPage() {
   };
 
   const filteredProducts = React.useMemo(() => {
-    setCurrentPage(1); // Reset to first page on search
+    setCurrentPage(1);
     return products.filter(product =>
       Object.values(product).some(value =>
         String(value).toLowerCase().includes(searchTerm.toLowerCase())
@@ -275,22 +283,22 @@ export default function DataManagementPage() {
   }, [filteredProducts, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-
-  const tableHeaders = React.useMemo(() => {
-    if (products.length === 0) {
-      return ["id", "name", "status", "location", "quantity"];
-    }
-    const allKeys = products.reduce((keys, product) => {
-      Object.keys(product).forEach(key => {
-        if (!keys.includes(key) && key !== 'firebaseId') {
-          keys.push(key);
+  
+  const handleColumnVisibilityChange = (header: string) => {
+    setVisibleHeaders(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(header)) {
+            newSet.delete(header);
+        } else {
+            newSet.add(header);
         }
-      });
-      return keys;
-    }, [] as string[]);
-    const prioritized = ["id", "name", "status", "location", "quantity"];
-    return [...prioritized.filter(h => allKeys.includes(h)), ...allKeys.filter(h => !prioritized.includes(h))];
-  }, [products]);
+        return newSet;
+    });
+  };
+
+  const displayedHeaders = React.useMemo(() => {
+    return allHeaders.filter(h => visibleHeaders.has(h));
+  }, [allHeaders, visibleHeaders]);
 
 
   return (
@@ -343,6 +351,28 @@ export default function DataManagementPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+             <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-8 w-8">
+                  <Settings className="h-4 w-4" />
+                  <span className="sr-only">Configurar Columnas</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Columnas Visibles</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {allHeaders.map(header => (
+                  <DropdownMenuCheckboxItem
+                    key={header}
+                    checked={visibleHeaders.has(header)}
+                    onSelect={(e) => e.preventDefault()}
+                    onCheckedChange={() => handleColumnVisibilityChange(header)}
+                  >
+                    {header.charAt(0).toUpperCase() + header.slice(1)}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         <TabsContent value="all">
@@ -368,94 +398,96 @@ export default function DataManagementPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {tableHeaders.map(header => <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>)}
-                    <TableHead>
-                      <span className="sr-only">Acciones</span>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
+              <ScrollArea className="w-full whitespace-nowrap">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={tableHeaders.length + 1} className="h-24 text-center">
-                        <Loader2 className="mx-auto h-8 w-8 animate-spin" />
-                      </TableCell>
+                      {displayedHeaders.map(header => <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>)}
+                      <TableHead>
+                        <span className="sr-only">Acciones</span>
+                      </TableHead>
                     </TableRow>
-                  ) : paginatedProducts.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={tableHeaders.length + 1} className="h-24 text-center">
-                        {searchTerm ? "No se encontraron productos con ese criterio." : "No hay productos. Cargue datos desde Excel."}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginatedProducts.map((product) => (
-                      <TableRow key={product.firebaseId}>
-                        {tableHeaders.map(header => (
-                          <TableCell key={header}>
-                            {header === 'status' ? (
-                              <Badge variant={product.status === 'Agotado' ? 'destructive' : product.status === 'Bajo Stock' ? 'secondary' : 'default'}
-                                style={product.status === 'En Stock' ? { backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' } : {}}>
-                                {product.status}
-                              </Badge>
-                            ) : (
-                              product[header]
-                            )}
-                          </TableCell>
-                        ))}
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-2">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <QrCode className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Código QR para {product.name}</DialogTitle>
-                                  <DialogDescription>
-                                    Escanea este código para acceder a la información del producto.
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <div className="flex justify-center p-4">
-                                  <Image
-                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${product.id}`}
-                                    alt={`Código QR para ${product.id}`}
-                                    width={200}
-                                    height={200}
-                                    data-ai-hint="qr code"
-                                  />
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  aria-haspopup="true"
-                                  size="icon"
-                                  variant="ghost"
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Menú</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                <DropdownMenuItem onSelect={() => handleEdit(product)}>Editar</DropdownMenuItem>
-                                <DropdownMenuItem>Eliminar</DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={displayedHeaders.length + 1} className="h-24 text-center">
+                          <Loader2 className="mx-auto h-8 w-8 animate-spin" />
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : paginatedProducts.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={displayedHeaders.length + 1} className="h-24 text-center">
+                          {searchTerm ? "No se encontraron productos con ese criterio." : "No hay productos. Cargue datos desde Excel."}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      paginatedProducts.map((product) => (
+                        <TableRow key={product.firebaseId}>
+                          {displayedHeaders.map(header => (
+                            <TableCell key={header}>
+                              {header === 'status' ? (
+                                <Badge variant={product.status === 'Agotado' ? 'destructive' : product.status === 'Bajo Stock' ? 'secondary' : 'default'}
+                                  style={product.status === 'En Stock' ? { backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' } : {}}>
+                                  {product.status}
+                                </Badge>
+                              ) : (
+                                product[header]
+                              )}
+                            </TableCell>
+                          ))}
+                          <TableCell>
+                            <div className="flex items-center justify-end gap-2">
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <QrCode className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Código QR para {product.name}</DialogTitle>
+                                    <DialogDescription>
+                                      Escanea este código para acceder a la información del producto.
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="flex justify-center p-4">
+                                    <Image
+                                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${product.id}`}
+                                      alt={`Código QR para ${product.id}`}
+                                      width={200}
+                                      height={200}
+                                      data-ai-hint="qr code"
+                                    />
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    aria-haspopup="true"
+                                    size="icon"
+                                    variant="ghost"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">Menú</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                  <DropdownMenuItem onSelect={() => handleEdit(product)}>Editar</DropdownMenuItem>
+                                  <DropdownMenuItem>Eliminar</DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
             </CardContent>
             <CardFooter>
               <div className="flex w-full items-center justify-between">
@@ -535,5 +567,3 @@ export default function DataManagementPage() {
     </>
   );
 }
-
-    
