@@ -111,12 +111,23 @@ export default function DataManagementPage() {
       setProducts(productsData);
 
       if (productsData.length > 0) {
-        const headers = Object.keys(productsData.reduce((acc, curr) => ({...acc, ...curr}), {}));
+        // Combine all keys from all product objects to create a comprehensive set of headers
+        const headers = Array.from(productsData.reduce((acc, curr) => {
+            Object.keys(curr).forEach(key => acc.add(key));
+            return acc;
+        }, new Set<string>()));
+        
         const filteredHeaders = headers.filter(key => key !== 'firebaseId');
         setAllHeaders(filteredHeaders);
-        if (visibleHeaders.size === 0) { // Only set initially
+
+        // Initialize visible headers only once or if they haven't been set.
+        if (visibleHeaders.size === 0 && filteredHeaders.length > 0) { 
             setVisibleHeaders(new Set(filteredHeaders));
         }
+      } else {
+        // If no data, clear all headers
+        setAllHeaders([]);
+        setVisibleHeaders(new Set());
       }
     } catch (error) {
       console.error("Error fetching products: ", error);
@@ -178,7 +189,7 @@ export default function DataManagementPage() {
         querySnapshot.docs.forEach(doc => {
           const productData = doc.data() as Product;
           if (productData.id) {
-            existingProductsMap.set(productData.id, { firebaseId: doc.id, data: productData });
+            existingProductsMap.set(String(productData.id), { firebaseId: doc.id, data: productData });
           }
         });
 
@@ -196,10 +207,9 @@ export default function DataManagementPage() {
         };
 
         newProductsData.forEach((newProduct) => {
-          // Ensure 'id' is a string for consistent lookups
           const productId = String(newProduct.id);
 
-          if (!productId || productId === 'undefined') {
+          if (!newProduct.id || productId === 'undefined') {
               console.warn("Producto sin ID encontrado en el archivo Excel, será tratado como nuevo:", newProduct);
               const docRef = doc(collection(db, "products"));
               batch.set(docRef, newProduct);
@@ -232,7 +242,7 @@ export default function DataManagementPage() {
           setIsUploadDialogOpen(false);
           setUploadFile(null);
           // After upload, reset visible headers based on the new data
-          const headers = Object.keys(newProductsData[0] || {});
+          const headers = Object.keys(newProductsData.reduce((acc, curr) => ({...acc, ...curr}), {}));
           const filteredHeaders = headers.filter(key => key !== 'firebaseId');
           setAllHeaders(filteredHeaders)
           setVisibleHeaders(new Set(filteredHeaders));
@@ -258,7 +268,7 @@ export default function DataManagementPage() {
         const querySnapshot = await getDocs(collection(db, "products"));
         const allProducts = querySnapshot.docs.map(doc => {
             const data = doc.data();
-            delete data.firebaseId; // Exclude firebaseId
+            delete data.firebaseId; 
             return data;
         });
 
@@ -305,11 +315,9 @@ export default function DataManagementPage() {
 
 
     try {
-      // Re-authenticate user to confirm their identity
       const credential = EmailAuthProvider.credential(user.email, deletePassword);
       await reauthenticateWithCredential(user, credential);
       
-      // If re-authentication is successful, proceed with deletion
       toast({
         title: "Eliminando datos...",
         description: "Este proceso puede tardar unos momentos.",
@@ -330,7 +338,7 @@ export default function DataManagementPage() {
         description: "Todos los productos han sido eliminados de la base de datos.",
       });
 
-      fetchProducts(); // Refresh the table
+      fetchProducts(); 
       setIsDeleteDialogOpen(false);
       setDeletePassword("");
 
@@ -550,13 +558,13 @@ export default function DataManagementPage() {
                 <TableBody>
                 {isLoading ? (
                     <TableRow>
-                    <TableCell colSpan={displayedHeaders.length + 1} className="h-24 text-center">
+                    <TableCell colSpan={displayedHeaders.length + 2} className="h-24 text-center">
                         <Loader2 className="mx-auto h-8 w-8 animate-spin" />
                     </TableCell>
                     </TableRow>
                 ) : paginatedProducts.length === 0 ? (
                     <TableRow>
-                    <TableCell colSpan={displayedHeaders.length + 1} className="h-24 text-center">
+                    <TableCell colSpan={displayedHeaders.length + 2} className="h-24 text-center">
                         {searchTerm ? "No se encontraron productos con ese criterio." : "No hay productos. Cargue datos desde Excel."}
                     </TableCell>
                     </TableRow>
@@ -570,30 +578,32 @@ export default function DataManagementPage() {
                         ))}
                         <TableCell>
                         <div className="flex items-center justify-end gap-2">
-                            <Dialog>
-                            <DialogTrigger asChild>
-                                <Button variant="ghost" size="icon" disabled={!product.id}>
-                                <QrCode className="h-4 w-4" />
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                <DialogTitle>Código QR para {product.name}</DialogTitle>
-                                <DialogDescription>
-                                    Escanea este código para acceder a la información del producto.
-                                </DialogDescription>
-                                </DialogHeader>
-                                <div className="flex justify-center p-4">
-                                <Image
-                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${product.id}`}
-                                    alt={`Código QR para ${product.id}`}
-                                    width={200}
-                                    height={200}
-                                    data-ai-hint="qr code"
-                                />
-                                </div>
-                            </DialogContent>
-                            </Dialog>
+                            {product.id && 
+                              <Dialog>
+                              <DialogTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                  <QrCode className="h-4 w-4" />
+                                  </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                  <DialogHeader>
+                                  <DialogTitle>Código QR para {product.name || product.id}</DialogTitle>
+                                  <DialogDescription>
+                                      Escanea este código para acceder a la información del producto.
+                                  </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="flex justify-center p-4">
+                                  <Image
+                                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${product.id}`}
+                                      alt={`Código QR para ${product.id}`}
+                                      width={200}
+                                      height={200}
+                                      data-ai-hint="qr code"
+                                  />
+                                  </div>
+                              </DialogContent>
+                              </Dialog>
+                            }
 
                             <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -681,7 +691,7 @@ export default function DataManagementPage() {
                   <Input
                     id={key}
                     type={typeof editingProduct[key] === 'number' ? 'number' : 'text'}
-                    value={editingProduct[key]}
+                    value={editingProduct[key] ?? ''}
                     onChange={handleInputChange}
                     className="col-span-3" />
                 </div>
@@ -696,6 +706,5 @@ export default function DataManagementPage() {
       )}
     </>
   );
-}
 
     
