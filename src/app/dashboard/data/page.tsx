@@ -78,14 +78,11 @@ import * as XLSX from "xlsx";
 import { EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 
 interface Product {
-  id: string;
-  name: string;
-  quantity: number;
-  location: string;
-  status: string;
+  id?: string;
   firebaseId?: string;
-  [key: string]: any; // Allow any other columns
+  [key: string]: any;
 }
+
 
 export default function DataManagementPage() {
   const [products, setProducts] = React.useState<Product[]>([]);
@@ -117,7 +114,9 @@ export default function DataManagementPage() {
         const headers = Object.keys(productsData.reduce((acc, curr) => ({...acc, ...curr}), {}));
         const filteredHeaders = headers.filter(key => key !== 'firebaseId');
         setAllHeaders(filteredHeaders);
-        setVisibleHeaders(new Set(filteredHeaders));
+        if (visibleHeaders.size === 0) { // Only set initially
+            setVisibleHeaders(new Set(filteredHeaders));
+        }
       }
     } catch (error) {
       console.error("Error fetching products: ", error);
@@ -197,13 +196,16 @@ export default function DataManagementPage() {
         };
 
         newProductsData.forEach((newProduct) => {
-          if (!newProduct.id) {
+          // Ensure 'id' is a string for consistent lookups
+          const productId = String(newProduct.id);
+
+          if (!productId || productId === 'undefined') {
               console.warn("Producto sin ID encontrado en el archivo Excel, será tratado como nuevo:", newProduct);
               const docRef = doc(collection(db, "products"));
               batch.set(docRef, newProduct);
               newCount++;
-          } else if (existingProductsMap.has(newProduct.id)) {
-            const existing = existingProductsMap.get(newProduct.id)!;
+          } else if (existingProductsMap.has(productId)) {
+            const existing = existingProductsMap.get(productId)!;
             const docRef = doc(db, "products", existing.firebaseId);
             batch.update(docRef, newProduct);
             updatedCount++;
@@ -229,6 +231,10 @@ export default function DataManagementPage() {
           setIsUploading(false);
           setIsUploadDialogOpen(false);
           setUploadFile(null);
+          // After upload, reset visible headers based on the new data
+          const headers = Object.keys(newProductsData[0] || {});
+          const filteredHeaders = headers.filter(key => key !== 'firebaseId');
+          setVisibleHeaders(new Set(filteredHeaders));
           fetchProducts();
           setProgress(0);
         }, 1000);
@@ -250,7 +256,8 @@ export default function DataManagementPage() {
       try {
         const querySnapshot = await getDocs(collection(db, "products"));
         const allProducts = querySnapshot.docs.map(doc => {
-            const { firebaseId, ...data } = doc.data(); // Exclude firebaseId
+            const data = doc.data();
+            delete data.firebaseId; // Exclude firebaseId
             return data;
         });
 
@@ -557,21 +564,14 @@ export default function DataManagementPage() {
                     <TableRow key={product.firebaseId}>
                         {displayedHeaders.map(header => (
                         <TableCell key={header}>
-                            {header === 'status' ? (
-                            <Badge variant={product.status === 'Agotado' ? 'destructive' : product.status === 'Bajo Stock' ? 'secondary' : 'default'}
-                                style={product.status === 'En Stock' ? { backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' } : {}}>
-                                {product.status}
-                            </Badge>
-                            ) : (
-                            product[header]
-                            )}
+                           {product[header]}
                         </TableCell>
                         ))}
                         <TableCell>
                         <div className="flex items-center justify-end gap-2">
                             <Dialog>
                             <DialogTrigger asChild>
-                                <Button variant="ghost" size="icon">
+                                <Button variant="ghost" size="icon" disabled={!product.id}>
                                 <QrCode className="h-4 w-4" />
                                 </Button>
                             </DialogTrigger>
@@ -696,6 +696,5 @@ export default function DataManagementPage() {
     </>
   );
 }
-
 
     
