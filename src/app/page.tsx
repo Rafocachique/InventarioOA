@@ -27,7 +27,7 @@ export default function LoginPage() {
       router.push('/dashboard');
     } catch (error: any) {
       console.error("Error de inicio de sesión:", error);
-      let description = "Las credenciales son incorrectas o el usuario no existe.";
+      let description = "Ocurrió un error inesperado al intentar iniciar sesión.";
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
         description = "El correo electrónico o la contraseña que ingresaste no son correctos. Por favor, inténtalo de nuevo.";
       }
