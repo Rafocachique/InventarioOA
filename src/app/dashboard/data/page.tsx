@@ -595,37 +595,37 @@ export default function DataManagementPage() {
                     paginatedProducts.map((product) => (
                     <TableRow key={product.firebaseId}>
                         {displayedHeaders.map(header => (
-                        <TableCell key={header}>
-                           {String(product[header])}
+                        <TableCell key={header} className="whitespace-nowrap">
+                            {String(product[header])}
                         </TableCell>
                         ))}
                         <TableCell>
                         <div className="flex items-center justify-end gap-2">
                             {product.id && 
-                              <Dialog>
-                              <DialogTrigger asChild>
-                                  <Button variant="ghost" size="icon">
-                                  <QrCode className="h-4 w-4" />
-                                  </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                  <DialogHeader>
-                                  <DialogTitle>Código QR para {product.name || product.id}</DialogTitle>
-                                  <DialogDescription>
-                                      Escanea este código para acceder a la información del producto.
-                                  </DialogDescription>
-                                  </DialogHeader>
-                                  <div className="flex justify-center p-4">
-                                  <Image
-                                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${product.id}`}
-                                      alt={`Código QR para ${product.id}`}
-                                      width={200}
-                                      height={200}
-                                      data-ai-hint="qr code"
-                                  />
-                                  </div>
-                              </DialogContent>
-                              </Dialog>
+                            <Dialog>
+                            <DialogTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                <QrCode className="h-4 w-4" />
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                <DialogTitle>Código QR para {product.name || product.id}</DialogTitle>
+                                <DialogDescription>
+                                    Escanea este código para acceder a la información del producto.
+                                </DialogDescription>
+                                </DialogHeader>
+                                <div className="flex justify-center p-4">
+                                <Image
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${product.id}`}
+                                    alt={`Código QR para ${product.id}`}
+                                    width={200}
+                                    height={200}
+                                    data-ai-hint="qr code"
+                                />
+                                </div>
+                            </DialogContent>
+                            </Dialog>
                             }
 
                             <DropdownMenu>
@@ -747,14 +747,5 @@ export default function DataManagementPage() {
       )}
     </>
   );
-    
+}
 
-    
-
-    
-
-    
-
-    
-
-    
