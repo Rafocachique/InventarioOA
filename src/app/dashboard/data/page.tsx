@@ -546,7 +546,7 @@ export default function DataManagementPage() {
             </DropdownMenu>
         </div>
       </div>
-      <Card className="mt-4">
+      <Card className="mt-4 flex flex-col">
         <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
@@ -747,6 +747,8 @@ export default function DataManagementPage() {
       )}
     </>
   );
+    
+
     
 
     
