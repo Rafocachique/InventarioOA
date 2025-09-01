@@ -452,63 +452,65 @@ export default function ScanPage() {
 
       </div>
       <Card className="flex flex-col">
-        <CardHeader className="flex flex-row items-start sm:items-center justify-between gap-2">
-            <div className="flex-1">
-                <CardTitle>Historial de Escaneos</CardTitle>
-                <CardDescription>Aquí se muestran los escaneos registrados.</CardDescription>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-                 <Popover>
-                    <PopoverTrigger asChild>
-                    <Button
-                        variant={"outline"}
-                        className="w-full sm:w-[240px] justify-start text-left font-normal"
-                    >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {selectedDate ? format(selectedDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
-                    </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="end">
-                    <Calendar
-                        locale={es}
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        initialFocus
-                    />
-                    </PopoverContent>
-                </Popover>
-                <Button onClick={handleExportHistory} size="sm" variant="outline" className="h-10 gap-1">
-                    <Download className="h-3.5 w-3.5" />
-                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                        Exportar
-                    </span>
-                </Button>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon" className="h-10 w-10">
-                        <Settings className="h-4 w-4" />
-                        <span className="sr-only">Configurar Columnas</span>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Columnas Visibles</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {scanHistoryHeaders.map(header => (
-                        <DropdownMenuCheckboxItem
-                            key={header}
-                            checked={visibleScanHistoryHeaders.has(header)}
-                            onSelect={(e) => e.preventDefault()}
-                            onCheckedChange={() => handleColumnVisibilityChange(header)}
+        <CardHeader className="p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <div className="flex-1">
+                    <CardTitle>Historial de Escaneos</CardTitle>
+                    <CardDescription>Aquí se muestran los escaneos registrados.</CardDescription>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                        <Button
+                            variant={"outline"}
+                            className="w-[240px] justify-start text-left font-normal"
                         >
-                            {header.charAt(0).toUpperCase() + header.slice(1)}
-                        </DropdownMenuCheckboxItem>
-                        ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {selectedDate ? format(selectedDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
+                        </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                        <Calendar
+                            locale={es}
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={setSelectedDate}
+                            initialFocus
+                        />
+                        </PopoverContent>
+                    </Popover>
+                    <Button onClick={handleExportHistory} size="sm" variant="outline" className="h-10 gap-1">
+                        <Download className="h-3.5 w-3.5" />
+                        <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                            Exportar
+                        </span>
+                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="icon" className="h-10 w-10">
+                            <Settings className="h-4 w-4" />
+                            <span className="sr-only">Configurar Columnas</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Columnas Visibles</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {scanHistoryHeaders.map(header => (
+                            <DropdownMenuCheckboxItem
+                                key={header}
+                                checked={visibleScanHistoryHeaders.has(header)}
+                                onSelect={(e) => e.preventDefault()}
+                                onCheckedChange={() => handleColumnVisibilityChange(header)}
+                            >
+                                {header.charAt(0).toUpperCase() + header.slice(1)}
+                            </DropdownMenuCheckboxItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
             </div>
         </CardHeader>
-        <CardContent className="p-6 pt-0">
+        <CardContent className="p-0">
             <div className="relative w-full overflow-auto">
                 <Table>
                     <TableHeader>
@@ -593,6 +595,8 @@ export default function ScanPage() {
     </div>
   );
 }
+
+    
 
     
 
