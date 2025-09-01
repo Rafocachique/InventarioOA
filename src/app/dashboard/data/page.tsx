@@ -699,7 +699,7 @@ export default function DataManagementPage() {
             </div>
             </div>
         </CardFooter>
-        </Card>
+      </Card>
 
       {editingProduct && (
         <Dialog open={!!editingProduct} onOpenChange={() => setEditingProduct(null)}>
@@ -748,5 +748,3 @@ export default function DataManagementPage() {
     </>
   );
 }
-
-    
