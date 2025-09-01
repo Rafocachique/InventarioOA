@@ -20,6 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, startOfDay, endOfDay } from "date-fns";
+import { es } from "date-fns/locale";
 import * as XLSX from "xlsx";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
@@ -464,11 +465,12 @@ export default function ScanPage() {
                         className="w-full sm:w-[240px] justify-start text-left font-normal"
                     >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {selectedDate ? format(selectedDate, "PPP") : <span>Seleccione una fecha</span>}
+                        {selectedDate ? format(selectedDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
                     </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="end">
                     <Calendar
+                        locale={es}
                         mode="single"
                         selected={selectedDate}
                         onSelect={setSelectedDate}
@@ -508,7 +510,7 @@ export default function ScanPage() {
         </CardHeader>
         <CardContent>
             <div className="relative w-full overflow-auto">
-            <Table>
+            <Table className="whitespace-nowrap">
                 <TableHeader>
                 <TableRow>
                     {displayedHistoryHeaders.map(header => <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>)}
