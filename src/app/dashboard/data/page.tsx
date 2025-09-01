@@ -507,7 +507,7 @@ export default function DataManagementPage() {
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
+                  <AlertDialogTitle>¿Está absolutely seguro?</AlertDialogTitle>
                   <AlertDialogDescription>
                     Esta acción es irreversible y eliminará **todos** los productos de la base de datos.
                     Para confirmar, por favor ingrese su contraseña de administrador.
@@ -569,7 +569,6 @@ export default function DataManagementPage() {
             </div>
         </CardHeader>
         <CardContent>
-            <div className="relative w-full overflow-auto">
             <Table className="whitespace-nowrap">
                 <TableHeader>
                 <TableRow>
@@ -653,7 +652,6 @@ export default function DataManagementPage() {
                 )}
                 </TableBody>
             </Table>
-            </div>
         </CardContent>
         <CardFooter>
             <div className="flex w-full flex-col sm:flex-row items-center justify-between gap-4">
@@ -751,4 +749,6 @@ export default function DataManagementPage() {
     
 
     
+    
+
     
