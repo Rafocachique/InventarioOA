@@ -567,9 +567,8 @@ export default function DataManagementPage() {
                 </div>
             </div>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="relative w-full overflow-auto">
-            <Table>
+        <CardContent>
+            <Table className="w-full table-fixed">
                 <TableHeader>
                 <TableRow>
                     {displayedHeaders.map(header => <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>)}
@@ -595,7 +594,7 @@ export default function DataManagementPage() {
                     paginatedProducts.map((product) => (
                     <TableRow key={product.firebaseId}>
                         {displayedHeaders.map(header => (
-                        <TableCell key={header}>
+                        <TableCell key={header} className="break-words">
                            {product[header]}
                         </TableCell>
                         ))}
@@ -652,7 +651,6 @@ export default function DataManagementPage() {
                 )}
                 </TableBody>
             </Table>
-          </div>
         </CardContent>
         <CardFooter className="p-6">
             <div className="flex w-full flex-col sm:flex-row items-center justify-between gap-4">
@@ -750,6 +748,8 @@ export default function DataManagementPage() {
     
 
     
+    
+
     
 
     
