@@ -567,7 +567,7 @@ export default function DataManagementPage() {
                 </div>
             </div>
         </CardHeader>
-        <CardContent className="p-6 pt-0 flex-1">
+        <CardContent className="p-6 pt-0">
           <div className="relative w-full overflow-auto">
             <Table>
                 <TableHeader>
@@ -750,6 +750,8 @@ export default function DataManagementPage() {
     
 
     
+    
+
     
 
     
