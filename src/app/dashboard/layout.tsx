@@ -1,3 +1,4 @@
+
 "use client";
 
 import { PanelLeft } from 'lucide-react';
@@ -106,8 +107,8 @@ export default function DashboardLayout({
             </DropdownMenu>
           </div>
         </header>
-        <main className="flex flex-1 flex-col overflow-auto bg-background">
-          <div className="flex-1 space-y-4 p-4 md:p-6">
+        <main className="flex flex-1 flex-col bg-background">
+          <div className="flex flex-1 flex-col space-y-4 p-4 md:p-6">
             {children}
           </div>
         </main>
@@ -115,5 +116,7 @@ export default function DashboardLayout({
     </SidebarProvider>
   );
 }
+
+    
 
     
