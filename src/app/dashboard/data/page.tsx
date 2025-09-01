@@ -546,7 +546,7 @@ export default function DataManagementPage() {
             </DropdownMenu>
         </div>
       </div>
-      <Card className="mt-4">
+      <Card className="mt-4 flex flex-col">
         <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
@@ -567,92 +567,92 @@ export default function DataManagementPage() {
                 </div>
             </div>
         </CardHeader>
-        <CardContent>
-            <div className="relative w-full overflow-auto">
-                <Table>
-                    <TableHeader>
+        <CardContent className="p-6 pt-0 flex-1">
+          <div className="relative w-full overflow-auto">
+            <Table>
+                <TableHeader>
+                <TableRow>
+                    {displayedHeaders.map(header => <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>)}
+                    <TableHead>
+                    <span className="sr-only">Acciones</span>
+                    </TableHead>
+                </TableRow>
+                </TableHeader>
+                <TableBody>
+                {isLoading ? (
                     <TableRow>
-                        {displayedHeaders.map(header => <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>)}
-                        <TableHead>
-                        <span className="sr-only">Acciones</span>
-                        </TableHead>
+                    <TableCell colSpan={displayedHeaders.length + 2} className="h-24 text-center">
+                        <Loader2 className="mx-auto h-8 w-8 animate-spin" />
+                    </TableCell>
                     </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                    {isLoading ? (
-                        <TableRow>
-                        <TableCell colSpan={displayedHeaders.length + 2} className="h-24 text-center">
-                            <Loader2 className="mx-auto h-8 w-8 animate-spin" />
+                ) : paginatedProducts.length === 0 ? (
+                    <TableRow>
+                    <TableCell colSpan={displayedHeaders.length + 2} className="h-24 text-center">
+                        {searchTerm ? "No se encontraron productos con ese criterio." : "No hay productos. Cargue datos desde Excel."}
+                    </TableCell>
+                    </TableRow>
+                ) : (
+                    paginatedProducts.map((product) => (
+                    <TableRow key={product.firebaseId}>
+                        {displayedHeaders.map(header => (
+                        <TableCell key={header}>
+                           {product[header]}
                         </TableCell>
-                        </TableRow>
-                    ) : paginatedProducts.length === 0 ? (
-                        <TableRow>
-                        <TableCell colSpan={displayedHeaders.length + 2} className="h-24 text-center">
-                            {searchTerm ? "No se encontraron productos con ese criterio." : "No hay productos. Cargue datos desde Excel."}
-                        </TableCell>
-                        </TableRow>
-                    ) : (
-                        paginatedProducts.map((product) => (
-                        <TableRow key={product.firebaseId}>
-                            {displayedHeaders.map(header => (
-                            <TableCell key={header}>
-                               {product[header]}
-                            </TableCell>
-                            ))}
-                            <TableCell>
-                            <div className="flex items-center justify-end gap-2">
-                                {product.id && 
-                                  <Dialog>
-                                  <DialogTrigger asChild>
-                                      <Button variant="ghost" size="icon">
-                                      <QrCode className="h-4 w-4" />
-                                      </Button>
-                                  </DialogTrigger>
-                                  <DialogContent>
-                                      <DialogHeader>
-                                      <DialogTitle>Código QR para {product.name || product.id}</DialogTitle>
-                                      <DialogDescription>
-                                          Escanea este código para acceder a la información del producto.
-                                      </DialogDescription>
-                                      </DialogHeader>
-                                      <div className="flex justify-center p-4">
-                                      <Image
-                                          src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${product.id}`}
-                                          alt={`Código QR para ${product.id}`}
-                                          width={200}
-                                          height={200}
-                                          data-ai-hint="qr code"
-                                      />
-                                      </div>
-                                  </DialogContent>
-                                  </Dialog>
-                                }
+                        ))}
+                        <TableCell>
+                        <div className="flex items-center justify-end gap-2">
+                            {product.id && 
+                              <Dialog>
+                              <DialogTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                  <QrCode className="h-4 w-4" />
+                                  </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                  <DialogHeader>
+                                  <DialogTitle>Código QR para {product.name || product.id}</DialogTitle>
+                                  <DialogDescription>
+                                      Escanea este código para acceder a la información del producto.
+                                  </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="flex justify-center p-4">
+                                  <Image
+                                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${product.id}`}
+                                      alt={`Código QR para ${product.id}`}
+                                      width={200}
+                                      height={200}
+                                      data-ai-hint="qr code"
+                                  />
+                                  </div>
+                              </DialogContent>
+                              </Dialog>
+                            }
 
-                                <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button
-                                    aria-haspopup="true"
-                                    size="icon"
-                                    variant="ghost"
-                                    >
-                                    <MoreHorizontal className="h-4 w-4" />
-                                    <span className="sr-only">Menú</span>
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                    <DropdownMenuItem onSelect={() => handleEdit(product)}>Editar</DropdownMenuItem>
-                                    <DropdownMenuItem onSelect={() => setProductToDelete(product)}>Eliminar</DropdownMenuItem>
-                                </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                            </TableCell>
-                        </TableRow>
-                        ))
-                    )}
-                    </TableBody>
-                </Table>
-            </div>
+                            <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                aria-haspopup="true"
+                                size="icon"
+                                variant="ghost"
+                                >
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Menú</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                <DropdownMenuItem onSelect={() => handleEdit(product)}>Editar</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => setProductToDelete(product)}>Eliminar</DropdownMenuItem>
+                            </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                        </TableCell>
+                    </TableRow>
+                    ))
+                )}
+                </TableBody>
+            </Table>
+          </div>
         </CardContent>
         <CardFooter>
             <div className="flex w-full flex-col sm:flex-row items-center justify-between gap-4">
