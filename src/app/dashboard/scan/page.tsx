@@ -357,7 +357,7 @@ export default function ScanPage() {
     });
   };
 
-  const displayedHistoryHeaders = useMemo(() => {
+  const displayedHistoryHeaders = React.useMemo(() => {
     return scanHistoryHeaders.filter(h => visibleScanHistoryHeaders.has(h));
   }, [scanHistoryHeaders, visibleScanHistoryHeaders]);
 
@@ -510,48 +510,48 @@ export default function ScanPage() {
         </CardHeader>
         <CardContent>
             <div className="relative w-full overflow-auto">
-            <Table className="whitespace-nowrap">
-                <TableHeader>
-                <TableRow>
-                    {displayedHistoryHeaders.map(header => <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>)}
-                    <TableHead>Fecha Escaneo</TableHead>
-                    <TableHead>Usuario</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-                </TableHeader>
-                <TableBody>
-                {isHistoryLoading ? (
+                <Table className="whitespace-nowrap">
+                    <TableHeader>
                     <TableRow>
-                    <TableCell colSpan={displayedHistoryHeaders.length + 3} className="h-24 text-center">
-                        <Loader2 className="mx-auto h-8 w-8 animate-spin" />
-                    </TableCell>
+                        {displayedHistoryHeaders.map(header => <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>)}
+                        <TableHead>Fecha Escaneo</TableHead>
+                        <TableHead>Usuario</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
-                ) : filteredHistory.length === 0 ? (
-                    <TableRow>
-                    <TableCell colSpan={displayedHistoryHeaders.length + 3} className="h-24 text-center">
-                        No hay registros de escaneo para la fecha seleccionada.
-                    </TableCell>
-                    </TableRow>
-                ) : (
-                    filteredHistory.map((scan) => (
-                    <TableRow key={scan.firebaseId}>
-                        {displayedHistoryHeaders.map(header => (
-                            <TableCell key={header}>
-                               {String(scan[header])}
-                            </TableCell>
-                        ))}
-                        <TableCell>{scan.scannedAt.toDate().toLocaleString('es-ES')}</TableCell>
-                        <TableCell>{scan.scannedBy}</TableCell>
-                        <TableCell className="text-right">
-                           <Button variant="ghost" size="icon" onClick={() => handleEditRecord(scan)}>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
+                    </TableHeader>
+                    <TableBody>
+                    {isHistoryLoading ? (
+                        <TableRow>
+                        <TableCell colSpan={displayedHistoryHeaders.length + 3} className="h-24 text-center">
+                            <Loader2 className="mx-auto h-8 w-8 animate-spin" />
                         </TableCell>
-                    </TableRow>
-                    ))
-                )}
-                </TableBody>
-            </Table>
+                        </TableRow>
+                    ) : filteredHistory.length === 0 ? (
+                        <TableRow>
+                        <TableCell colSpan={displayedHistoryHeaders.length + 3} className="h-24 text-center">
+                            No hay registros de escaneo para la fecha seleccionada.
+                        </TableCell>
+                        </TableRow>
+                    ) : (
+                        filteredHistory.map((scan) => (
+                        <TableRow key={scan.firebaseId}>
+                            {displayedHistoryHeaders.map(header => (
+                                <TableCell key={header}>
+                                {String(scan[header])}
+                                </TableCell>
+                            ))}
+                            <TableCell>{scan.scannedAt.toDate().toLocaleString('es-ES')}</TableCell>
+                            <TableCell>{scan.scannedBy}</TableCell>
+                            <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => handleEditRecord(scan)}>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </TableCell>
+                        </TableRow>
+                        ))
+                    )}
+                    </TableBody>
+                </Table>
             </div>
         </CardContent>
       </Card>
