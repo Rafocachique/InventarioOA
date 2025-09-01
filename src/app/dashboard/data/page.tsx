@@ -569,8 +569,8 @@ export default function DataManagementPage() {
             </div>
         </CardHeader>
         <CardContent>
-            <ScrollArea className="w-full whitespace-nowrap">
-            <Table>
+            <div className="relative w-full overflow-auto">
+            <Table className="whitespace-nowrap">
                 <TableHeader>
                 <TableRow>
                     {displayedHeaders.map(header => <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>)}
@@ -653,7 +653,7 @@ export default function DataManagementPage() {
                 )}
                 </TableBody>
             </Table>
-            </ScrollArea>
+            </div>
         </CardContent>
         <CardFooter>
             <div className="flex w-full flex-col sm:flex-row items-center justify-between gap-4">
@@ -750,4 +750,5 @@ export default function DataManagementPage() {
   );
     
 
+    
     
