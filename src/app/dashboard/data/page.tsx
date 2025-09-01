@@ -546,7 +546,7 @@ export default function DataManagementPage() {
             </DropdownMenu>
         </div>
       </div>
-      <Card className="mt-4 flex flex-col">
+      <Card className="mt-4">
         <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
@@ -567,9 +567,8 @@ export default function DataManagementPage() {
                 </div>
             </div>
         </CardHeader>
-        <CardContent className="flex-1 p-0">
-          <div className="relative h-full w-full overflow-auto">
-            <Table>
+        <CardContent>
+            <Table className="w-full table-fixed">
                 <TableHeader>
                 <TableRow>
                     {displayedHeaders.map(header => <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>)}
@@ -595,7 +594,7 @@ export default function DataManagementPage() {
                     paginatedProducts.map((product) => (
                     <TableRow key={product.firebaseId}>
                         {displayedHeaders.map(header => (
-                        <TableCell key={header}>
+                        <TableCell key={header} className="whitespace-normal break-words">
                            {String(product[header])}
                         </TableCell>
                         ))}
@@ -652,7 +651,6 @@ export default function DataManagementPage() {
                 )}
                 </TableBody>
             </Table>
-            </div>
         </CardContent>
         <CardFooter>
             <div className="flex w-full flex-col sm:flex-row items-center justify-between gap-4">
@@ -750,6 +748,8 @@ export default function DataManagementPage() {
     
 
     
+    
+
     
 
     
