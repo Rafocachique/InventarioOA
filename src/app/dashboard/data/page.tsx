@@ -546,8 +546,8 @@ export default function DataManagementPage() {
             </DropdownMenu>
         </div>
       </div>
-      <Card className="mt-4 flex flex-col">
-        <CardHeader className="p-6">
+      <Card className="mt-4">
+        <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                 <CardTitle>Productos</CardTitle>
@@ -567,7 +567,7 @@ export default function DataManagementPage() {
                 </div>
             </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent>
           <div className="relative w-full overflow-auto">
             <Table>
                 <TableHeader>
@@ -654,7 +654,7 @@ export default function DataManagementPage() {
             </Table>
             </div>
         </CardContent>
-        <CardFooter className="p-6">
+        <CardFooter>
             <div className="flex w-full flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-xs text-muted-foreground">
                 Mostrando <strong>{paginatedProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-{(currentPage - 1) * itemsPerPage + paginatedProducts.length}</strong> de <strong>{filteredProducts.length}</strong> productos
@@ -750,6 +750,8 @@ export default function DataManagementPage() {
     
 
     
+    
+
     
 
     
