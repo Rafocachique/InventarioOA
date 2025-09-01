@@ -448,8 +448,49 @@ export default function DataManagementPage() {
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        <div className="ml-auto flex items-center gap-2">
+      <div className="flex w-full items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-center gap-4 mr-auto">
+            <div className="text-xs text-muted-foreground">
+                Mostrando <strong>{paginatedProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-{(currentPage - 1) * itemsPerPage + paginatedProducts.length}</strong> de <strong>{filteredProducts.length}</strong> productos
+            </div>
+            <div className="flex items-center gap-2">
+                <Label htmlFor="items-per-page" className="text-xs">Filas por página</Label>
+                <Select value={String(itemsPerPage)} onValueChange={(value) => setItemsPerPage(Number(value))}>
+                    <SelectTrigger id="items-per-page" className="h-8 w-[70px]">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent side="top">
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="20">20</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="text-xs font-semibold">Página {currentPage} de {totalPages}</div>
+            <div className="flex items-center gap-2">
+                <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                >
+                    <ChevronLeft className="h-4 w-4" />
+                    <span className="sr-only">Página anterior</span>
+                </Button>
+                <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                >
+                    <ChevronRight className="h-4 w-4" />
+                    <span className="sr-only">Página siguiente</span>
+                </Button>
+            </div>
+        </div>
+        <div className="flex items-center gap-2">
             <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
             <DialogTrigger asChild>
                 <Button size="sm" className="h-8 gap-1" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
@@ -547,7 +588,7 @@ export default function DataManagementPage() {
         </div>
       </div>
       <Card className="mt-4 flex flex-col">
-        <CardHeader className="flex flex-col gap-4">
+        <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                 <CardTitle>Productos</CardTitle>
@@ -564,49 +605,6 @@ export default function DataManagementPage() {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     />
-                </div>
-            </div>
-            <div className="flex w-full flex-col sm:flex-row items-center justify-between gap-4 border-t pt-4">
-                <div className="text-xs text-muted-foreground">
-                    Mostrando <strong>{paginatedProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-{(currentPage - 1) * itemsPerPage + paginatedProducts.length}</strong> de <strong>{filteredProducts.length}</strong> productos
-                </div>
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                    <div className="flex items-center gap-2">
-                        <Label htmlFor="items-per-page" className="text-xs">Filas por página</Label>
-                        <Select value={String(itemsPerPage)} onValueChange={(value) => setItemsPerPage(Number(value))}>
-                            <SelectTrigger id="items-per-page" className="h-8 w-[70px]">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent side="top">
-                                <SelectItem value="10">10</SelectItem>
-                                <SelectItem value="20">20</SelectItem>
-                                <SelectItem value="50">50</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="text-xs font-semibold">Página {currentPage} de {totalPages}</div>
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                            disabled={currentPage === 1}
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                            <span className="sr-only">Página anterior</span>
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                            disabled={currentPage === totalPages}
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                            <span className="sr-only">Página siguiente</span>
-                        </Button>
-                    </div>
                 </div>
             </div>
         </CardHeader>
@@ -745,7 +743,4 @@ export default function DataManagementPage() {
       )}
     </>
   );
-
 }
-
-    
