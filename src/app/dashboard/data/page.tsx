@@ -569,89 +569,91 @@ export default function DataManagementPage() {
             </div>
         </CardHeader>
         <CardContent>
-            <Table className="whitespace-nowrap">
-                <TableHeader>
-                <TableRow>
-                    {displayedHeaders.map(header => <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>)}
-                    <TableHead>
-                    <span className="sr-only">Acciones</span>
-                    </TableHead>
-                </TableRow>
-                </TableHeader>
-                <TableBody>
-                {isLoading ? (
+            <div className="relative w-full overflow-auto">
+                <Table className="whitespace-nowrap">
+                    <TableHeader>
                     <TableRow>
-                    <TableCell colSpan={displayedHeaders.length + 2} className="h-24 text-center">
-                        <Loader2 className="mx-auto h-8 w-8 animate-spin" />
-                    </TableCell>
+                        {displayedHeaders.map(header => <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>)}
+                        <TableHead>
+                        <span className="sr-only">Acciones</span>
+                        </TableHead>
                     </TableRow>
-                ) : paginatedProducts.length === 0 ? (
-                    <TableRow>
-                    <TableCell colSpan={displayedHeaders.length + 2} className="h-24 text-center">
-                        {searchTerm ? "No se encontraron productos con ese criterio." : "No hay productos. Cargue datos desde Excel."}
-                    </TableCell>
-                    </TableRow>
-                ) : (
-                    paginatedProducts.map((product) => (
-                    <TableRow key={product.firebaseId}>
-                        {displayedHeaders.map(header => (
-                        <TableCell key={header}>
-                           {product[header]}
+                    </TableHeader>
+                    <TableBody>
+                    {isLoading ? (
+                        <TableRow>
+                        <TableCell colSpan={displayedHeaders.length + 2} className="h-24 text-center">
+                            <Loader2 className="mx-auto h-8 w-8 animate-spin" />
                         </TableCell>
-                        ))}
-                        <TableCell>
-                        <div className="flex items-center justify-end gap-2">
-                            {product.id && 
-                              <Dialog>
-                              <DialogTrigger asChild>
-                                  <Button variant="ghost" size="icon">
-                                  <QrCode className="h-4 w-4" />
-                                  </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                  <DialogHeader>
-                                  <DialogTitle>Código QR para {product.name || product.id}</DialogTitle>
-                                  <DialogDescription>
-                                      Escanea este código para acceder a la información del producto.
-                                  </DialogDescription>
-                                  </DialogHeader>
-                                  <div className="flex justify-center p-4">
-                                  <Image
-                                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${product.id}`}
-                                      alt={`Código QR para ${product.id}`}
-                                      width={200}
-                                      height={200}
-                                      data-ai-hint="qr code"
-                                  />
-                                  </div>
-                              </DialogContent>
-                              </Dialog>
-                            }
+                        </TableRow>
+                    ) : paginatedProducts.length === 0 ? (
+                        <TableRow>
+                        <TableCell colSpan={displayedHeaders.length + 2} className="h-24 text-center">
+                            {searchTerm ? "No se encontraron productos con ese criterio." : "No hay productos. Cargue datos desde Excel."}
+                        </TableCell>
+                        </TableRow>
+                    ) : (
+                        paginatedProducts.map((product) => (
+                        <TableRow key={product.firebaseId}>
+                            {displayedHeaders.map(header => (
+                            <TableCell key={header}>
+                               {product[header]}
+                            </TableCell>
+                            ))}
+                            <TableCell>
+                            <div className="flex items-center justify-end gap-2">
+                                {product.id && 
+                                  <Dialog>
+                                  <DialogTrigger asChild>
+                                      <Button variant="ghost" size="icon">
+                                      <QrCode className="h-4 w-4" />
+                                      </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                      <DialogHeader>
+                                      <DialogTitle>Código QR para {product.name || product.id}</DialogTitle>
+                                      <DialogDescription>
+                                          Escanea este código para acceder a la información del producto.
+                                      </DialogDescription>
+                                      </DialogHeader>
+                                      <div className="flex justify-center p-4">
+                                      <Image
+                                          src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${product.id}`}
+                                          alt={`Código QR para ${product.id}`}
+                                          width={200}
+                                          height={200}
+                                          data-ai-hint="qr code"
+                                      />
+                                      </div>
+                                  </DialogContent>
+                                  </Dialog>
+                                }
 
-                            <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
-                                >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Menú</span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                <DropdownMenuItem onSelect={() => handleEdit(product)}>Editar</DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => setProductToDelete(product)}>Eliminar</DropdownMenuItem>
-                            </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
-                        </TableCell>
-                    </TableRow>
-                    ))
-                )}
-                </TableBody>
-            </Table>
+                                <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                    aria-haspopup="true"
+                                    size="icon"
+                                    variant="ghost"
+                                    >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">Menú</span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                    <DropdownMenuItem onSelect={() => handleEdit(product)}>Editar</DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => setProductToDelete(product)}>Eliminar</DropdownMenuItem>
+                                </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                            </TableCell>
+                        </TableRow>
+                        ))
+                    )}
+                    </TableBody>
+                </Table>
+            </div>
         </CardContent>
         <CardFooter>
             <div className="flex w-full flex-col sm:flex-row items-center justify-between gap-4">
@@ -749,6 +751,8 @@ export default function DataManagementPage() {
     
 
     
+    
+
     
 
     
