@@ -508,7 +508,7 @@ export default function ScanPage() {
                 </DropdownMenu>
             </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
             <div className="relative w-full overflow-auto">
                 <Table className="whitespace-nowrap">
                     <TableHeader>
@@ -593,5 +593,3 @@ export default function ScanPage() {
     </div>
   );
 }
-
-    

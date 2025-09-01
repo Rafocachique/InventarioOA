@@ -568,7 +568,7 @@ export default function DataManagementPage() {
                 </div>
             </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
             <div className="relative w-full overflow-auto">
                 <Table className="whitespace-nowrap">
                     <TableHeader>
