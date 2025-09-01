@@ -581,13 +581,13 @@ export default function DataManagementPage() {
                 <TableBody>
                 {isLoading ? (
                     <TableRow>
-                    <TableCell colSpan={displayedHeaders.length + 2} className="h-24 text-center">
+                    <TableCell colSpan={displayedHeaders.length + 1} className="h-24 text-center">
                         <Loader2 className="mx-auto h-8 w-8 animate-spin" />
                     </TableCell>
                     </TableRow>
                 ) : paginatedProducts.length === 0 ? (
                     <TableRow>
-                    <TableCell colSpan={displayedHeaders.length + 2} className="h-24 text-center">
+                    <TableCell colSpan={displayedHeaders.length + 1} className="h-24 text-center">
                         {searchTerm ? "No se encontraron productos con ese criterio." : "No hay productos. Cargue datos desde Excel."}
                     </TableCell>
                     </TableRow>
