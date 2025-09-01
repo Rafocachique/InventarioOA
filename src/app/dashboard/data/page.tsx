@@ -69,7 +69,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import Image from "next/image";
 import { db, auth } from "@/lib/firebase";
 import { collection, getDocs, doc, updateDoc, writeBatch, deleteDoc } from "firebase/firestore";
@@ -568,9 +567,9 @@ export default function DataManagementPage() {
                 </div>
             </div>
         </CardHeader>
-        <CardContent className="pt-0">
+        <CardContent>
             <div className="relative w-full overflow-auto">
-                <Table className="whitespace-nowrap">
+                <Table>
                     <TableHeader>
                     <TableRow>
                         {displayedHeaders.map(header => <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>)}
@@ -751,6 +750,8 @@ export default function DataManagementPage() {
     
 
     
+    
+
     
 
     

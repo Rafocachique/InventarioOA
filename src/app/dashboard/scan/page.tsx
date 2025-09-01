@@ -508,9 +508,9 @@ export default function ScanPage() {
                 </DropdownMenu>
             </div>
         </CardHeader>
-        <CardContent className="pt-0">
+        <CardContent>
             <div className="relative w-full overflow-auto">
-                <Table className="whitespace-nowrap">
+                <Table>
                     <TableHeader>
                     <TableRow>
                         {displayedHistoryHeaders.map(header => <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>)}
@@ -593,3 +593,5 @@ export default function ScanPage() {
     </div>
   );
 }
+
+    
