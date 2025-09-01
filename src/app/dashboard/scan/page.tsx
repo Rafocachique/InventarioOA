@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,13 +11,15 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { scanAndVerifyData, ScanAndVerifyDataOutput } from "@/ai/flows/scan-and-verify-data";
 import { extractTextFromImage } from "@/ai/flows/extract-text-from-image";
 import { saveScan, SaveScanInput } from "@/ai/flows/save-scan";
-import { Loader2, CheckCircle, XCircle, Camera, Save, ScanLine, Download, MoreHorizontal, Settings } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Camera, Save, ScanLine, Download, MoreHorizontal, Settings, Calendar as CalendarIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { doc, getDocs, updateDoc, collection, query, where, Timestamp, onSnapshot, orderBy } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format, startOfDay, endOfDay } from "date-fns";
 import * as XLSX from "xlsx";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
@@ -54,6 +56,7 @@ export default function ScanPage() {
   const [editingScanRecord, setEditingScanRecord] = useState<EditableProduct | null>(null);
   const [scanHistoryHeaders, setScanHistoryHeaders] = useState<string[]>([]);
   const [visibleScanHistoryHeaders, setVisibleScanHistoryHeaders] = useState<Set<string>>(new Set());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -305,13 +308,24 @@ export default function ScanPage() {
     }
   };
   
+  const filteredHistory = useMemo(() => {
+    if (!selectedDate) return scanHistory;
+    const start = startOfDay(selectedDate);
+    const end = endOfDay(selectedDate);
+    return scanHistory.filter(scan => {
+      const scanDate = scan.scannedAt.toDate();
+      return scanDate >= start && scanDate <= end;
+    });
+  }, [scanHistory, selectedDate]);
+
+
   const handleExportHistory = () => {
-      if (scanHistory.length === 0) {
-          toast({ title: "No hay datos", description: "El historial de escaneos está vacío." });
+      if (filteredHistory.length === 0) {
+          toast({ title: "No hay datos", description: "No hay escaneos para la fecha seleccionada." });
           return;
       }
 
-      const dataToExport = scanHistory.map(scan => {
+      const dataToExport = filteredHistory.map(scan => {
           const { firebaseId, scannedAt, ...rest } = scan;
           return {
               ...rest,
@@ -322,7 +336,8 @@ export default function ScanPage() {
       const worksheet = XLSX.utils.json_to_sheet(dataToExport);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Historial de Escaneos");
-      XLSX.writeFile(workbook, "historial_escaneos.xlsx");
+      const excelFileName = selectedDate ? `historial_escaneos_${format(selectedDate, "yyyy-MM-dd")}.xlsx` : "historial_escaneos.xlsx";
+      XLSX.writeFile(workbook, excelFileName);
   };
 
   const handleEditRecord = async (record: ScanRecord) => {
@@ -341,7 +356,7 @@ export default function ScanPage() {
     });
   };
 
-  const displayedHistoryHeaders = React.useMemo(() => {
+  const displayedHistoryHeaders = useMemo(() => {
     return scanHistoryHeaders.filter(h => visibleScanHistoryHeaders.has(h));
   }, [scanHistoryHeaders, visibleScanHistoryHeaders]);
 
@@ -436,13 +451,32 @@ export default function ScanPage() {
 
       </div>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-            <div>
+        <CardHeader className="flex flex-row items-start sm:items-center justify-between gap-2">
+            <div className="flex-1">
                 <CardTitle>Historial de Escaneos</CardTitle>
                 <CardDescription>Aquí se muestran los escaneos registrados.</CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-                <Button onClick={handleExportHistory} size="sm" variant="outline" className="h-8 gap-1">
+            <div className="flex items-center gap-2 flex-shrink-0">
+                 <Popover>
+                    <PopoverTrigger asChild>
+                    <Button
+                        variant={"outline"}
+                        className="w-full sm:w-[240px] justify-start text-left font-normal"
+                    >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? format(selectedDate, "PPP") : <span>Seleccione una fecha</span>}
+                    </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        initialFocus
+                    />
+                    </PopoverContent>
+                </Popover>
+                <Button onClick={handleExportHistory} size="sm" variant="outline" className="h-10 gap-1">
                     <Download className="h-3.5 w-3.5" />
                     <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                         Exportar
@@ -450,7 +484,7 @@ export default function ScanPage() {
                 </Button>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon" className="h-8 w-8">
+                        <Button variant="outline" size="icon" className="h-10 w-10">
                         <Settings className="h-4 w-4" />
                         <span className="sr-only">Configurar Columnas</span>
                         </Button>
@@ -473,8 +507,8 @@ export default function ScanPage() {
             </div>
         </CardHeader>
         <CardContent>
-            <ScrollArea className="h-[600px]">
-            <Table className="whitespace-nowrap">
+            <div className="relative w-full overflow-auto">
+            <Table>
                 <TableHeader>
                 <TableRow>
                     {displayedHistoryHeaders.map(header => <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>)}
@@ -490,14 +524,14 @@ export default function ScanPage() {
                         <Loader2 className="mx-auto h-8 w-8 animate-spin" />
                     </TableCell>
                     </TableRow>
-                ) : scanHistory.length === 0 ? (
+                ) : filteredHistory.length === 0 ? (
                     <TableRow>
                     <TableCell colSpan={displayedHistoryHeaders.length + 3} className="h-24 text-center">
-                        No hay registros de escaneo.
+                        No hay registros de escaneo para la fecha seleccionada.
                     </TableCell>
                     </TableRow>
                 ) : (
-                    scanHistory.map((scan) => (
+                    filteredHistory.map((scan) => (
                     <TableRow key={scan.firebaseId}>
                         {displayedHistoryHeaders.map(header => (
                             <TableCell key={header}>
@@ -516,7 +550,7 @@ export default function ScanPage() {
                 )}
                 </TableBody>
             </Table>
-            </ScrollArea>
+            </div>
         </CardContent>
       </Card>
       
