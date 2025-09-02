@@ -448,7 +448,7 @@ export default function DataManagementPage() {
 
   return (
     <>
-      <div className="flex flex-col h-full gap-4">
+      <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row items-center gap-4">
           <div className="flex flex-col sm:flex-row items-center gap-4 mr-auto">
               <div className="text-xs text-muted-foreground">
@@ -746,3 +746,5 @@ export default function DataManagementPage() {
     </>
   );
 }
+
+    
