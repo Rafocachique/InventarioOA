@@ -170,12 +170,12 @@ export default function DashboardPage() {
         </Card>
       </div>
       <div className="grid gap-4 md:gap-8 lg:grid-cols-2">
-        <Card className="col-span-2 flex flex-col">
+        <Card className="col-span-2">
           <CardHeader>
             <CardTitle>Resumen de Escaneos Semanal</CardTitle>
-            <CardDescription>Un resumen de los inmobiliarios escaneados durante la última semana.</CardDescription>
+            <CardDescription>Un resumen de los inmobiliarios escaneos durante la última semana.</CardDescription>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="pl-2">
             <div className="relative w-full overflow-auto">
                 <ChartContainer config={chartConfig} className="h-[350px] w-full min-w-[600px]">
                   <ResponsiveContainer width="100%" height="100%">
@@ -199,3 +199,5 @@ export default function DashboardPage() {
     </>
   );
 }
+
+    
