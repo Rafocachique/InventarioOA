@@ -68,7 +68,7 @@ export default function DashboardPage() {
         </Card>
       </div>
       <div className="grid gap-4 md:gap-8 lg:grid-cols-2">
-        <Card className="col-span-2">
+        <Card className="col-span-2 flex flex-col">
           <CardHeader>
             <CardTitle>Resumen de Escaneos Semanal</CardTitle>
             <CardDescription>Un resumen de los productos escaneados durante la última semana.</CardDescription>
@@ -95,3 +95,5 @@ export default function DashboardPage() {
     </>
   );
 }
+
+    

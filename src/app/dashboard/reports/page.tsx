@@ -1,3 +1,4 @@
+
 "use client"
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -89,14 +90,15 @@ export default function ReportsPage() {
                 </CardContent>
             </Card>
         </div>
-        <Card>
+        <Card className="flex flex-col">
             <CardHeader>
                 <CardTitle>Herramienta de Actualización de Datos</CardTitle>
                 <CardDescription>
                   Actualice manualmente los datos escaneados o el inventario. Aquí se muestran los escaneos recientes.
                 </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
+              <div className="relative w-full overflow-auto">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -131,8 +133,11 @@ export default function ReportsPage() {
                         ))}
                     </TableBody>
                 </Table>
+              </div>
             </CardContent>
         </Card>
     </div>
   );
 }
+
+    
