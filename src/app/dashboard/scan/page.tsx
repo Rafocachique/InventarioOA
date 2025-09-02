@@ -181,7 +181,7 @@ export default function ScanPage() {
             
             toast({
                 title: "Escaneo Registrado",
-                description: "El producto ha sido verificado y guardado en el historial.",
+                description: "El inmobiliario ha sido verificado y guardado en el historial.",
             });
 
             setEditableProduct(productData as EditableProduct);
@@ -215,7 +215,7 @@ export default function ScanPage() {
       }
     }
 
-    setError("No se encontró ningún producto con los códigos escaneados.");
+    setError("No se encontró ningún inmobiliario con los códigos escaneados.");
     setResult({ isValid: false });
     setIsLoading(false);
   };
@@ -292,8 +292,8 @@ export default function ScanPage() {
         await updateDoc(productDocRef, productData);
 
         toast({
-            title: "Producto Actualizado",
-            description: "Los cambios se han guardado correctamente en la base de datos de productos.",
+            title: "Inmobiliario Actualizado",
+            description: "Los cambios se han guardado correctamente en la base de datos de inmobiliarios.",
         });
 
     } catch (error) {
@@ -301,7 +301,7 @@ export default function ScanPage() {
         toast({
             variant: "destructive",
             title: "Error al Guardar",
-            description: "No se pudo actualizar el producto.",
+            description: "No se pudo actualizar el inmobiliario.",
         });
     } finally {
         setIsLoading(false);
@@ -399,7 +399,7 @@ export default function ScanPage() {
                     </TabsContent>
                     <TabsContent value="manual" className="mt-4">
                         <div className="space-y-4">
-                            <Label htmlFor="manual-code">Código del Producto</Label>
+                            <Label htmlFor="manual-code">Código del Inmobiliario</Label>
                             <Input id="manual-code" placeholder="Ingrese el código a verificar" value={manualCode} onChange={(e) => setManualCode(e.target.value)} />
                             <Button onClick={handleManualVerify} className="w-full" disabled={isLoading || isVerifying}>
                                 {isLoading || isVerifying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ScanLine className="mr-2 h-4 w-4" />}
@@ -415,7 +415,7 @@ export default function ScanPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Resultados de Verificación</CardTitle>
-                    <CardDescription>Producto encontrado. Puede editar la información y se reflejará en la base de datos principal.</CardDescription>
+                    <CardDescription>Inmobiliario encontrado. Puede editar la información y se reflejará en la base de datos principal.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 pt-6">
                      <Alert className="border-green-500 text-green-500 mb-4">
@@ -440,7 +440,7 @@ export default function ScanPage() {
                 <CardFooter>
                     <Button onClick={() => handleSaveChanges(editableProduct)} disabled={isLoading} className="w-full">
                         {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                        Guardar Cambios en Producto
+                        Guardar Cambios en Inmobiliario
                     </Button>
                 </CardFooter>
             </Card>
@@ -562,9 +562,9 @@ export default function ScanPage() {
         <Dialog open={!!editingScanRecord} onOpenChange={() => setEditingScanRecord(null)}>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
-              <DialogTitle>Editar Producto desde Historial</DialogTitle>
+              <DialogTitle>Editar Inmobiliario desde Historial</DialogTitle>
               <DialogDescription>
-                Los cambios se guardarán en la base de datos principal de productos.
+                Los cambios se guardarán en la base de datos principal de inmobiliarios.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-6">
@@ -595,9 +595,5 @@ export default function ScanPage() {
     </div>
   );
 }
-
-    
-
-    
 
     

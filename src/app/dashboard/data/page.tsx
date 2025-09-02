@@ -135,7 +135,7 @@ export default function DataManagementPage() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "No se pudieron cargar los productos.",
+        description: "No se pudieron cargar los inmobiliarios.",
       });
     } finally {
       setIsLoading(false);
@@ -211,7 +211,7 @@ export default function DataManagementPage() {
           const productId = String(newProduct.id);
 
           if (!newProduct.id || productId === 'undefined') {
-              console.warn("Producto sin ID encontrado en el archivo Excel, será tratado como nuevo:", newProduct);
+              console.warn("Inmobiliario sin ID encontrado en el archivo Excel, será tratado como nuevo:", newProduct);
               const docRef = doc(collection(db, "products"));
               batch.set(docRef, newProduct);
               newCount++;
@@ -235,7 +235,7 @@ export default function DataManagementPage() {
 
         toast({
           title: "Carga Exitosa",
-          description: `${newCount} productos nuevos añadidos y ${updatedCount} productos actualizados.`,
+          description: `${newCount} inmobiliarios nuevos añadidos y ${updatedCount} inmobiliarios actualizados.`,
         });
 
         setTimeout(() => {
@@ -276,15 +276,15 @@ export default function DataManagementPage() {
         if (allProducts.length === 0) {
             toast({
                 title: "No hay datos",
-                description: "No hay productos en la base de datos para exportar.",
+                description: "No hay inmobiliarios en la base de datos para exportar.",
             });
             return;
         }
 
         const worksheet = XLSX.utils.json_to_sheet(allProducts);
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Productos");
-        XLSX.writeFile(workbook, "productos.xlsx");
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Inmobiliarios");
+        XLSX.writeFile(workbook, "inmobiliarios.xlsx");
       } catch (error) {
           console.error("Error downloading excel: ", error);
           toast({
@@ -336,7 +336,7 @@ export default function DataManagementPage() {
 
       toast({
         title: "Eliminación Completa",
-        description: "Todos los productos han sido eliminados de la base de datos.",
+        description: "Todos los inmobiliarios han sido eliminados de la base de datos.",
       });
 
       fetchProducts(); 
@@ -368,8 +368,8 @@ export default function DataManagementPage() {
     try {
         await deleteDoc(doc(db, "products", productToDelete.firebaseId));
         toast({
-            title: "Producto Eliminado",
-            description: `El producto ${productToDelete.name || productToDelete.id} ha sido eliminado.`,
+            title: "Inmobiliario Eliminado",
+            description: `El inmobiliario ${productToDelete.name || productToDelete.id} ha sido eliminado.`,
         });
         setProductToDelete(null);
         fetchProducts();
@@ -378,7 +378,7 @@ export default function DataManagementPage() {
         toast({
             variant: "destructive",
             title: "Error",
-            description: "No se pudo eliminar el producto.",
+            description: "No se pudo eliminar el inmobiliario.",
         });
     }
   };
@@ -392,7 +392,7 @@ export default function DataManagementPage() {
       const { firebaseId, ...productData } = editingProduct;
       await updateDoc(productDocRef, productData);
       toast({
-        title: "Producto Actualizado",
+        title: "Inmobiliario Actualizado",
         description: "Los cambios se han guardado correctamente.",
       });
       setEditingProduct(null);
@@ -402,7 +402,7 @@ export default function DataManagementPage() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "No se pudo actualizar el producto.",
+        description: "No se pudo actualizar el inmobiliario.",
       });
     }
   };
@@ -451,7 +451,7 @@ export default function DataManagementPage() {
       <div className="flex w-full items-center gap-2 mb-4">
         <div className="flex flex-col sm:flex-row items-center gap-4 mr-auto">
             <div className="text-xs text-muted-foreground">
-                Mostrando <strong>{paginatedProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-{(currentPage - 1) * itemsPerPage + paginatedProducts.length}</strong> de <strong>{filteredProducts.length}</strong> productos
+                Mostrando <strong>{paginatedProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-{(currentPage - 1) * itemsPerPage + paginatedProducts.length}</strong> de <strong>{filteredProducts.length}</strong> inmobiliarios
             </div>
             <div className="flex items-center gap-2">
                 <Label htmlFor="items-per-page" className="text-xs">Filas por página</Label>
@@ -504,7 +504,7 @@ export default function DataManagementPage() {
                 <DialogHeader>
                 <DialogTitle>Carga de Datos desde Excel</DialogTitle>
                 <DialogDescription>
-                    Seleccione un archivo .xlsx o .xls para cargar los datos de sus productos en Firebase. La primera hoja del archivo será procesada.
+                    Seleccione un archivo .xlsx o .xls para cargar los datos de sus inmobiliarios en Firebase. La primera hoja del archivo será procesada.
                 </DialogDescription>
                 </DialogHeader>
                 {isUploading ? (
@@ -549,7 +549,7 @@ export default function DataManagementPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>¿Está absolutely seguro?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Esta acción es irreversible y eliminará **todos** los productos de la base de datos.
+                    Esta acción es irreversible y eliminará **todos** los inmobiliarios de la base de datos.
                     Para confirmar, por favor ingrese su contraseña de administrador.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
@@ -591,16 +591,16 @@ export default function DataManagementPage() {
         <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                <CardTitle>Productos</CardTitle>
+                <CardTitle>Inventario Inmobiliario de la OA</CardTitle>
                 <CardDescription>
-                    Gestiona tus productos y visualiza su inventario.
+                    Gestiona tus inmobiliarios y visualiza su inventario.
                 </CardDescription>
                 </div>
                 <div className="relative w-full sm:w-auto">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input 
                     type="search" 
-                    placeholder="Buscar productos..." 
+                    placeholder="Buscar inmobiliarios..." 
                     className="pl-8 sm:w-[300px] w-full" 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -629,7 +629,7 @@ export default function DataManagementPage() {
                 ) : paginatedProducts.length === 0 ? (
                     <TableRow>
                     <TableCell colSpan={displayedHeaders.length + 1} className="h-24 text-center">
-                        {searchTerm ? "No se encontraron productos con ese criterio." : "No hay productos. Cargue datos desde Excel."}
+                        {searchTerm ? "No se encontraron inmobiliarios con ese criterio." : "No hay inmobiliarios. Cargue datos desde Excel."}
                     </TableCell>
                     </TableRow>
                 ) : (
@@ -653,7 +653,7 @@ export default function DataManagementPage() {
                                 <DialogHeader>
                                 <DialogTitle>Código QR para {product.name || product.id}</DialogTitle>
                                 <DialogDescription>
-                                    Escanea este código para acceder a la información del producto.
+                                    Escanea este código para acceder a la información del inmobiliario.
                                 </DialogDescription>
                                 </DialogHeader>
                                 <div className="flex justify-center p-4">
@@ -701,7 +701,7 @@ export default function DataManagementPage() {
         <Dialog open={!!editingProduct} onOpenChange={() => setEditingProduct(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Editar Producto: {editingProduct.id}</DialogTitle>
+              <DialogTitle>Editar Inmobiliario: {editingProduct.id}</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               {Object.keys(editingProduct).filter(key => key !== 'firebaseId').map(key => (
@@ -728,9 +728,9 @@ export default function DataManagementPage() {
           <AlertDialog open={!!productToDelete} onOpenChange={() => setProductToDelete(null)}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>¿Está seguro de que desea eliminar este producto?</AlertDialogTitle>
+                    <AlertDialogTitle>¿Está seguro de que desea eliminar este inmobiliario?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Esta acción no se puede deshacer. Se eliminará permanentemente el producto
+                        Esta acción no se puede deshacer. Se eliminará permanentemente el inmobiliario
                         <span className="font-bold"> {productToDelete.name || productToDelete.id}</span>.
                     </AlertDialogDescription>
                 </AlertDialogHeader>

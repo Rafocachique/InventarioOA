@@ -29,7 +29,7 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Productos</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Inmobiliarios</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -72,7 +72,7 @@ export default function DashboardPage() {
         <Card className="col-span-2 flex flex-col">
           <CardHeader>
             <CardTitle>Resumen de Escaneos Semanal</CardTitle>
-            <CardDescription>Un resumen de los productos escaneados durante la última semana.</CardDescription>
+            <CardDescription>Un resumen de los inmobiliarios escaneados durante la última semana.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <div className="relative w-full overflow-auto">

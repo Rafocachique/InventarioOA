@@ -38,14 +38,14 @@ const inventoryStatus = [
 ];
 
 const pieChartConfig = {
-  value: { label: 'Productos' },
+  value: { label: 'Inmobiliarios' },
   ...inventoryStatus.reduce((acc, cur) => ({ ...acc, [cur.name]: { label: cur.name, color: cur.fill } }), {})
 };
 
 const recentScans = [
-    { id: "SCAN-987", product: "PROD-001", user: "supervisor1", time: "Hace 5 minutos", status: "Válido" },
+    { id: "SCAN-987", product: "INM-001", user: "supervisor1", time: "Hace 5 minutos", status: "Válido" },
     { id: "SCAN-986", product: "XYZ-000", user: "supervisor2", time: "Hace 10 minutos", status: "Inválido" },
-    { id: "SCAN-985", product: "PROD-003", user: "supervisor1", time: "Hace 12 minutos", status: "Válido" },
+    { id: "SCAN-985", product: "INM-003", user: "supervisor1", time: "Hace 12 minutos", status: "Válido" },
 ]
 
 export default function ReportsPage() {
@@ -107,7 +107,7 @@ export default function ReportsPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>ID Escaneo</TableHead>
-                            <TableHead>Producto</TableHead>
+                            <TableHead>Inmobiliario</TableHead>
                             <TableHead>Usuario</TableHead>
                             <TableHead>Hora</TableHead>
                              <TableHead>Estado</TableHead>
@@ -128,7 +128,7 @@ export default function ReportsPage() {
                                             <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent>
-                                            <DropdownMenuItem>Corregir ID Producto</DropdownMenuItem>
+                                            <DropdownMenuItem>Corregir ID Inmobiliario</DropdownMenuItem>
                                             <DropdownMenuItem>Marcar como Revisado</DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
