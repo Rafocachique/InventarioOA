@@ -1,3 +1,4 @@
+
 "use client";
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -74,21 +75,23 @@ export default function DashboardPage() {
             <CardDescription>Un resumen de los productos escaneados durante la última semana.</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
-            <ChartContainer config={chartConfig} className="h-[350px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dailyScans} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                  <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" />
-                  <YAxis stroke="hsl(var(--muted-foreground))" />
-                  <Tooltip
-                    cursor={{ fill: 'hsla(var(--card), 0.5)' }}
-                    content={<ChartTooltipContent />}
-                  />
-                  <Legend />
-                  <Bar dataKey="scans" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
+            <div className="relative w-full overflow-auto">
+                <ChartContainer config={chartConfig} className="h-[350px] w-full min-w-[600px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dailyScans} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                      <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" />
+                      <YAxis stroke="hsl(var(--muted-foreground))" />
+                      <Tooltip
+                        cursor={{ fill: 'hsla(var(--card), 0.5)' }}
+                        content={<ChartTooltipContent />}
+                      />
+                      <Legend />
+                      <Bar dataKey="scans" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+            </div>
           </CardContent>
         </Card>
       </div>
