@@ -745,5 +745,3 @@ export default function DataManagementPage() {
   );
 
     
-
-    
