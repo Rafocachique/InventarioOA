@@ -610,7 +610,7 @@ export default function DataManagementPage() {
               </div>
           </CardHeader>
           <CardContent className="flex-grow p-0">
-            <div className="relative w-full h-full overflow-auto">
+            <div className="relative w-full h-full overflow-y-auto">
               <Table>
                   <TableHeader>
                   <TableRow>
@@ -746,5 +746,3 @@ export default function DataManagementPage() {
     </>
   );
 }
-
-    
