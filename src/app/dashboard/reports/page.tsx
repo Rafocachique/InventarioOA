@@ -52,7 +52,7 @@ export default function ReportsPage() {
   return (
     <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:col-span-2">
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2">
-            <Card className="flex flex-col">
+            <Card>
                 <CardHeader>
                     <CardTitle>Reporte de Escaneos Diarios</CardTitle>
                 </CardHeader>
@@ -71,7 +71,7 @@ export default function ReportsPage() {
                     </div>
                 </CardContent>
             </Card>
-            <Card className="flex flex-col">
+            <Card>
                 <CardHeader>
                     <CardTitle>Estado del Inventario</CardTitle>
                 </CardHeader>
@@ -94,7 +94,7 @@ export default function ReportsPage() {
                 </CardContent>
             </Card>
         </div>
-        <Card className="flex flex-col">
+        <Card>
             <CardHeader>
                 <CardTitle>Herramienta de Actualización de Datos</CardTitle>
                 <CardDescription>
@@ -143,5 +143,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-
-    

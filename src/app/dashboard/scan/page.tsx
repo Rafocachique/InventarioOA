@@ -451,7 +451,7 @@ export default function ScanPage() {
         )}
 
       </div>
-      <Card className="flex flex-col">
+      <Card>
         <CardHeader className="p-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <div className="flex-1">
@@ -595,5 +595,3 @@ export default function ScanPage() {
     </div>
   );
 }
-
-    
