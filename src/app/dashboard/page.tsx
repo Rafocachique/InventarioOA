@@ -74,7 +74,7 @@ export default function DashboardPage() {
             <CardTitle>Resumen de Escaneos Semanal</CardTitle>
             <CardDescription>Un resumen de los productos escaneados durante la última semana.</CardDescription>
           </CardHeader>
-          <CardContent className="pl-2">
+          <CardContent className="p-0">
             <div className="relative w-full overflow-auto">
                 <ChartContainer config={chartConfig} className="h-[350px] w-full min-w-[600px]">
                   <ResponsiveContainer width="100%" height="100%">

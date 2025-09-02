@@ -52,41 +52,45 @@ export default function ReportsPage() {
   return (
     <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:col-span-2">
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2">
-            <Card>
+            <Card className="flex flex-col">
                 <CardHeader>
                     <CardTitle>Reporte de Escaneos Diarios</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <ChartContainer config={barChartConfig} className="h-64 w-full">
-                        <ResponsiveContainer>
-                            <BarChart data={dailyScans}>
-                                <CartesianGrid vertical={false} />
-                                <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => new Date(value).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })} />
-                                <Tooltip content={<ChartTooltipContent />} />
-                                <Bar dataKey="count" fill="hsl(var(--primary))" radius={4} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </ChartContainer>
+                <CardContent className="p-0">
+                    <div className="relative w-full overflow-auto">
+                        <ChartContainer config={barChartConfig} className="h-64 w-full min-w-[300px]">
+                            <ResponsiveContainer>
+                                <BarChart data={dailyScans}>
+                                    <CartesianGrid vertical={false} />
+                                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => new Date(value).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })} />
+                                    <Tooltip content={<ChartTooltipContent />} />
+                                    <Bar dataKey="count" fill="hsl(var(--primary))" radius={4} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </ChartContainer>
+                    </div>
                 </CardContent>
             </Card>
-            <Card>
+            <Card className="flex flex-col">
                 <CardHeader>
                     <CardTitle>Estado del Inventario</CardTitle>
                 </CardHeader>
-                <CardContent className="flex justify-center">
-                    <ChartContainer config={pieChartConfig} className="h-64 w-full">
-                        <ResponsiveContainer>
-                            <PieChart>
-                                <Tooltip content={<ChartTooltipContent hideLabel />} />
-                                <Pie data={inventoryStatus} dataKey="value" nameKey="name" innerRadius={50}>
-                                    {inventoryStatus.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                                    ))}
-                                </Pie>
-                                <Legend/>
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </ChartContainer>
+                <CardContent className="flex justify-center p-0">
+                    <div className="relative w-full overflow-auto">
+                        <ChartContainer config={pieChartConfig} className="h-64 w-full min-w-[300px]">
+                            <ResponsiveContainer>
+                                <PieChart>
+                                    <Tooltip content={<ChartTooltipContent hideLabel />} />
+                                    <Pie data={inventoryStatus} dataKey="value" nameKey="name" innerRadius={50}>
+                                        {inventoryStatus.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                                        ))}
+                                    </Pie>
+                                    <Legend/>
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </ChartContainer>
+                    </div>
                 </CardContent>
             </Card>
         </div>
@@ -94,7 +98,7 @@ export default function ReportsPage() {
             <CardHeader>
                 <CardTitle>Herramienta de Actualización de Datos</CardTitle>
                 <CardDescription>
-                  Actualice manualmente los datos escaneados o el inventario. Aquí se muestran los escaneos recientes.
+                  Actualice manually los datos escaneados o el inventario. Aquí se muestran los escaneos recientes.
                 </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
