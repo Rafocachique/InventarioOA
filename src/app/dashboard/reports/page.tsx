@@ -17,7 +17,7 @@ import {
 const dailyScans = [
   { date: '2024-07-01', count: 230 },
   { date: '2024-07-02', count: 250 },
-  { date: '2024-_07-03', count: 210 },
+  { date: '2024-07-03', count: 210 },
   { date: '2024-07-04', count: 280 },
   { date: '2024-07-05', count: 310 },
   { date: '2024-07-06', count: 190 },
@@ -143,5 +143,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-
-    
