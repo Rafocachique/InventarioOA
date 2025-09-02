@@ -75,7 +75,7 @@ export default function ReportsPage() {
                 <CardHeader>
                     <CardTitle>Estado del Inventario</CardTitle>
                 </CardHeader>
-                <CardContent className="flex justify-center p-0">
+                <CardContent className="p-0">
                     <div className="relative w-full overflow-auto">
                         <ChartContainer config={pieChartConfig} className="h-64 w-full min-w-[300px]">
                             <ResponsiveContainer>
