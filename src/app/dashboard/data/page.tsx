@@ -448,7 +448,7 @@ export default function DataManagementPage() {
 
   return (
     <>
-      <div className="flex w-full items-center gap-2">
+      <div className="flex w-full items-center gap-2 mb-4">
         <div className="flex flex-col sm:flex-row items-center gap-4 mr-auto">
             <div className="text-xs text-muted-foreground">
                 Mostrando <strong>{paginatedProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-{(currentPage - 1) * itemsPerPage + paginatedProducts.length}</strong> de <strong>{filteredProducts.length}</strong> productos
@@ -587,7 +587,7 @@ export default function DataManagementPage() {
             </DropdownMenu>
         </div>
       </div>
-      <Card className="mt-4 flex flex-col">
+      <Card className="flex flex-col">
         <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
@@ -744,3 +744,6 @@ export default function DataManagementPage() {
     </>
   );
 }
+
+
+    
