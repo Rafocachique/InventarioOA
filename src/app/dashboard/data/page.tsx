@@ -35,6 +35,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
   Table,
@@ -743,5 +744,3 @@ export default function DataManagementPage() {
     </>
   );
 }
-
-    
