@@ -76,7 +76,7 @@ export default function AssetSearchPage() {
 
 
   return (
-    <div className="grid auto-rows-max items-start gap-4 md:gap-8">
+    <div className="flex flex-col h-full gap-4 md:gap-8">
         <Card>
             <CardHeader>
                 <CardTitle>Búsqueda General de Activos</CardTitle>
@@ -99,15 +99,15 @@ export default function AssetSearchPage() {
         </Card>
         
         {searchTerm && (
-        <Card>
+        <Card className="flex flex-col flex-grow">
             <CardHeader>
                 <CardTitle>Resultados de la Búsqueda</CardTitle>
                  <CardDescription>
                     {`Se encontraron ${filteredResults.length} activos para "${searchTerm}".`}
                 </CardDescription>
             </CardHeader>
-            <CardContent className="p-0">
-              <div className="relative w-full overflow-auto">
+            <CardContent className="flex-grow p-0">
+              <div className="relative w-full h-full overflow-auto">
                 <Table>
                     <TableHeader>
                         <TableRow>
