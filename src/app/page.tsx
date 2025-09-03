@@ -29,7 +29,7 @@ export default function LoginPage() {
       console.error("Error de inicio de sesión:", error);
       let description = "Ocurrió un error inesperado al intentar iniciar sesión.";
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-        description = "El correo electrónico o la contraseña que ingresaste no son correctos. Por favor, inténtalo de nuevo.";
+        description = "Credenciales inválidas. Por favor, revise su correo electrónico y contraseña.";
       }
       toast({
         variant: "destructive",
