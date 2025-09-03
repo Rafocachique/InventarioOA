@@ -55,11 +55,17 @@ export default function AssetSearchPage() {
                 foundProducts.push({ firebaseId: doc.id, ...doc.data() } as Product);
             });
 
-            setResults(foundProducts);
+            // Secondary filter in client-side to ensure it starts with the term
+            const filteredProducts = foundProducts.filter(p => 
+                String(p.Responsable).toUpperCase().startsWith(upperCaseSearchTerm)
+            );
 
-            if (foundProducts.length > 0) {
+
+            setResults(filteredProducts);
+
+            if (filteredProducts.length > 0) {
                 // Get all unique keys from the results to build table headers
-                const allKeys = foundProducts.reduce((acc, product) => {
+                const allKeys = filteredProducts.reduce((acc, product) => {
                     Object.keys(product).forEach(key => acc.add(key));
                     return acc;
                 }, new Set<string>());
