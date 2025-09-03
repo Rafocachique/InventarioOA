@@ -107,7 +107,7 @@ export default function AssetSearchPage() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="flex-grow p-0">
-              <div className="relative w-full h-full overflow-auto">
+              <div className="relative w-full overflow-auto">
                 <Table>
                     <TableHeader>
                         <TableRow>
