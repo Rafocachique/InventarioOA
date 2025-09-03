@@ -2,13 +2,12 @@
 "use client"
 
 import * as React from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, Search } from 'lucide-react';
 import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs, DocumentData } from "firebase/firestore";
+import { collection, getDocs, DocumentData } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 
 interface Product {
@@ -18,77 +17,67 @@ interface Product {
 
 export default function AssetSearchPage() {
     const [searchTerm, setSearchTerm] = React.useState("");
-    const [results, setResults] = React.useState<Product[]>([]);
-    const [isLoading, setIsLoading] = React.useState(false);
+    const [allProducts, setAllProducts] = React.useState<Product[]>([]);
+    const [filteredResults, setFilteredResults] = React.useState<Product[]>([]);
+    const [isLoading, setIsLoading] = React.useState(true);
     const [hasSearched, setHasSearched] = React.useState(false);
     const [headers, setHeaders] = React.useState<string[]>([]);
     const { toast } = useToast();
 
-    const handleSearch = async () => {
-        if (!searchTerm.trim()) {
-            toast({
-                variant: "destructive",
-                title: "Término de Búsqueda Vacío",
-                description: "Por favor, ingrese un nombre para buscar.",
-            });
+    React.useEffect(() => {
+        const fetchAllProducts = async () => {
+            setIsLoading(true);
+            try {
+                const productsRef = collection(db, "products");
+                const querySnapshot = await getDocs(productsRef);
+                const productsData: Product[] = querySnapshot.docs.map(doc => ({ firebaseId: doc.id, ...doc.data() } as Product));
+                setAllProducts(productsData);
+            } catch (error) {
+                console.error("Error fetching assets: ", error);
+                toast({
+                    variant: "destructive",
+                    title: "Error de Carga",
+                    description: "No se pudieron cargar los datos de los activos.",
+                });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchAllProducts();
+    }, [toast]);
+
+    React.useEffect(() => {
+        if (!searchTerm) {
+            setFilteredResults([]);
+            if(hasSearched) setHasSearched(false);
             return;
         }
 
-        setIsLoading(true);
-        setResults([]);
-        setHasSearched(true);
+        const lowerCaseSearchTerm = searchTerm.toLowerCase();
         
-        const upperCaseSearchTerm = searchTerm.toUpperCase();
+        const results = allProducts.filter(product => 
+            product.Responsable && String(product.Responsable).toLowerCase().includes(lowerCaseSearchTerm)
+        );
 
-        try {
-            const productsRef = collection(db, "products");
-            // Perform a case-insensitive search by querying for the uppercase version of the name.
-            const responsibleQuery = query(productsRef, 
-                where("Responsable", ">=", upperCaseSearchTerm), 
-                where("Responsable", "<=", upperCaseSearchTerm + '\uf8ff')
-            );
+        setFilteredResults(results);
 
-            const querySnapshot = await getDocs(responsibleQuery);
-            
-            const foundProducts: Product[] = [];
-            querySnapshot.forEach((doc) => {
-                foundProducts.push({ firebaseId: doc.id, ...doc.data() } as Product);
-            });
+        if (results.length > 0) {
+            const allKeys = results.reduce((acc, product) => {
+                Object.keys(product).forEach(key => acc.add(key));
+                return acc;
+            }, new Set<string>());
 
-            // Secondary filter in client-side to ensure it starts with the term
-            const filteredProducts = foundProducts.filter(p => 
-                String(p.Responsable).toUpperCase().startsWith(upperCaseSearchTerm)
-            );
-
-
-            setResults(filteredProducts);
-
-            if (filteredProducts.length > 0) {
-                // Get all unique keys from the results to build table headers
-                const allKeys = filteredProducts.reduce((acc, product) => {
-                    Object.keys(product).forEach(key => acc.add(key));
-                    return acc;
-                }, new Set<string>());
-
-                const sortedHeaders = Array.from(allKeys).filter(key => key !== 'firebaseId');
-                setHeaders(sortedHeaders);
-            }
-
-        } catch (error) {
-            console.error("Error searching assets: ", error);
-            toast({
-                variant: "destructive",
-                title: "Error de Búsqueda",
-                description: "Ocurrió un error al buscar en la base de datos. Es posible que necesite crear un índice en Firestore para el campo 'Responsable'.",
-            });
-        } finally {
-            setIsLoading(false);
+            const sortedHeaders = Array.from(allKeys).filter(key => key !== 'firebaseId');
+            setHeaders(sortedHeaders);
         }
-    };
+
+        if(!hasSearched) setHasSearched(true);
+
+    }, [searchTerm, allProducts, hasSearched]);
     
     const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
         if (event.key === 'Enter') {
-            handleSearch();
+            setHasSearched(true);
         }
     };
 
@@ -99,32 +88,30 @@ export default function AssetSearchPage() {
             <CardHeader>
                 <CardTitle>Búsqueda de Activos por Responsable</CardTitle>
                 <CardDescription>
-                  Ingrese el nombre del responsable para encontrar todos los activos inmobiliarios asignados a esa persona.
+                  Escriba en el campo para buscar en tiempo real todos los activos asignados a un responsable.
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="flex w-full max-w-lg items-center space-x-2">
+                <div className="relative w-full max-w-lg">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input 
-                        type="text" 
-                        placeholder="Nombre del responsable..." 
+                        type="search" 
+                        placeholder="Escriba el nombre del responsable..." 
+                        className="pl-8 w-full"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         onKeyPress={handleKeyPress}
                     />
-                    <Button onClick={handleSearch} disabled={isLoading}>
-                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                        Buscar
-                    </Button>
                 </div>
             </CardContent>
         </Card>
         
-        {hasSearched && (
+        {searchTerm && hasSearched && (
         <Card>
             <CardHeader>
                 <CardTitle>Resultados de la Búsqueda</CardTitle>
                  <CardDescription>
-                    {isLoading ? "Buscando..." : `Se encontraron ${results.length} activos para "${searchTerm}".`}
+                    {`Se encontraron ${filteredResults.length} activos para "${searchTerm}".`}
                 </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -140,10 +127,10 @@ export default function AssetSearchPage() {
                     <TableBody>
                         {isLoading ? (
                             <TableRow><TableCell colSpan={headers.length} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
-                        ) : results.length === 0 ? (
+                        ) : filteredResults.length === 0 ? (
                              <TableRow><TableCell colSpan={headers.length || 1} className="text-center h-24">No se encontraron activos para este responsable.</TableCell></TableRow>
                         ) : (
-                            results.map(product => (
+                            filteredResults.map(product => (
                                 <TableRow key={product.firebaseId}>
                                     {headers.map(header => (
                                         <TableCell key={header}>
