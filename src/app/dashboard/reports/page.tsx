@@ -48,6 +48,7 @@ export default function AssetSearchPage() {
     React.useEffect(() => {
         if (!searchTerm) {
             setFilteredResults([]);
+            setHeaders([]);
             return;
         }
 
@@ -98,15 +99,15 @@ export default function AssetSearchPage() {
         </Card>
         
         {searchTerm && (
-        <Card className="flex flex-col flex-grow">
+        <Card>
             <CardHeader>
                 <CardTitle>Resultados de la Búsqueda</CardTitle>
                  <CardDescription>
                     {`Se encontraron ${filteredResults.length} activos para "${searchTerm}".`}
                 </CardDescription>
             </CardHeader>
-            <CardContent className="flex-grow p-0">
-              <div className="relative w-full h-full overflow-auto">
+            <CardContent className="p-0">
+              <div className="relative w-full overflow-auto">
                 <Table>
                     <TableHeader>
                         <TableRow>

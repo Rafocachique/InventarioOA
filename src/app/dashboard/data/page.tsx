@@ -588,7 +588,7 @@ export default function DataManagementPage() {
               </DropdownMenu>
           </div>
         </div>
-        <Card className="flex flex-col flex-grow">
+        <Card>
           <CardHeader>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div>
@@ -609,8 +609,8 @@ export default function DataManagementPage() {
                   </div>
               </div>
           </CardHeader>
-          <CardContent className="flex-grow p-0">
-            <div className="relative w-full h-full overflow-auto">
+          <CardContent className="p-0">
+            <div className="relative w-full overflow-auto">
               <Table>
                   <TableHeader>
                   <TableRow>
