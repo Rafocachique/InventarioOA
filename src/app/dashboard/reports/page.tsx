@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from '@/components/ui/input';
 import { Loader2, Search } from 'lucide-react';
 import { db } from "@/lib/firebase";
-import { collection, getDocs, DocumentData } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 
 interface Product {
@@ -98,15 +98,15 @@ export default function AssetSearchPage() {
         </Card>
         
         {searchTerm && (
-        <Card>
+        <Card className="flex flex-col flex-grow">
             <CardHeader>
                 <CardTitle>Resultados de la Búsqueda</CardTitle>
                  <CardDescription>
                     {`Se encontraron ${filteredResults.length} activos para "${searchTerm}".`}
                 </CardDescription>
             </CardHeader>
-            <CardContent className="p-0">
-              <div className="relative w-full overflow-auto">
+            <CardContent className="flex-grow p-0">
+              <div className="relative w-full h-full overflow-auto">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -122,7 +122,7 @@ export default function AssetSearchPage() {
                             filteredResults.map(product => (
                                 <TableRow key={product.firebaseId}>
                                     {headers.map(header => (
-                                        <TableCell key={header}>
+                                        <TableCell key={header} className="whitespace-nowrap">
                                             {String(product[header] ?? '')}
                                         </TableCell>
                                     ))}
@@ -140,3 +140,5 @@ export default function AssetSearchPage() {
     </div>
   );
 }
+
+    
