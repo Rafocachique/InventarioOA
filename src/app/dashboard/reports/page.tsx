@@ -76,8 +76,8 @@ export default function AssetSearchPage() {
 
 
   return (
-    <div className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 lg:grid-cols-3 xl:grid-cols-3">
-        <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:col-span-1">
+    <div className="grid flex-1 grid-cols-1 gap-4 md:gap-8 lg:grid-cols-3">
+        <div className="flex flex-col gap-4 md:gap-8 lg:col-span-1">
             <Card>
                 <CardHeader>
                     <CardTitle>Búsqueda General de Activos</CardTitle>
@@ -100,7 +100,7 @@ export default function AssetSearchPage() {
             </Card>
         </div>
         
-        <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:col-span-2">
+        <div className="flex flex-col gap-4 md:gap-8 lg:col-span-2">
              <Card className="flex flex-grow flex-col">
                 <CardHeader>
                     <CardTitle>Resultados de la Búsqueda</CardTitle>
