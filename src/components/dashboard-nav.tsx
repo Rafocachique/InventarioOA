@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Database, Home, ScanLine, BarChart3, Users } from 'lucide-react';
+import { Database, Home, ScanLine, Search, Users } from 'lucide-react';
 
 import {
   SidebarMenu,
@@ -14,7 +14,7 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/dashboard/data', label: 'Gestión de Datos', icon: Database },
   { href: '/dashboard/scan', label: 'Escanear y Verificar', icon: ScanLine },
-  { href: '/dashboard/reports', label: 'Reportes', icon: BarChart3 },
+  { href: '/dashboard/reports', label: 'Búsqueda de Activos', icon: Search },
   { href: '/dashboard/roles', label: 'Gestión de Roles', icon: Users },
 ];
 

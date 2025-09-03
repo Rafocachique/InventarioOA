@@ -2,280 +2,122 @@
 "use client"
 
 import * as React from "react";
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from "@/components/ui/label";
-import { MoreHorizontal, Loader2, Save } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Loader2, Search } from 'lucide-react';
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, query, where, Timestamp, orderBy, limit, doc, getDocs, updateDoc } from "firebase/firestore";
-import { subDays, format } from "date-fns";
-import { es } from "date-fns/locale";
+import { collection, query, where, getDocs, DocumentData } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 
-
-interface ScanHistoryItem {
-    firebaseId: string;
-    scannedAt: Timestamp;
-    scannedBy: string;
-    [key: string]: any; 
-}
-
-interface InventoryStatusItem {
-    name: string;
-    value: number;
-    fill: string;
-}
-
-interface DailyScanItem {
-    date: string;
-    count: number;
-}
-interface EditableProduct {
+interface Product {
   firebaseId: string;
   [key: string]: any;
 }
 
-
-const barChartConfig = {
-  count: {
-    label: "Escaneos",
-    color: "hsl(var(--primary))",
-  },
-};
-
-const PIE_CHART_COLORS = [
-    "hsl(var(--chart-1))",
-    "hsl(var(--chart-2))",
-    "hsl(var(--chart-3))",
-    "hsl(var(--chart-4))",
-    "hsl(var(--chart-5))",
-];
-
-export default function ReportsPage() {
-    const [dailyScans, setDailyScans] = React.useState<DailyScanItem[]>([]);
-    const [inventoryStatus, setInventoryStatus] = React.useState<InventoryStatusItem[]>([]);
-    const [pieChartConfig, setPieChartConfig] = React.useState<any>({});
-    const [recentScans, setRecentScans] = React.useState<ScanHistoryItem[]>([]);
-    const [isLoading, setIsLoading] = React.useState(true);
-    const [isSubmitting, setIsSubmitting] = React.useState(false);
-
-    const [editingRecord, setEditingRecord] = React.useState<EditableProduct | null>(null);
+export default function AssetSearchPage() {
+    const [searchTerm, setSearchTerm] = React.useState("");
+    const [results, setResults] = React.useState<Product[]>([]);
+    const [isLoading, setIsLoading] = React.useState(false);
+    const [hasSearched, setHasSearched] = React.useState(false);
+    const [headers, setHeaders] = React.useState<string[]>([]);
     const { toast } = useToast();
 
-    React.useEffect(() => {
-        setIsLoading(true);
-
-        // --- Listener for Daily Scans ---
-        const sevenDaysAgo = startOfDate(subDays(new Date(), 6));
-        const dailyScansQuery = query(collection(db, "scan_history"), where("scannedAt", ">=", Timestamp.fromDate(sevenDaysAgo)));
-        
-        const dailyScansUnsubscribe = onSnapshot(dailyScansQuery, (snapshot) => {
-            const scansByDay: { [key: string]: number } = {};
-            for (let i = 0; i < 7; i++) {
-                const date = format(subDays(new Date(), i), 'yyyy-MM-dd');
-                scansByDay[date] = 0;
-            }
-
-            snapshot.docs.forEach(doc => {
-                const scanDate = doc.data().scannedAt.toDate();
-                const dateStr = format(scanDate, 'yyyy-MM-dd');
-                if(scansByDay[dateStr] !== undefined){
-                    scansByDay[dateStr]++;
-                }
+    const handleSearch = async () => {
+        if (!searchTerm.trim()) {
+            toast({
+                variant: "destructive",
+                title: "Término de Búsqueda Vacío",
+                description: "Por favor, ingrese un nombre para buscar.",
             });
-
-            const chartData = Object.entries(scansByDay)
-                .map(([date, count]) => ({ date, count }))
-                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-            
-            setDailyScans(chartData);
-        });
-
-        // --- Listener for Inventory Status ---
-        const inventoryQuery = query(collection(db, "products"));
-        const inventoryUnsubscribe = onSnapshot(inventoryQuery, (snapshot) => {
-            const statusCounts: { [key: string]: number } = {};
-            snapshot.docs.forEach(doc => {
-                const data = doc.data();
-                const status = data.Estado || 'Sin Estado'; 
-                if (statusCounts[status]) {
-                    statusCounts[status]++;
-                } else {
-                    statusCounts[status] = 1;
-                }
-            });
-
-            const statusData = Object.entries(statusCounts).map(([name, value], index) => ({
-                name,
-                value,
-                fill: PIE_CHART_COLORS[index % PIE_CHART_COLORS.length],
-            }));
-            setInventoryStatus(statusData);
-
-            const newPieConfig = {
-                value: { label: 'Inmobiliarios' },
-                ...statusData.reduce((acc, cur) => ({ ...acc, [cur.name]: { label: cur.name, color: cur.fill } }), {})
-            };
-            setPieChartConfig(newPieConfig);
-        });
-
-        // --- Listener for Recent Scans ---
-        const recentScansQuery = query(collection(db, "scan_history"), orderBy("scannedAt", "desc"), limit(5));
-        const recentScansUnsubscribe = onSnapshot(recentScansQuery, (snapshot) => {
-            const scans: ScanHistoryItem[] = [];
-            snapshot.forEach(doc => {
-                scans.push({ firebaseId: doc.id, ...doc.data() } as ScanHistoryItem);
-            });
-            setRecentScans(scans);
-        });
-
-        setIsLoading(false);
-
-        return () => {
-            dailyScansUnsubscribe();
-            inventoryUnsubscribe();
-            recentScansUnsubscribe();
-        };
-
-    }, []);
-
-    const startOfDate = (date: Date) => {
-        const newDate = new Date(date);
-        newDate.setHours(0, 0, 0, 0);
-        return newDate;
-    };
-
-    const handleEditRecord = (record: ScanHistoryItem) => {
-        // We need to find the original product document to edit it.
-        // We can use a key from the scan, e.g., 'id' or 'Codbien' to find it.
-        const idKey = record.id || record.Codbien;
-        if (!idKey) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Este registro de escaneo no tiene un identificador único para encontrar el inmobiliario original.' });
             return;
         }
 
-        const findAndEdit = async () => {
-            const productsRef = collection(db, "products");
-            // Assuming 'id' field is the unique identifier in the 'products' collection
-            const q = query(productsRef, where("id", "==", idKey));
-            const querySnapshot = await getDocs(q);
+        setIsLoading(true);
+        setResults([]);
+        setHasSearched(true);
 
-            if (querySnapshot.empty) {
-                toast({ variant: 'destructive', title: 'No Encontrado', description: `No se pudo encontrar el inmobiliario original con id ${idKey}.` });
-                return;
-            }
-            
-            const productDoc = querySnapshot.docs[0];
-            setEditingRecord({ firebaseId: productDoc.id, ...productDoc.data() });
-        }
-        
-        findAndEdit();
-    };
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!editingRecord) return;
-        const { id, value } = e.target;
-        setEditingRecord({ ...editingRecord, [id]: e.target.type === 'number' ? Number(value) : value });
-    };
-
-    const handleSaveChanges = async () => {
-        if (!editingRecord || !editingRecord.firebaseId) return;
-
-        setIsSubmitting(true);
         try {
-            const productDocRef = doc(db, "products", editingRecord.firebaseId);
-            const { firebaseId, ...productData } = editingRecord;
-            await updateDoc(productDocRef, productData);
-            toast({
-                title: "Inmobiliario Actualizado",
-                description: "Los cambios se han guardado correctamente.",
+            const productsRef = collection(db, "products");
+            // We assume the field is called 'Responsable'. This might need adjustment.
+            // Firestore's >= and < trick allows for "starts with" queries.
+            const responsibleQuery = query(productsRef, 
+                where("Responsable", ">=", searchTerm), 
+                where("Responsable", "<=", searchTerm + '\uf8ff')
+            );
+
+            const querySnapshot = await getDocs(responsibleQuery);
+            
+            const foundProducts: Product[] = [];
+            querySnapshot.forEach((doc) => {
+                foundProducts.push({ firebaseId: doc.id, ...doc.data() } as Product);
             });
-            setEditingRecord(null);
+
+            setResults(foundProducts);
+
+            if (foundProducts.length > 0) {
+                // Get all unique keys from the results to build table headers
+                const allKeys = foundProducts.reduce((acc, product) => {
+                    Object.keys(product).forEach(key => acc.add(key));
+                    return acc;
+                }, new Set<string>());
+
+                const sortedHeaders = Array.from(allKeys).filter(key => key !== 'firebaseId');
+                setHeaders(sortedHeaders);
+            }
+
         } catch (error) {
-            console.error("Error updating product: ", error);
-            toast({ variant: "destructive", title: "Error", description: "No se pudo actualizar el inmobiliario." });
+            console.error("Error searching assets: ", error);
+            toast({
+                variant: "destructive",
+                title: "Error de Búsqueda",
+                description: "Ocurrió un error al buscar en la base de datos.",
+            });
         } finally {
-            setIsSubmitting(false);
+            setIsLoading(false);
+        }
+    };
+    
+    const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (event.key === 'Enter') {
+            handleSearch();
         }
     };
 
 
   return (
-    <>
-    <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:col-span-2">
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Reporte de Escaneos Diarios</CardTitle>
-                     <CardDescription>Muestra los escaneos realizados en los últimos 7 días.</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="relative w-full overflow-auto">
-                        <ChartContainer config={barChartConfig} className="h-64 w-full min-w-[300px]">
-                            {isLoading ? <Loader2 className="h-8 w-8 animate-spin mx-auto mt-24" /> :
-                            <ResponsiveContainer>
-                                <BarChart data={dailyScans}>
-                                    <CartesianGrid vertical={false} />
-                                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => new Date(value).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} />
-                                    <YAxis />
-                                    <Tooltip content={<ChartTooltipContent />} />
-                                    <Bar dataKey="count" fill="hsl(var(--primary))" radius={4} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                            }
-                        </ChartContainer>
-                    </div>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Estado del Inventario</CardTitle>
-                    <CardDescription>Distribución de inmobiliarios por estado.</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="relative w-full overflow-auto">
-                        <ChartContainer config={pieChartConfig} className="h-64 w-full min-w-[300px]">
-                             {isLoading ? <Loader2 className="h-8 w-8 animate-spin mx-auto mt-24" /> :
-                            <ResponsiveContainer>
-                                <PieChart>
-                                    <Tooltip content={<ChartTooltipContent hideLabel />} />
-                                    <Pie data={inventoryStatus} dataKey="value" nameKey="name" innerRadius={50} paddingAngle={2}>
-                                        {inventoryStatus.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                                        ))}
-                                    </Pie>
-                                    <Legend/>
-                                </PieChart>
-                            </ResponsiveContainer>
-                            }
-                        </ChartContainer>
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
+    <div className="grid auto-rows-max items-start gap-4 md:gap-8">
         <Card>
             <CardHeader>
-                <CardTitle>Herramienta de Actualización de Datos</CardTitle>
+                <CardTitle>Búsqueda de Activos por Responsable</CardTitle>
                 <CardDescription>
-                  Actualice manualmente los datos de los inmobiliarios desde los escaneos recientes.
+                  Ingrese el nombre del responsable para encontrar todos los activos inmobiliarios asignados a esa persona.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="flex w-full max-w-lg items-center space-x-2">
+                    <Input 
+                        type="text" 
+                        placeholder="Nombre del responsable..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyPress={handleKeyPress}
+                    />
+                    <Button onClick={handleSearch} disabled={isLoading}>
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+                        Buscar
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+        
+        {hasSearched && (
+        <Card>
+            <CardHeader>
+                <CardTitle>Resultados de la Búsqueda</CardTitle>
+                 <CardDescription>
+                    {isLoading ? "Buscando..." : `Se encontraron ${results.length} activos para "${searchTerm}".`}
                 </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -283,35 +125,24 @@ export default function ReportsPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Inmobiliario (ID)</TableHead>
-                            <TableHead>Denominación</TableHead>
-                            <TableHead>Usuario</TableHead>
-                            <TableHead>Hora</TableHead>
-                            <TableHead><span className="sr-only">Acciones</span></TableHead>
+                            {headers.map(header => (
+                                <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>
+                            ))}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
-                            <TableRow><TableCell colSpan={5} className="text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto my-12" /></TableCell></TableRow>
-                        ) : recentScans.length === 0 ? (
-                             <TableRow><TableCell colSpan={5} className="text-center h-24">No hay escaneos recientes.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={headers.length} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                        ) : results.length === 0 ? (
+                             <TableRow><TableCell colSpan={headers.length} className="text-center h-24">No se encontraron activos para este responsable.</TableCell></TableRow>
                         ) : (
-                            recentScans.map(scan => (
-                                <TableRow key={scan.firebaseId}>
-                                    <TableCell className="font-mono">{scan.id || scan.Codbien || 'N/A'}</TableCell>
-                                    <TableCell>{scan.Denominacion || 'N/A'}</TableCell>
-                                    <TableCell>{scan.scannedBy}</TableCell>
-                                    <TableCell>{scan.scannedAt.toDate().toLocaleTimeString('es-ES')}</TableCell>
-                                    <TableCell className="text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent>
-                                                <DropdownMenuItem onSelect={() => handleEditRecord(scan)}>Editar Inmobiliario</DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
+                            results.map(product => (
+                                <TableRow key={product.firebaseId}>
+                                    {headers.map(header => (
+                                        <TableCell key={header}>
+                                            {String(product[header] ?? '')}
+                                        </TableCell>
+                                    ))}
                                 </TableRow>
                             ))
                         )}
@@ -320,40 +151,7 @@ export default function ReportsPage() {
               </div>
             </CardContent>
         </Card>
+        )}
     </div>
-
-    {editingRecord && (
-        <Dialog open={!!editingRecord} onOpenChange={() => setEditingRecord(null)}>
-            <DialogContent className="max-w-2xl">
-            <DialogHeader>
-                <DialogTitle>Editar Inmobiliario: {editingRecord.Denominacion}</DialogTitle>
-                <DialogDescription>Los cambios se guardarán en la base de datos principal.</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-6">
-                {Object.keys(editingRecord).filter(key => key !== 'firebaseId').map(key => (
-                <div key={key} className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor={key} className="text-right capitalize">{key.replace(/_/g, ' ')}</Label>
-                    <Input
-                    id={key}
-                    type={typeof editingRecord[key] === 'number' ? 'number' : 'text'}
-                    value={editingRecord[key] ?? ''}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                    disabled={key === 'id' || key === 'Codbien'}
-                    />
-                </div>
-                ))}
-            </div>
-            <DialogFooter>
-                <Button variant="outline" onClick={() => setEditingRecord(null)}>Cancelar</Button>
-                <Button onClick={handleSaveChanges} disabled={isSubmitting}>
-                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Guardar Cambios
-                </Button>
-            </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    )}
-    </>
   );
 }
