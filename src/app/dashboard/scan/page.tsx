@@ -11,18 +11,36 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { scanAndVerifyData, ScanAndVerifyDataOutput } from "@/ai/flows/scan-and-verify-data";
 import { extractTextFromImage } from "@/ai/flows/extract-text-from-image";
 import { saveScan, SaveScanInput } from "@/ai/flows/save-scan";
-import { Loader2, CheckCircle, XCircle, Camera, Save, ScanLine, Download, MoreHorizontal, Settings, Calendar as CalendarIcon } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Camera, Save, ScanLine, Download, MoreHorizontal, Settings, Calendar as CalendarIcon, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { doc, getDocs, updateDoc, collection, query, where, Timestamp, onSnapshot, orderBy } from "firebase/firestore";
+import { doc, getDocs, updateDoc, collection, query, where, Timestamp, onSnapshot, orderBy, deleteDoc, writeBatch } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { DateRange } from "react-day-picker";
+import { format, startOfDay, endOfDay, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import * as XLSX from "xlsx";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,7 +50,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
-
 
 interface EditableProduct {
   firebaseId: string;
@@ -57,7 +74,14 @@ export default function ScanPage() {
   const [editingScanRecord, setEditingScanRecord] = useState<EditableProduct | null>(null);
   const [scanHistoryHeaders, setScanHistoryHeaders] = useState<string[]>([]);
   const [visibleScanHistoryHeaders, setVisibleScanHistoryHeaders] = useState<Set<string>>(new Set());
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: startOfDay(new Date()),
+    to: endOfDay(new Date()),
+  });
+
+  const [scanToDelete, setScanToDelete] = useState<ScanRecord | null>(null);
+  const [isDeleteRangeAlertOpen, setIsDeleteRangeAlertOpen] = useState(false);
+
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -309,19 +333,21 @@ export default function ScanPage() {
   };
   
   const filteredHistory = useMemo(() => {
-    if (!selectedDate) return scanHistory;
-    const start = startOfDay(selectedDate);
-    const end = endOfDay(selectedDate);
+    if (!dateRange?.from) return scanHistory;
+
+    const start = startOfDay(dateRange.from);
+    const end = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
+    
     return scanHistory.filter(scan => {
       const scanDate = scan.scannedAt.toDate();
       return scanDate >= start && scanDate <= end;
     });
-  }, [scanHistory, selectedDate]);
+  }, [scanHistory, dateRange]);
 
 
   const handleExportHistory = () => {
       if (filteredHistory.length === 0) {
-          toast({ title: "No hay datos", description: "No hay escaneos para la fecha seleccionada." });
+          toast({ title: "No hay datos", description: "No hay escaneos para el rango de fechas seleccionado." });
           return;
       }
 
@@ -336,12 +362,49 @@ export default function ScanPage() {
       const worksheet = XLSX.utils.json_to_sheet(dataToExport);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Historial de Escaneos");
-      const excelFileName = selectedDate ? `historial_escaneos_${format(selectedDate, "yyyy-MM-dd")}.xlsx` : "historial_escaneos.xlsx";
+      const excelFileName = `historial_escaneos_${format(dateRange!.from!, "yyyy-MM-dd")}_a_${format(dateRange!.to || dateRange!.from!, "yyyy-MM-dd")}.xlsx`;
       XLSX.writeFile(workbook, excelFileName);
   };
 
   const handleEditRecord = async (record: ScanRecord) => {
     setEditingScanRecord({ ...record });
+  };
+
+  const handleDeleteScan = async () => {
+    if (!scanToDelete) return;
+    try {
+        await deleteDoc(doc(db, "scan_history", scanToDelete.firebaseId));
+        toast({
+            title: "Escaneo Eliminado",
+            description: "El registro de escaneo ha sido eliminado del historial.",
+        });
+        setScanToDelete(null);
+    } catch (error) {
+        console.error("Error deleting scan record:", error);
+        toast({ variant: "destructive", title: "Error", description: "No se pudo eliminar el registro." });
+    }
+  };
+
+  const handleDeleteScansByRange = async () => {
+      if (!dateRange?.from) return;
+      
+      const batch = writeBatch(db);
+      filteredHistory.forEach(scan => {
+          const docRef = doc(db, "scan_history", scan.firebaseId);
+          batch.delete(docRef);
+      });
+
+      try {
+          await batch.commit();
+          toast({
+              title: "Registros Eliminados",
+              description: `Se eliminaron ${filteredHistory.length} registros de escaneo del rango seleccionado.`,
+          });
+          setIsDeleteRangeAlertOpen(false);
+      } catch (error) {
+          console.error("Error deleting scan records in batch:", error);
+          toast({ variant: "destructive", title: "Error", description: "No se pudieron eliminar los registros." });
+      }
   };
 
   const handleColumnVisibilityChange = (header: string) => {
@@ -458,24 +521,38 @@ export default function ScanPage() {
                       <CardTitle>Historial de Escaneos</CardTitle>
                       <CardDescription>Aquí se muestran los escaneos registrados.</CardDescription>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
                       <Popover>
                           <PopoverTrigger asChild>
-                          <Button
+                           <Button
+                              id="date"
                               variant={"outline"}
-                              className="w-full sm:w-[240px] justify-start text-left font-normal"
-                          >
+                              className="w-full sm:w-[280px] justify-start text-left font-normal"
+                            >
                               <CalendarIcon className="mr-2 h-4 w-4" />
-                              {selectedDate ? format(selectedDate, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
-                          </Button>
+                              {dateRange?.from ? (
+                                dateRange.to ? (
+                                  <>
+                                    {format(dateRange.from, "LLL dd, y", { locale: es })} -{" "}
+                                    {format(dateRange.to, "LLL dd, y", { locale: es })}
+                                  </>
+                                ) : (
+                                  format(dateRange.from, "LLL dd, y", { locale: es })
+                                )
+                              ) : (
+                                <span>Seleccione un rango</span>
+                              )}
+                            </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="end">
                           <Calendar
-                              locale={es}
-                              mode="single"
-                              selected={selectedDate}
-                              onSelect={setSelectedDate}
                               initialFocus
+                              mode="range"
+                              defaultMonth={dateRange?.from}
+                              selected={dateRange}
+                              onSelect={setDateRange}
+                              numberOfMonths={2}
+                              locale={es}
                           />
                           </PopoverContent>
                       </Popover>
@@ -485,6 +562,28 @@ export default function ScanPage() {
                               Exportar
                           </span>
                       </Button>
+                      <AlertDialog open={isDeleteRangeAlertOpen} onOpenChange={setIsDeleteRangeAlertOpen}>
+                        <AlertDialogTrigger asChild>
+                           <Button size="sm" variant="destructive" className="h-10 gap-1" disabled={filteredHistory.length === 0}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                                  Eliminar del Rango
+                              </span>
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Esta acción es irreversible y eliminará <strong>{filteredHistory.length}</strong> registros de escaneo del rango de fechas seleccionado.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteScansByRange}>Confirmar y Eliminar</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                       <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                               <Button variant="outline" size="icon" className="h-10 w-10">
@@ -531,7 +630,7 @@ export default function ScanPage() {
                     ) : filteredHistory.length === 0 ? (
                         <TableRow>
                         <TableCell colSpan={displayedHistoryHeaders.length + 3} className="h-24 text-center">
-                            No hay registros de escaneo para la fecha seleccionada.
+                            No hay registros de escaneo para el rango de fechas seleccionado.
                         </TableCell>
                         </TableRow>
                     ) : (
@@ -545,9 +644,19 @@ export default function ScanPage() {
                             <TableCell>{scan.scannedAt.toDate().toLocaleString('es-ES')}</TableCell>
                             <TableCell>{scan.scannedBy}</TableCell>
                             <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => handleEditRecord(scan)}>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
+                               <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                        <DropdownMenuItem onSelect={() => handleEditRecord(scan)}>Editar Inmobiliario</DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem className="text-red-500" onSelect={() => setScanToDelete(scan)}>Eliminar Escaneo</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </TableCell>
                         </TableRow>
                         ))
@@ -593,6 +702,24 @@ export default function ScanPage() {
           </DialogContent>
         </Dialog>
       )}
+
+      {scanToDelete && (
+        <AlertDialog open={!!scanToDelete} onOpenChange={() => setScanToDelete(null)}>
+          <AlertDialogContent>
+              <AlertDialogHeader>
+                  <AlertDialogTitle>¿Desea eliminar este registro de escaneo?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                      Esta acción no se puede deshacer. Se eliminará permanentemente el registro del historial. El inmobiliario en sí no será eliminado.
+                  </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteScan}>Confirmar</AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
     </div>
   );
 }
