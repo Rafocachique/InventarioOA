@@ -82,7 +82,6 @@ export default function ScanPage() {
         }
         setHasCameraPermission(true);
       } catch (err: any) {
-        console.error("Error al acceder a la cámara:", err);
         setHasCameraPermission(false);
         if (err.name === "NotAllowedError") {
              setError("Permiso de cámara denegado. Por favor, habilite el acceso a la cámara en la configuración de su navegador.");
