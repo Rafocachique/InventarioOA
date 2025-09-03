@@ -7,10 +7,18 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 
 
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,10 +36,13 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { DashboardNav } from '@/components/dashboard-nav';
 import { useToast } from '@/hooks/use-toast';
 
 interface UserData {
+    id?: string;
     name?: string;
     email?: string;
     role?: string;
@@ -56,37 +67,43 @@ export default function DashboardLayout({
   const { toast } = useToast();
   const [currentUser, setCurrentUser] = React.useState<UserData | null>(null);
   const [initials, setInitials] = React.useState("");
+  const [isProfileDialogOpen, setIsProfileDialogOpen] = React.useState(false);
+  const [editableName, setEditableName] = React.useState("");
+  const [isLoading, setIsLoading] = React.useState(false);
+
+
+  const fetchUserData = async (user: User) => {
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+      let userData: UserData;
+
+      if (userDoc.exists()) {
+          userData = { id: user.uid, ...userDoc.data() } as UserData;
+      } else {
+          userData = { id: user.uid, email: user.email || 'N/A' };
+      }
+      
+      setCurrentUser(userData);
+      setEditableName(userData.name || "");
+      
+      const name = userData.name;
+      if (name) {
+           const nameParts = name.split(' ');
+           const initials = nameParts.length > 1 
+              ? `${nameParts[0][0]}${nameParts[1][0]}`
+              : name.substring(0, 2);
+           setInitials(initials.toUpperCase());
+      } else if (user.email) {
+           setInitials(user.email.substring(0, 2).toUpperCase());
+      }
+  }
 
 
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
       if (user) {
         // User is signed in
-        const userDocRef = doc(db, "users", user.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-            const userData = userDoc.data() as UserData;
-            setCurrentUser(userData);
-            
-            // Generate initials from name, or email as fallback
-            const name = userData.name;
-            if (name) {
-                 const nameParts = name.split(' ');
-                 const initials = nameParts.length > 1 
-                    ? `${nameParts[0][0]}${nameParts[1][0]}`
-                    : name.substring(0, 2);
-                 setInitials(initials.toUpperCase());
-            } else if (user.email) {
-                 setInitials(user.email.substring(0, 2).toUpperCase());
-            }
-
-        } else {
-            // Fallback for user data not in Firestore
-            setCurrentUser({ email: user.email || 'N/A' });
-            if (user.email) {
-                setInitials(user.email.substring(0, 2).toUpperCase());
-            }
-        }
+        fetchUserData(user);
       } else {
         // User is signed out
         router.push('/');
@@ -112,6 +129,45 @@ export default function DashboardLayout({
         title: "Error",
         description: "No se pudo cerrar la sesión.",
       });
+    }
+  };
+  
+  const handleOpenProfileDialog = () => {
+    if (currentUser) {
+      setEditableName(currentUser.name || "");
+      setIsProfileDialogOpen(true);
+    }
+  }
+
+  const handleProfileUpdate = async () => {
+    if (!currentUser?.id || !editableName) {
+      toast({ variant: 'destructive', title: 'Error', description: 'El nombre no puede estar vacío.' });
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      const userDocRef = doc(db, "users", currentUser.id);
+      await updateDoc(userDocRef, {
+        name: editableName,
+      });
+
+      toast({
+        title: "Perfil Actualizado",
+        description: "Tu nombre ha sido actualizado con éxito.",
+      });
+      
+      // Re-fetch user data to update UI
+      if (auth.currentUser) {
+        await fetchUserData(auth.currentUser);
+      }
+
+      setIsProfileDialogOpen(false);
+    } catch (error) {
+      console.error("Error al actualizar perfil:", error);
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo actualizar el perfil.' });
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -154,7 +210,7 @@ export default function DashboardLayout({
                     <div className="text-xs text-muted-foreground">{currentUser?.email}</div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem disabled>Mi Perfil</DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleOpenProfileDialog}>Mi Perfil</DropdownMenuItem>
                 <DropdownMenuItem disabled>Ajustes</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={handleLogout}>
@@ -170,6 +226,49 @@ export default function DashboardLayout({
           </div>
         </main>
       </SidebarInset>
+
+      <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Perfil</DialogTitle>
+            <DialogDescription>
+              Realice cambios en su perfil aquí. Haga clic en guardar cuando haya terminado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Nombre
+              </Label>
+              <Input
+                id="name"
+                value={editableName}
+                onChange={(e) => setEditableName(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="email" className="text-right">
+                    Email
+                </Label>
+                <Input
+                    id="email"
+                    value={currentUser?.email || ""}
+                    disabled
+                    className="col-span-3"
+                />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsProfileDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleProfileUpdate} disabled={isLoading}>
+              {isLoading ? 'Guardando...' : 'Guardar Cambios'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
   );
 }
+
+    
