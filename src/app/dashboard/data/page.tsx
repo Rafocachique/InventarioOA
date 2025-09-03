@@ -703,7 +703,7 @@ export default function DataManagementPage() {
             <DialogHeader>
               <DialogTitle>Editar Inmobiliario: {editingProduct.id}</DialogTitle>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
+            <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-6">
               {Object.keys(editingProduct).filter(key => key !== 'firebaseId').map(key => (
                 <div key={key} className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor={key} className="text-right">{key.charAt(0).toUpperCase() + key.slice(1)}</Label>
@@ -744,3 +744,5 @@ export default function DataManagementPage() {
     </div>
   );
 }
+
+    

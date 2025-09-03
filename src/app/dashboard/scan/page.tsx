@@ -416,7 +416,7 @@ export default function ScanPage() {
                     <CardTitle>Resultados de Verificación</CardTitle>
                     <CardDescription>Inmobiliario encontrado. Puede editar la información y se reflejará en la base de datos principal.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4 pt-6 max-h-[60vh] overflow-y-auto">
+                <CardContent className="space-y-4 pt-6 max-h-[60vh] overflow-y-auto pr-6">
                      <Alert className="border-green-500 text-green-500 mb-4">
                         <CheckCircle className="h-4 w-4 !text-green-500" />
                         <AlertTitle>Verificación Exitosa</AlertTitle>
@@ -538,8 +538,8 @@ export default function ScanPage() {
                         filteredHistory.map((scan) => (
                         <TableRow key={scan.firebaseId}>
                             {displayedHistoryHeaders.map(header => (
-                                <TableCell key={header}>
-                                {String(scan[header])}
+                                <TableCell key={header} className="whitespace-nowrap">
+                                {String(scan[header] ?? '')}
                                 </TableCell>
                             ))}
                             <TableCell>{scan.scannedAt.toDate().toLocaleString('es-ES')}</TableCell>
