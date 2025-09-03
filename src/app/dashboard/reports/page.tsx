@@ -20,7 +20,6 @@ export default function AssetSearchPage() {
     const [allProducts, setAllProducts] = React.useState<Product[]>([]);
     const [filteredResults, setFilteredResults] = React.useState<Product[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
-    const [hasSearched, setHasSearched] = React.useState(false);
     const [headers, setHeaders] = React.useState<string[]>([]);
     const { toast } = useToast();
 
@@ -49,7 +48,6 @@ export default function AssetSearchPage() {
     React.useEffect(() => {
         if (!searchTerm) {
             setFilteredResults([]);
-            if(hasSearched) setHasSearched(false);
             return;
         }
 
@@ -71,15 +69,7 @@ export default function AssetSearchPage() {
             setHeaders(sortedHeaders);
         }
 
-        if(!hasSearched) setHasSearched(true);
-
-    }, [searchTerm, allProducts, hasSearched]);
-    
-    const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
-        if (event.key === 'Enter') {
-            setHasSearched(true);
-        }
-    };
+    }, [searchTerm, allProducts]);
 
 
   return (
@@ -100,13 +90,12 @@ export default function AssetSearchPage() {
                         className="pl-8 w-full"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        onKeyPress={handleKeyPress}
                     />
                 </div>
             </CardContent>
         </Card>
         
-        {searchTerm && hasSearched && (
+        {searchTerm && (
         <Card>
             <CardHeader>
                 <CardTitle>Resultados de la Búsqueda</CardTitle>
@@ -126,10 +115,8 @@ export default function AssetSearchPage() {
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
-                            <TableRow><TableCell colSpan={headers.length} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
-                        ) : filteredResults.length === 0 ? (
-                             <TableRow><TableCell colSpan={headers.length || 1} className="text-center h-24">No se encontraron activos para este responsable.</TableCell></TableRow>
-                        ) : (
+                            <TableRow><TableCell colSpan={headers.length || 1} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                        ) : filteredResults.length > 0 ? (
                             filteredResults.map(product => (
                                 <TableRow key={product.firebaseId}>
                                     {headers.map(header => (
@@ -139,6 +126,8 @@ export default function AssetSearchPage() {
                                     ))}
                                 </TableRow>
                             ))
+                        ) : (
+                             <TableRow><TableCell colSpan={headers.length || 1} className="text-center h-24">No se encontraron activos para este responsable.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>
