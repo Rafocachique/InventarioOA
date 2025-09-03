@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'StockCheck Pro',
+  title: 'ScanCheck Pro',
   description: 'Gestión de inventario y escaneo de datos',
 };
 
