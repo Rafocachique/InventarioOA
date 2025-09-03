@@ -449,140 +449,155 @@ export default function DataManagementPage() {
   return (
     <div className="grid flex-1 grid-cols-1 gap-4 md:gap-8 lg:grid-cols-3">
       <div className="flex flex-col gap-4 md:gap-8 lg:col-span-1">
+        
         <Card>
           <CardHeader>
-            <CardTitle>Controles de Datos</CardTitle>
+            <CardTitle>Acciones de Datos</CardTitle>
             <CardDescription>
-                Gestiona los datos y la visualización de la tabla.
+                Cargue, descargue o elimine datos en masa.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  type="search" 
-                  placeholder="Buscar en todos los datos..." 
-                  className="pl-8 w-full" 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                  <Label htmlFor="items-per-page" className="text-sm whitespace-nowrap">Filas por página</Label>
-                  <Select value={String(itemsPerPage)} onValueChange={(value) => setItemsPerPage(Number(value))}>
-                      <SelectTrigger id="items-per-page" className="h-9">
-                          <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                          <SelectItem value="10">10</SelectItem>
-                          <SelectItem value="20">20</SelectItem>
-                          <SelectItem value="50">50</SelectItem>
-                      </SelectContent>
-                  </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">Página {currentPage} de {totalPages}</div>
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                        disabled={currentPage === 1}
-                    >
-                        <ChevronLeft className="h-4 w-4" />
-                        <span className="sr-only">Página anterior</span>
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                        disabled={currentPage === totalPages}
-                    >
-                        <ChevronRight className="h-4 w-4" />
-                        <span className="sr-only">Página siguiente</span>
-                    </Button>
-                </div>
-              </div>
-               <div className="text-xs text-muted-foreground pt-2">
-                  Mostrando <strong>{paginatedProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-{(currentPage - 1) * itemsPerPage + paginatedProducts.length}</strong> de <strong>{filteredProducts.length}</strong> inmobiliarios
-              </div>
-          </CardContent>
-          <CardFooter className="flex-col items-stretch gap-2">
-                <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
-                <DialogTrigger asChild>
-                    <Button size="sm" className="h-9 gap-1" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
-                    <Upload className="h-3.5 w-3.5" />
-                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                        Cargar Datos
-                    </span>
-                    </Button>
-                </DialogTrigger>
-                <DialogContent>
-                    <DialogHeader>
-                    <DialogTitle>Carga de Datos desde Excel</DialogTitle>
-                    <DialogDescription>
-                        Seleccione un archivo .xlsx o .xls para cargar los datos de sus inmobiliarios en Firebase. La primera hoja del archivo será procesada.
-                    </DialogDescription>
-                    </DialogHeader>
-                    {isUploading ? (
-                    <div className="flex flex-col gap-4 py-4">
-                        <p>Procesando y guardando en Firebase...</p>
-                        <Progress value={progress} />
-                        <p className="text-center text-sm text-muted-foreground">{progress}% completado</p>
-                    </div>
-                    ) : (
-                    <div className="grid gap-4 py-4">
-                        <Label htmlFor="excel-file">Archivo de Excel</Label>
-                        <Input id="excel-file" type="file" onChange={handleFileUpload} accept=".xlsx, .xls" />
-                        {uploadFile && <p className="text-sm text-muted-foreground">Archivo seleccionado: {uploadFile.name}</p>}
-                    </div>
-                    )}
-                    <DialogFooter>
-                    {!isUploading && (
-                        <>
-                        <Button variant="outline" onClick={() => { setIsUploadDialogOpen(false); setUploadFile(null); }}>Cancelar</Button>
-                        <Button onClick={handleUpload} disabled={!uploadFile}>Cargar y Procesar</Button>
-                        </>
-                    )}
-                    </DialogFooter>
-                </DialogContent>
-                </Dialog>
-                <Button size="sm" variant="outline" className="h-9 gap-1" onClick={handleDownloadExcel}>
-                    <Download className="h-3.5 w-3.5" />
-                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                        Descargar
-                    </span>
+          <CardContent className="flex flex-col gap-2">
+            <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+              <DialogTrigger asChild>
+                  <Button size="sm" className="h-9 gap-1" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
+                  <Upload className="h-3.5 w-3.5" />
+                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                      Cargar Datos
+                  </span>
+                  </Button>
+              </DialogTrigger>
+              <DialogContent>
+                  <DialogHeader>
+                  <DialogTitle>Carga de Datos desde Excel</DialogTitle>
+                  <DialogDescription>
+                      Seleccione un archivo .xlsx o .xls para cargar los datos de sus inmobiliarios en Firebase. La primera hoja del archivo será procesada.
+                  </DialogDescription>
+                  </DialogHeader>
+                  {isUploading ? (
+                  <div className="flex flex-col gap-4 py-4">
+                      <p>Procesando y guardando en Firebase...</p>
+                      <Progress value={progress} />
+                      <p className="text-center text-sm text-muted-foreground">{progress}% completado</p>
+                  </div>
+                  ) : (
+                  <div className="grid gap-4 py-4">
+                      <Label htmlFor="excel-file">Archivo de Excel</Label>
+                      <Input id="excel-file" type="file" onChange={handleFileUpload} accept=".xlsx, .xls" />
+                      {uploadFile && <p className="text-sm text-muted-foreground">Archivo seleccionado: {uploadFile.name}</p>}
+                  </div>
+                  )}
+                  <DialogFooter>
+                  {!isUploading && (
+                      <>
+                      <Button variant="outline" onClick={() => { setIsUploadDialogOpen(false); setUploadFile(null); }}>Cancelar</Button>
+                      <Button onClick={handleUpload} disabled={!uploadFile}>Cargar y Procesar</Button>
+                      </>
+                  )}
+                  </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Button size="sm" variant="outline" className="h-9 gap-1" onClick={handleDownloadExcel}>
+                <Download className="h-3.5 w-3.5" />
+                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                    Descargar
+                </span>
+            </Button>
+             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="destructive" className="h-9 gap-1">
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                    Eliminar Todo
+                  </span>
                 </Button>
-                 <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                  <AlertDialogTrigger asChild>
-                    <Button size="sm" variant="destructive" className="h-9 gap-1">
-                      <Trash2 className="h-3.5 w-3.5" />
-                      <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                        Eliminar Todo
-                      </span>
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Esta acción es irreversible y eliminará **todos** los inmobiliarios de la base de datos.
-                        Para confirmar, por favor ingrese su contraseña de administrador.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                     <div className="grid gap-4 py-4">
-                        <Label htmlFor="delete-password">Contraseña</Label>
-                        <Input id="delete-password" type="password" value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)} placeholder="••••••••" />
-                    </div>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel onClick={() => setDeletePassword("")}>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDeleteAllData} disabled={!deletePassword}>Confirmar y Eliminar Todo</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-          </CardFooter>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta acción es irreversible y eliminará **todos** los inmobiliarios de la base de datos.
+                    Para confirmar, por favor ingrese su contraseña de administrador.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                 <div className="grid gap-4 py-4">
+                    <Label htmlFor="delete-password">Contraseña</Label>
+                    <Input id="delete-password" type="password" value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)} placeholder="••••••••" />
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setDeletePassword("")}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteAllData} disabled={!deletePassword}>Confirmar y Eliminar Todo</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Visualización</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+             <div className="flex items-center gap-2">
+                <Label htmlFor="items-per-page" className="text-sm whitespace-nowrap">Filas por página</Label>
+                <Select value={String(itemsPerPage)} onValueChange={(value) => setItemsPerPage(Number(value))}>
+                    <SelectTrigger id="items-per-page" className="h-9">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="20">20</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">Página {currentPage} de {totalPages}</div>
+              <div className="flex items-center gap-2">
+                  <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                  >
+                      <ChevronLeft className="h-4 w-4" />
+                      <span className="sr-only">Página anterior</span>
+                  </Button>
+                  <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                  >
+                      <ChevronRight className="h-4 w-4" />
+                      <span className="sr-only">Página siguiente</span>
+                  </Button>
+              </div>
+            </div>
+             <div className="text-xs text-muted-foreground">
+                Mostrando <strong>{paginatedProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-{(currentPage - 1) * itemsPerPage + paginatedProducts.length}</strong> de <strong>{filteredProducts.length}</strong> inmobiliarios
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Búsqueda</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input 
+                type="search" 
+                placeholder="Buscar en todos los datos..." 
+                className="pl-8 w-full" 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </CardContent>
         </Card>
       </div>
 
@@ -758,4 +773,3 @@ export default function DataManagementPage() {
   );
 }
 
-    
