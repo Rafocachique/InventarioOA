@@ -363,96 +363,95 @@ export default function ScanPage() {
 
 
   return (
-    <div className="flex flex-col gap-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+      <div className="flex flex-col gap-8">
+        <Card>
+            <CardHeader>
+            <CardTitle>Escanear y Verificar</CardTitle>
+            <CardDescription>Use la cámara para escanear un código o ingréselo manualmente.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Tabs defaultValue="camera">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="camera">Escanear con Cámara</TabsTrigger>
+                        <TabsTrigger value="manual">Ingreso Manual</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="camera" className="mt-4">
+                        <div className="aspect-video bg-card-foreground/10 rounded-lg flex items-center justify-center p-4">
+                            {hasCameraPermission === null && (
+                            <Loader2 className="h-16 w-16 text-muted-foreground animate-spin" />
+                            )}
+                            <video ref={videoRef} className={`w-full h-full object-cover rounded-md ${hasCameraPermission === null || hasCameraPermission === false ? 'hidden' : ''}`} autoPlay muted playsInline />
+                            {hasCameraPermission === false && !error?.includes("Intentando") && ( 
+                            <div className="text-center text-destructive">
+                                <Camera className="h-16 w-16 mx-auto" />
+                                <p className="mt-2">No se pudo acceder a la cámara.</p>
+                                <p className="text-sm text-muted-foreground">{error}</p>
+                            </div>
+                            )}
+                        </div>
+                        <Button onClick={captureAndScan} className="w-full mt-4" disabled={isLoading || !hasCameraPermission} style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
+                            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Camera className="mr-2 h-4 w-4" />}
+                            {isVerifying ? "Verificando..." : (isLoading ? "Escaneando..." : "Escanear y Verificar")}
+                        </Button>
+                        <canvas ref={canvasRef} style={{ display: "none" }} />
+                    </TabsContent>
+                    <TabsContent value="manual" className="mt-4">
+                        <div className="space-y-4">
+                            <Label htmlFor="manual-code">Código del Inmobiliario</Label>
+                            <Input id="manual-code" placeholder="Ingrese el código a verificar" value={manualCode} onChange={(e) => setManualCode(e.target.value)} />
+                            <Button onClick={handleManualVerify} className="w-full" disabled={isLoading || isVerifying}>
+                                {isLoading || isVerifying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ScanLine className="mr-2 h-4 w-4" />}
+                                Verificar Código
+                            </Button>
+                        </div>
+                    </TabsContent>
+                </Tabs>
+            </CardContent>
+        </Card>
+
+        {editableProduct && !isVerifying && (
             <Card>
                 <CardHeader>
-                <CardTitle>Escanear y Verificar</CardTitle>
-                <CardDescription>Use la cámara para escanear un código o ingréselo manualmente.</CardDescription>
+                    <CardTitle>Resultados de Verificación</CardTitle>
+                    <CardDescription>Inmobiliario encontrado. Puede editar la información y se reflejará en la base de datos principal.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <Tabs defaultValue="camera">
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="camera">Escanear con Cámara</TabsTrigger>
-                            <TabsTrigger value="manual">Ingreso Manual</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="camera" className="mt-4">
-                            <div className="aspect-video bg-card-foreground/10 rounded-lg flex items-center justify-center p-4">
-                                {hasCameraPermission === null && (
-                                <Loader2 className="h-16 w-16 text-muted-foreground animate-spin" />
-                                )}
-                                <video ref={videoRef} className={`w-full h-full object-cover rounded-md ${hasCameraPermission === null || hasCameraPermission === false ? 'hidden' : ''}`} autoPlay muted playsInline />
-                                {hasCameraPermission === false && !error?.includes("Intentando") && ( 
-                                <div className="text-center text-destructive">
-                                    <Camera className="h-16 w-16 mx-auto" />
-                                    <p className="mt-2">No se pudo acceder a la cámara.</p>
-                                    <p className="text-sm text-muted-foreground">{error}</p>
-                                </div>
-                                )}
-                            </div>
-                            <Button onClick={captureAndScan} className="w-full mt-4" disabled={isLoading || !hasCameraPermission} style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
-                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Camera className="mr-2 h-4 w-4" />}
-                                {isVerifying ? "Verificando..." : (isLoading ? "Escaneando..." : "Escanear y Verificar")}
-                            </Button>
-                            <canvas ref={canvasRef} style={{ display: "none" }} />
-                        </TabsContent>
-                        <TabsContent value="manual" className="mt-4">
-                            <div className="space-y-4">
-                                <Label htmlFor="manual-code">Código del Inmobiliario</Label>
-                                <Input id="manual-code" placeholder="Ingrese el código a verificar" value={manualCode} onChange={(e) => setManualCode(e.target.value)} />
-                                <Button onClick={handleManualVerify} className="w-full" disabled={isLoading || isVerifying}>
-                                    {isLoading || isVerifying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ScanLine className="mr-2 h-4 w-4" />}
-                                    Verificar Código
-                                </Button>
-                            </div>
-                        </TabsContent>
-                    </Tabs>
+                <CardContent className="space-y-4 pt-6 max-h-[60vh] overflow-y-auto">
+                     <Alert className="border-green-500 text-green-500 mb-4">
+                        <CheckCircle className="h-4 w-4 !text-green-500" />
+                        <AlertTitle>Verificación Exitosa</AlertTitle>
+                        <AlertDescription>El escaneo se guardó en el historial.</AlertDescription>
+                    </Alert>
+                    {Object.entries(editableProduct).filter(([key]) => key !== 'firebaseId').map(([key, value]) => (
+                        <div key={key} className="grid grid-cols-3 items-center gap-4">
+                            <Label htmlFor={key} className="text-right capitalize">{key.replace(/_/g, ' ')}</Label>
+                            <Input
+                                id={key}
+                                type={typeof value === 'number' ? 'number' : 'text'}
+                                value={value ?? ''}
+                                onChange={(e) => handleInputChange(e, editableProduct, setEditableProduct)}
+                                className="col-span-2"
+                                disabled={key === 'Codbien' || key === 'id'}
+                            />
+                        </div>
+                    ))}
                 </CardContent>
+                <CardFooter>
+                    <Button onClick={() => handleSaveChanges(editableProduct)} disabled={isLoading} className="w-full">
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        Guardar Cambios en Inmobiliario
+                    </Button>
+                </CardFooter>
             </Card>
+        )}
+        
+        {(error && !isLoading && !isVerifying && !editableProduct) && (
+             <Alert variant="destructive"><XCircle className="h-4 w-4" /><AlertTitle>Verificación Fallida</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>
+        )}
 
-            <div className="flex flex-col gap-4">
-                {editableProduct && !isVerifying && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Resultados de Verificación</CardTitle>
-                            <CardDescription>Inmobiliario encontrado. Puede editar la información y se reflejará en la base de datos principal.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4 pt-6 max-h-[60vh] overflow-y-auto">
-                            <Alert className="border-green-500 text-green-500 mb-4">
-                                <CheckCircle className="h-4 w-4 !text-green-500" />
-                                <AlertTitle>Verificación Exitosa</AlertTitle>
-                                <AlertDescription>El escaneo se guardó en el historial.</AlertDescription>
-                            </Alert>
-                            {Object.entries(editableProduct).filter(([key]) => key !== 'firebaseId').map(([key, value]) => (
-                                <div key={key} className="grid grid-cols-3 items-center gap-4">
-                                    <Label htmlFor={key} className="text-right capitalize">{key.replace(/_/g, ' ')}</Label>
-                                    <Input
-                                        id={key}
-                                        type={typeof value === 'number' ? 'number' : 'text'}
-                                        value={value ?? ''}
-                                        onChange={(e) => handleInputChange(e, editableProduct, setEditableProduct)}
-                                        className="col-span-2"
-                                        disabled={key === 'Codbien' || key === 'id'}
-                                    />
-                                </div>
-                            ))}
-                        </CardContent>
-                        <CardFooter>
-                            <Button onClick={() => handleSaveChanges(editableProduct)} disabled={isLoading} className="w-full">
-                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                Guardar Cambios en Inmobiliario
-                            </Button>
-                        </CardFooter>
-                    </Card>
-                )}
-                
-                {(error && !isLoading && !isVerifying && !editableProduct) && (
-                    <Alert variant="destructive"><XCircle className="h-4 w-4" /><AlertTitle>Verificación Fallida</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>
-                )}
-            </div>
       </div>
-      
-      <Card>
+      <div className="flex flex-col h-full gap-4">
+        <Card className="flex flex-col flex-grow">
           <CardHeader className="p-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                   <div className="flex-1">
@@ -511,8 +510,8 @@ export default function ScanPage() {
                   </div>
               </div>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="relative w-full overflow-auto">
+          <CardContent className="flex-grow p-0">
+            <div className="relative w-full h-full overflow-auto">
                 <Table>
                     <TableHeader>
                     <TableRow>
@@ -558,6 +557,7 @@ export default function ScanPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
       
       {editingScanRecord && (
         <Dialog open={!!editingScanRecord} onOpenChange={() => setEditingScanRecord(null)}>
