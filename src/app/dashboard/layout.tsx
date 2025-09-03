@@ -1,17 +1,21 @@
 
 "use client";
 
+import * as React from 'react';
 import { PanelLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { signOut, onAuthStateChanged, User } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc } from "firebase/firestore";
+
 
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -23,9 +27,16 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { DashboardNav } from '@/components/dashboard-nav';
 import { useToast } from '@/hooks/use-toast';
+
+interface UserData {
+    name?: string;
+    email?: string;
+    role?: string;
+}
+
 
 function CheckSquareIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -43,6 +54,48 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const { toast } = useToast();
+  const [currentUser, setCurrentUser] = React.useState<UserData | null>(null);
+  const [initials, setInitials] = React.useState("");
+
+
+  React.useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
+      if (user) {
+        // User is signed in
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+            const userData = userDoc.data() as UserData;
+            setCurrentUser(userData);
+            
+            // Generate initials from name, or email as fallback
+            const name = userData.name;
+            if (name) {
+                 const nameParts = name.split(' ');
+                 const initials = nameParts.length > 1 
+                    ? `${nameParts[0][0]}${nameParts[1][0]}`
+                    : name.substring(0, 2);
+                 setInitials(initials.toUpperCase());
+            } else if (user.email) {
+                 setInitials(user.email.substring(0, 2).toUpperCase());
+            }
+
+        } else {
+            // Fallback for user data not in Firestore
+            setCurrentUser({ email: user.email || 'N/A' });
+            if (user.email) {
+                setInitials(user.email.substring(0, 2).toUpperCase());
+            }
+        }
+      } else {
+        // User is signed out
+        router.push('/');
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
 
   const handleLogout = async () => {
     try {
@@ -91,14 +144,18 @@ export default function DashboardLayout({
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src="https://picsum.photos/40/40" alt="@admin" data-ai-hint="person face"/>
-                    <AvatarFallback>AD</AvatarFallback>
+                    <AvatarFallback>{initials || 'AD'}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>Mi Perfil</DropdownMenuItem>
-                <DropdownMenuItem>Ajustes</DropdownMenuItem>
+                <DropdownMenuLabel>
+                    <div className="font-bold">{currentUser?.name || 'Usuario'}</div>
+                    <div className="text-xs text-muted-foreground">{currentUser?.email}</div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem disabled>Mi Perfil</DropdownMenuItem>
+                <DropdownMenuItem disabled>Ajustes</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={handleLogout}>
                     Cerrar Sesión
@@ -116,5 +173,3 @@ export default function DashboardLayout({
     </SidebarProvider>
   );
 }
-
-    
