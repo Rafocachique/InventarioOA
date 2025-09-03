@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react";
@@ -100,7 +99,7 @@ export default function AssetSearchPage() {
             </Card>
         </div>
         
-        <div className="lg:col-span-2 flex flex-col">
+        <div className="flex flex-col gap-4 md:gap-8 lg:col-span-2">
             <Card className="flex flex-grow flex-col">
                 <CardHeader>
                     <CardTitle>Resultados de la Búsqueda</CardTitle>
