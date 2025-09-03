@@ -19,8 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { DateRange } from "react-day-picker";
-import { format, startOfDay, endOfDay, addDays } from "date-fns";
+import { format, startOfDay, endOfDay, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import * as XLSX from "xlsx";
 import { 
@@ -75,10 +74,7 @@ export default function ScanPage() {
   const [editingScanRecord, setEditingScanRecord] = useState<EditableProduct | null>(null);
   const [scanHistoryHeaders, setScanHistoryHeaders] = useState<string[]>([]);
   const [visibleScanHistoryHeaders, setVisibleScanHistoryHeaders] = useState<Set<string>>(new Set());
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: startOfDay(new Date()),
-    to: endOfDay(new Date()),
-  });
+  const [selectedDates, setSelectedDates] = useState<Date[] | undefined>([new Date()]);
 
   const [scanToDelete, setScanToDelete] = useState<ScanRecord | null>(null);
   const [isDeleteRangeAlertOpen, setIsDeleteRangeAlertOpen] = useState(false);
@@ -334,21 +330,18 @@ export default function ScanPage() {
   };
   
   const filteredHistory = useMemo(() => {
-    if (!dateRange?.from) return scanHistory;
-
-    const start = startOfDay(dateRange.from);
-    const end = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
+    if (!selectedDates || selectedDates.length === 0) return scanHistory;
     
     return scanHistory.filter(scan => {
-      const scanDate = scan.scannedAt.toDate();
-      return scanDate >= start && scanDate <= end;
+        const scanDate = scan.scannedAt.toDate();
+        return selectedDates.some(selectedDate => isSameDay(scanDate, selectedDate));
     });
-  }, [scanHistory, dateRange]);
+  }, [scanHistory, selectedDates]);
 
 
   const handleExportHistory = () => {
       if (filteredHistory.length === 0) {
-          toast({ title: "No hay datos", description: "No hay escaneos para el rango de fechas seleccionado." });
+          toast({ title: "No hay datos", description: "No hay escaneos para las fechas seleccionadas." });
           return;
       }
 
@@ -363,7 +356,7 @@ export default function ScanPage() {
       const worksheet = XLSX.utils.json_to_sheet(dataToExport);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Historial de Escaneos");
-      const excelFileName = `historial_escaneos_${format(dateRange!.from!, "yyyy-MM-dd")}_a_${format(dateRange!.to || dateRange!.from!, "yyyy-MM-dd")}.xlsx`;
+      const excelFileName = `historial_escaneos.xlsx`;
       XLSX.writeFile(workbook, excelFileName);
   };
 
@@ -387,7 +380,7 @@ export default function ScanPage() {
   };
 
   const handleDeleteScansByRange = async () => {
-      if (!dateRange?.from) return;
+      if (!selectedDates || selectedDates.length === 0) return;
       
       const batch = writeBatch(db);
       filteredHistory.forEach(scan => {
@@ -399,7 +392,7 @@ export default function ScanPage() {
           await batch.commit();
           toast({
               title: "Registros Eliminados",
-              description: `Se eliminaron ${filteredHistory.length} registros de escaneo del rango seleccionado.`,
+              description: `Se eliminaron ${filteredHistory.length} registros de escaneo de las fechas seleccionadas.`,
           });
           setIsDeleteRangeAlertOpen(false);
       } catch (error) {
@@ -531,27 +524,20 @@ export default function ScanPage() {
                               className="w-full sm:w-[280px] justify-start text-left font-normal"
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
-                              {dateRange?.from ? (
-                                dateRange.to ? (
-                                  <>
-                                    {format(dateRange.from, "LLL dd, y", { locale: es })} -{" "}
-                                    {format(dateRange.to, "LLL dd, y", { locale: es })}
-                                  </>
-                                ) : (
-                                  format(dateRange.from, "LLL dd, y", { locale: es })
-                                )
+                              {selectedDates?.length ? (
+                                `${selectedDates.length} día(s) seleccionado(s)`
                               ) : (
-                                <span>Seleccione un rango</span>
+                                <span>Seleccione fechas</span>
                               )}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="end">
                           <Calendar
                               initialFocus
-                              mode="range"
-                              defaultMonth={dateRange?.from}
-                              selected={dateRange}
-                              onSelect={setDateRange}
+                              mode="multiple"
+                              min={0}
+                              selected={selectedDates}
+                              onSelect={setSelectedDates}
                               numberOfMonths={2}
                               locale={es}
                           />
@@ -568,7 +554,7 @@ export default function ScanPage() {
                            <Button size="sm" variant="destructive" className="h-10 gap-1" disabled={filteredHistory.length === 0}>
                               <Trash2 className="h-3.5 w-3.5" />
                               <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                                  Eliminar del Rango
+                                  Eliminar Seleccionados
                               </span>
                           </Button>
                         </AlertDialogTrigger>
@@ -576,7 +562,7 @@ export default function ScanPage() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Esta acción es irreversible y eliminará <strong>{filteredHistory.length}</strong> registros de escaneo del rango de fechas seleccionado.
+                              Esta acción es irreversible y eliminará <strong>{filteredHistory.length}</strong> registros de escaneo de las fechas seleccionadas.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -631,7 +617,7 @@ export default function ScanPage() {
                     ) : filteredHistory.length === 0 ? (
                         <TableRow>
                         <TableCell colSpan={displayedHistoryHeaders.length + 3} className="h-24 text-center">
-                            No hay registros de escaneo para el rango de fechas seleccionado.
+                            No hay registros de escaneo para las fechas seleccionadas.
                         </TableCell>
                         </TableRow>
                     ) : (
@@ -724,5 +710,6 @@ export default function ScanPage() {
     </div>
   );
 }
+
 
     
