@@ -447,11 +447,11 @@ export default function DataManagementPage() {
 
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
-      <div className="lg:col-span-1 flex flex-col gap-8">
+    <div className="grid flex-1 grid-cols-1 gap-4 md:gap-8 lg:grid-cols-3">
+      <div className="flex flex-col gap-4 md:gap-8 lg:col-span-1">
         <Card>
           <CardHeader>
-            <CardTitle>Controles</CardTitle>
+            <CardTitle>Controles de Datos</CardTitle>
             <CardDescription>
                 Gestiona los datos y la visualización de la tabla.
             </CardDescription>
@@ -566,7 +566,7 @@ export default function DataManagementPage() {
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>¿Está absolutely seguro?</AlertDialogTitle>
+                      <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
                       <AlertDialogDescription>
                         Esta acción es irreversible y eliminará **todos** los inmobiliarios de la base de datos.
                         Para confirmar, por favor ingrese su contraseña de administrador.
@@ -586,8 +586,8 @@ export default function DataManagementPage() {
         </Card>
       </div>
 
-      <div className="lg:col-span-2 flex flex-col h-full gap-4">
-          <Card className="flex flex-col flex-grow">
+      <div className="flex flex-col gap-4 md:gap-8 lg:col-span-2">
+          <Card className="flex flex-grow flex-col">
             <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
@@ -621,7 +621,7 @@ export default function DataManagementPage() {
                 </div>
             </CardHeader>
             <CardContent className="flex-grow p-0">
-              <div className="relative w-full h-full overflow-auto">
+              <div className="relative h-full w-full overflow-auto">
                 <Table>
                     <TableHeader>
                     <TableRow>
@@ -757,3 +757,5 @@ export default function DataManagementPage() {
     </div>
   );
 }
+
+    
