@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react";
@@ -75,13 +76,13 @@ export default function AssetSearchPage() {
 
 
   return (
-    <div className="grid flex-1 grid-cols-1 gap-4 md:gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-1">
+    <div className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 lg:grid-cols-3 xl:grid-cols-3">
+        <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:col-span-1">
             <Card>
                 <CardHeader>
                     <CardTitle>Búsqueda General de Activos</CardTitle>
                     <CardDescription>
-                    Escriba para buscar en tiempo real cualquier activo por cualquiera de sus datos.
+                        Escriba para buscar en tiempo real cualquier activo por cualquiera de sus datos.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -99,8 +100,8 @@ export default function AssetSearchPage() {
             </Card>
         </div>
         
-        <div className="flex flex-col gap-4 md:gap-8 lg:col-span-2">
-            <Card className="flex flex-grow flex-col">
+        <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:col-span-2">
+             <Card className="flex flex-grow flex-col">
                 <CardHeader>
                     <CardTitle>Resultados de la Búsqueda</CardTitle>
                     <CardDescription>
@@ -108,34 +109,34 @@ export default function AssetSearchPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow p-0">
-                <div className="relative h-full w-full overflow-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                {headers.map(header => (
-                                    <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>
-                                ))}
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isLoading && searchTerm ? (
-                                <TableRow><TableCell colSpan={headers.length || 1} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
-                            ) : filteredResults.length > 0 ? (
-                                filteredResults.map(product => (
-                                    <TableRow key={product.firebaseId}>
-                                        {headers.map(header => (
-                                            <TableCell key={header} className="whitespace-nowrap">
-                                                {String(product[header] ?? '')}
-                                            </TableCell>
-                                        ))}
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow><TableCell colSpan={headers.length || 1} className="text-center h-24">{searchTerm ? "No se encontraron activos que coincidan." : "Los resultados aparecerán aquí."}</TableCell></TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
+                    <div className="relative w-full h-full overflow-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    {headers.map(header => (
+                                        <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>
+                                    ))}
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isLoading && searchTerm ? (
+                                    <TableRow><TableCell colSpan={headers.length || 1} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                                ) : filteredResults.length > 0 ? (
+                                    filteredResults.map(product => (
+                                        <TableRow key={product.firebaseId}>
+                                            {headers.map(header => (
+                                                <TableCell key={header} className="whitespace-nowrap">
+                                                    {String(product[header] ?? '')}
+                                                </TableCell>
+                                            ))}
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow><TableCell colSpan={headers.length || 1} className="text-center h-24">{searchTerm ? "No se encontraron activos que coincidan." : "Los resultados aparecerán aquí."}</TableCell></TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
         </div>
