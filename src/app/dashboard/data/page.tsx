@@ -449,7 +449,7 @@ export default function DataManagementPage() {
   return (
     <div className="flex flex-col h-full gap-4">
       <div className="flex flex-col sm:flex-row items-center gap-4">
-        <div className="flex flex-col sm:flex-row items-center gap-4 mr-auto">
+        <div className="flex-grow flex flex-col sm:flex-row items-center gap-4">
             <div className="text-xs text-muted-foreground">
                 Mostrando <strong>{paginatedProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-{(currentPage - 1) * itemsPerPage + paginatedProducts.length}</strong> de <strong>{filteredProducts.length}</strong> inmobiliarios
             </div>
@@ -490,7 +490,7 @@ export default function DataManagementPage() {
                 </Button>
             </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 ml-auto">
             <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
             <DialogTrigger asChild>
                 <Button size="sm" className="h-8 gap-1" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
@@ -744,5 +744,3 @@ export default function DataManagementPage() {
     </div>
   );
 }
-
-    
