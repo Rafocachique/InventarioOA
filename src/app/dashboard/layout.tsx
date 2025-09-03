@@ -40,6 +40,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DashboardNav } from '@/components/dashboard-nav';
 import { useToast } from '@/hooks/use-toast';
+import { Toaster } from "@/components/ui/toaster";
 
 interface UserData {
     id?: string;
@@ -267,8 +268,7 @@ export default function DashboardLayout({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Toaster />
     </SidebarProvider>
   );
 }
-
-    
