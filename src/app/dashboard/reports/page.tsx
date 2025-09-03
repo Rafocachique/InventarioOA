@@ -76,68 +76,70 @@ export default function AssetSearchPage() {
 
 
   return (
-    <div className="flex flex-col h-full gap-4 md:gap-8">
-        <Card>
-            <CardHeader>
-                <CardTitle>Búsqueda General de Activos</CardTitle>
-                <CardDescription>
-                  Escriba en el campo para buscar en tiempo real cualquier activo por cualquiera de sus datos.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="relative w-full max-w-lg">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                        type="search" 
-                        placeholder="Buscar por cualquier dato (ID, nombre, responsable, etc.)..." 
-                        className="pl-8 w-full"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-            </CardContent>
-        </Card>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
+        <div className="lg:col-span-1 flex flex-col gap-8">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Búsqueda General de Activos</CardTitle>
+                    <CardDescription>
+                    Escriba en el campo para buscar en tiempo real cualquier activo por cualquiera de sus datos.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="relative w-full">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                            type="search" 
+                            placeholder="Buscar por ID, nombre, responsable..." 
+                            className="pl-8 w-full"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
         
-        {searchTerm && (
-        <Card className="flex flex-col flex-grow">
-            <CardHeader>
-                <CardTitle>Resultados de la Búsqueda</CardTitle>
-                 <CardDescription>
-                    {`Se encontraron ${filteredResults.length} activos para "${searchTerm}".`}
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="flex-grow p-0">
-              <div className="relative w-full overflow-auto">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            {headers.map(header => (
-                                <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>
-                            ))}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading ? (
-                            <TableRow><TableCell colSpan={headers.length || 1} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
-                        ) : filteredResults.length > 0 ? (
-                            filteredResults.map(product => (
-                                <TableRow key={product.firebaseId}>
-                                    {headers.map(header => (
-                                        <TableCell key={header} className="whitespace-nowrap">
-                                            {String(product[header] ?? '')}
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
-                            ))
-                        ) : (
-                             <TableRow><TableCell colSpan={headers.length || 1} className="text-center h-24">No se encontraron activos que coincidan con la búsqueda.</TableCell></TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-        </Card>
-        )}
+        <div className="lg:col-span-2 flex flex-col h-full gap-4">
+            <Card className="flex flex-col flex-grow">
+                <CardHeader>
+                    <CardTitle>Resultados de la Búsqueda</CardTitle>
+                    <CardDescription>
+                        {searchTerm ? `Se encontraron ${filteredResults.length} activos para "${searchTerm}".` : "Ingrese un término de búsqueda para ver los resultados."}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-grow p-0">
+                <div className="relative w-full h-full overflow-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                {headers.map(header => (
+                                    <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>
+                                ))}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading && searchTerm ? (
+                                <TableRow><TableCell colSpan={headers.length || 1} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                            ) : filteredResults.length > 0 ? (
+                                filteredResults.map(product => (
+                                    <TableRow key={product.firebaseId}>
+                                        {headers.map(header => (
+                                            <TableCell key={header} className="whitespace-nowrap">
+                                                {String(product[header] ?? '')}
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow><TableCell colSpan={headers.length || 1} className="text-center h-24">{searchTerm ? "No se encontraron activos que coincidan." : "Los resultados aparecerán aquí."}</TableCell></TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+                </CardContent>
+            </Card>
+        </div>
     </div>
   );
 }
