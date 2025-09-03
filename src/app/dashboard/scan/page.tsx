@@ -380,7 +380,10 @@ export default function ScanPage() {
   };
 
   const handleDeleteScansByRange = async () => {
-      if (!selectedDates || selectedDates.length === 0) return;
+      if (!selectedDates || selectedDates.length === 0) {
+        toast({ variant: "destructive", title: "Sin selección", description: "Por favor, seleccione las fechas que desea eliminar." });
+        return
+      };
       
       const batch = writeBatch(db);
       filteredHistory.forEach(scan => {
@@ -524,7 +527,9 @@ export default function ScanPage() {
                               className="w-full sm:w-[280px] justify-start text-left font-normal"
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
-                              {selectedDates?.length ? (
+                              {selectedDates?.length === 1 && isSameDay(selectedDates[0], new Date()) ? (
+                                'Hoy'
+                              ) : selectedDates?.length ? (
                                 `${selectedDates.length} día(s) seleccionado(s)`
                               ) : (
                                 <span>Seleccione fechas</span>
@@ -535,10 +540,8 @@ export default function ScanPage() {
                           <Calendar
                               initialFocus
                               mode="multiple"
-                              min={0}
                               selected={selectedDates}
                               onSelect={setSelectedDates}
-                              numberOfMonths={2}
                               locale={es}
                           />
                           </PopoverContent>
@@ -710,6 +713,5 @@ export default function ScanPage() {
     </div>
   );
 }
-
 
     
