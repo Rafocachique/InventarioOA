@@ -37,14 +37,15 @@ export default function AssetSearchPage() {
         setIsLoading(true);
         setResults([]);
         setHasSearched(true);
+        
+        const upperCaseSearchTerm = searchTerm.toUpperCase();
 
         try {
             const productsRef = collection(db, "products");
-            // We assume the field is called 'Responsable'. This might need adjustment.
-            // Firestore's >= and < trick allows for "starts with" queries.
+            // Perform a case-insensitive search by querying for the uppercase version of the name.
             const responsibleQuery = query(productsRef, 
-                where("Responsable", ">=", searchTerm), 
-                where("Responsable", "<=", searchTerm + '\uf8ff')
+                where("Responsable", ">=", upperCaseSearchTerm), 
+                where("Responsable", "<=", upperCaseSearchTerm + '\uf8ff')
             );
 
             const querySnapshot = await getDocs(responsibleQuery);
@@ -72,7 +73,7 @@ export default function AssetSearchPage() {
             toast({
                 variant: "destructive",
                 title: "Error de Búsqueda",
-                description: "Ocurrió un error al buscar en la base de datos.",
+                description: "Ocurrió un error al buscar en la base de datos. Es posible que necesite crear un índice en Firestore para el campo 'Responsable'.",
             });
         } finally {
             setIsLoading(false);
@@ -134,7 +135,7 @@ export default function AssetSearchPage() {
                         {isLoading ? (
                             <TableRow><TableCell colSpan={headers.length} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
                         ) : results.length === 0 ? (
-                             <TableRow><TableCell colSpan={headers.length} className="text-center h-24">No se encontraron activos para este responsable.</TableCell></TableRow>
+                             <TableRow><TableCell colSpan={headers.length || 1} className="text-center h-24">No se encontraron activos para este responsable.</TableCell></TableRow>
                         ) : (
                             results.map(product => (
                                 <TableRow key={product.firebaseId}>
