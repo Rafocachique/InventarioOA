@@ -71,7 +71,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Image from "next/image";
 import { db, auth } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, writeBatch, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, writeBatch, deleteDoc, query, orderBy, limit } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 import { EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
@@ -112,21 +112,15 @@ export default function DataManagementPage() {
       setProducts(productsData);
 
       if (productsData.length > 0) {
-        // Combine all keys from all product objects to create a comprehensive set of headers
-        const headers = Array.from(productsData.reduce((acc, curr) => {
-            Object.keys(curr).forEach(key => acc.add(key));
-            return acc;
-        }, new Set<string>()));
-        
-        const filteredHeaders = headers.filter(key => key !== 'firebaseId');
-        setAllHeaders(filteredHeaders);
+        // Get headers from the first product to maintain order.
+        const firstProductHeaders = Object.keys(productsData[0]);
+        const headers = firstProductHeaders.filter(key => key !== 'firebaseId');
+        setAllHeaders(headers);
 
-        // Initialize visible headers only once or if they haven't been set.
-        if (visibleHeaders.size === 0 && filteredHeaders.length > 0) { 
-            setVisibleHeaders(new Set(filteredHeaders));
+        if (visibleHeaders.size === 0 && headers.length > 0) {
+            setVisibleHeaders(new Set(headers));
         }
       } else {
-        // If no data, clear all headers
         setAllHeaders([]);
         setVisibleHeaders(new Set());
       }
@@ -172,7 +166,11 @@ export default function DataManagementPage() {
         const workbook = XLSX.read(data, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
+        // Use header: 1 to get an array of arrays, so we can get the header order from the first row.
+        const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        const headersFromExcel: string[] = jsonData[0];
         const newProductsData = XLSX.utils.sheet_to_json(worksheet) as Product[];
+
 
         if (newProductsData.length === 0) {
           toast({
@@ -242,10 +240,9 @@ export default function DataManagementPage() {
           setIsUploading(false);
           setIsUploadDialogOpen(false);
           setUploadFile(null);
-          // After upload, reset visible headers based on the new data
-          const headers = Object.keys(newProductsData.reduce((acc, curr) => ({...acc, ...curr}), {}));
-          const filteredHeaders = headers.filter(key => key !== 'firebaseId');
-          setAllHeaders(filteredHeaders)
+          // Set headers based on the original order from Excel
+          const filteredHeaders = headersFromExcel.filter(key => key !== 'firebaseId');
+          setAllHeaders(filteredHeaders);
           setVisibleHeaders(new Set(filteredHeaders));
           fetchProducts();
           setProgress(0);
@@ -441,6 +438,15 @@ export default function DataManagementPage() {
     });
   };
 
+  const handleToggleAllColumns = (selectAll: boolean) => {
+    if (selectAll) {
+        setVisibleHeaders(new Set(allHeaders));
+    } else {
+        setVisibleHeaders(new Set());
+    }
+  };
+
+
   const displayedHeaders = React.useMemo(() => {
     return allHeaders.filter(h => visibleHeaders.has(h));
   }, [allHeaders, visibleHeaders]);
@@ -620,6 +626,9 @@ export default function DataManagementPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Columnas Visibles</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onSelect={() => handleToggleAllColumns(true)}>Marcar Todas</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleToggleAllColumns(false)}>Desmarcar Todas</DropdownMenuItem>
                           <DropdownMenuSeparator />
                           {allHeaders.map(header => (
                           <DropdownMenuCheckboxItem
