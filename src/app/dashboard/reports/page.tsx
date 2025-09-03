@@ -54,7 +54,9 @@ export default function AssetSearchPage() {
         const lowerCaseSearchTerm = searchTerm.toLowerCase();
         
         const results = allProducts.filter(product => 
-            product.Responsable && String(product.Responsable).toLowerCase().includes(lowerCaseSearchTerm)
+            Object.values(product).some(value =>
+                String(value).toLowerCase().includes(lowerCaseSearchTerm)
+            )
         );
 
         setFilteredResults(results);
@@ -76,9 +78,9 @@ export default function AssetSearchPage() {
     <div className="grid auto-rows-max items-start gap-4 md:gap-8">
         <Card>
             <CardHeader>
-                <CardTitle>Búsqueda de Activos por Responsable</CardTitle>
+                <CardTitle>Búsqueda General de Activos</CardTitle>
                 <CardDescription>
-                  Escriba en el campo para buscar en tiempo real todos los activos asignados a un responsable.
+                  Escriba en el campo para buscar en tiempo real cualquier activo por cualquiera de sus datos.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -86,7 +88,7 @@ export default function AssetSearchPage() {
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input 
                         type="search" 
-                        placeholder="Escriba el nombre del responsable..." 
+                        placeholder="Buscar por cualquier dato (ID, nombre, responsable, etc.)..." 
                         className="pl-8 w-full"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -127,7 +129,7 @@ export default function AssetSearchPage() {
                                 </TableRow>
                             ))
                         ) : (
-                             <TableRow><TableCell colSpan={headers.length || 1} className="text-center h-24">No se encontraron activos para este responsable.</TableCell></TableRow>
+                             <TableRow><TableCell colSpan={headers.length || 1} className="text-center h-24">No se encontraron activos que coincidan con la búsqueda.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>
