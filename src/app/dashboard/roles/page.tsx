@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -28,7 +29,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { db, auth } from "@/lib/firebase";
 import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc } from "firebase/firestore";
-import { createUserWithEmailAndPassword, deleteUser } from "firebase/auth";
+import { createUserWithEmailAndPassword, deleteUser, signInWithCredential, EmailAuthProvider, signInWithEmailAndPassword } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -83,15 +84,27 @@ export default function RolesPage() {
       });
       return;
     }
+
+    const adminUser = auth.currentUser;
+    if (!adminUser || !adminUser.email) {
+      toast({ variant: "destructive", title: "Error de Administrador", description: "No se pudo verificar la sesión del administrador." });
+      return;
+    }
+    const adminEmail = adminUser.email;
+    const adminPassword = prompt("Para confirmar, por favor ingrese su contraseña de administrador:");
+
+    if (!adminPassword) {
+      toast({ variant: "destructive", title: "Operación Cancelada", description: "Se requiere la contraseña del administrador." });
+      return;
+    }
     
     try {
       // Step 1: Create user in Firebase Auth
-      // This will sign in the new user, which is acceptable in this admin dashboard flow.
       const userCredential = await createUserWithEmailAndPassword(auth, newUserEmail, newUserPassword);
-      const user = userCredential.user;
+      const newUser = userCredential.user;
 
-      // Step 2: Store user role and name in Firestore, using the UID from Auth as the document ID
-      await setDoc(doc(db, "users", user.uid), {
+      // Step 2: Store user role and name in Firestore
+      await setDoc(doc(db, "users", newUser.uid), {
         name: newUserName,
         email: newUserEmail,
         role: newUserRole,
@@ -102,6 +115,9 @@ export default function RolesPage() {
         description: "El nuevo usuario ha sido añadido con éxito.",
       });
       
+      // Step 3: Re-authenticate the admin to keep their session active
+      await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+      
       // Reset form and close dialog
       setNewUserName("");
       setNewUserEmail("");
@@ -109,14 +125,25 @@ export default function RolesPage() {
       setNewUserRole("Supervisor");
       setIsAddUserOpen(false);
       fetchUsers(); // Refresh users list
+
     } catch (error: any) {
       console.error("Error creating user: ", error);
+      
       let description = "No se pudo crear el usuario.";
       if (error.code === 'auth/email-already-in-use') {
         description = "El correo electrónico ya está en uso por otra cuenta.";
       } else if (error.code === 'auth/weak-password') {
         description = "La contraseña debe tener al menos 6 caracteres.";
+      } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        description = "La contraseña de administrador es incorrecta. No se creó el usuario.";
       }
+
+      // If user creation succeeded but re-login failed, the admin is logged out.
+      // We should inform them about this.
+      if (auth.currentUser?.email !== adminEmail) {
+          description += " Se ha cerrado la sesión de administrador."
+      }
+
       toast({
         variant: "destructive",
         title: "Error de Creación",
