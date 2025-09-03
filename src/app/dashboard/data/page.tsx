@@ -746,5 +746,3 @@ export default function DataManagementPage() {
 }
 
     
-
-    
