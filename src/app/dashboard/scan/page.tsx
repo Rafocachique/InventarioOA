@@ -528,7 +528,7 @@ export default function ScanPage() {
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
                               {selectedDates?.length === 1 && isSameDay(selectedDates[0], new Date()) ? (
-                                'Hoy'
+                                format(selectedDates[0], "PPP", { locale: es })
                               ) : selectedDates?.length ? (
                                 `${selectedDates.length} día(s) seleccionado(s)`
                               ) : (
