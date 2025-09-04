@@ -53,6 +53,7 @@ import {
 
 interface EditableProduct {
   firebaseId: string;
+  scanId?: string; // To hold the id of the scan history document
   [key: string]: any;
 }
 
@@ -140,7 +141,7 @@ export default function ScanPage() {
                 return acc;
             }, new Set<string>()));
             
-            const filteredHeaders = headers.filter(key => key !== 'firebaseId' && key !== 'scannedAt' && key !== 'scannedBy');
+            const filteredHeaders = headers.filter(key => key !== 'firebaseId' && key !== 'scannedAt' && key !== 'scannedBy' && key !== 'scanId');
             setScanHistoryHeaders(filteredHeaders);
 
             if (visibleScanHistoryHeaders.size === 0 && filteredHeaders.length > 0) { 
@@ -191,20 +192,32 @@ export default function ScanPage() {
                 setIsVerifying(false);
                 return false;
             }
+            
+            const { firebaseId, ...dataToSaveInHistory } = productData;
 
-            const scanData: SaveScanInput = {
+            const scanInput: SaveScanInput = {
                 scannedBy: currentUser.email || 'unknown',
-                productData: productData
+                productData: dataToSaveInHistory
             };
             
-            await saveScan(scanData);
+            const saveResponse = await saveScan(scanInput);
             
-            toast({
-                title: "Escaneo Registrado",
-                description: "El inmobiliario ha sido verificado y guardado en el historial.",
-            });
+            if (saveResponse.success && saveResponse.scanId) {
+                 toast({
+                    title: "Escaneo Registrado",
+                    description: "El inmobiliario ha sido verificado y guardado en el historial.",
+                });
 
-            setEditableProduct(productData as EditableProduct);
+                setEditableProduct({ 
+                    ...productData, 
+                    scanId: saveResponse.scanId 
+                } as EditableProduct);
+            } else {
+                 setError("El inmobiliario fue verificado pero no se pudo guardar en el historial.");
+                 toast({ variant: 'destructive', title: 'Error al Guardar' });
+            }
+
+
             setIsVerifying(false);
             return true;
         }
@@ -304,16 +317,45 @@ export default function ScanPage() {
   const handleSaveChanges = async (productToSave: EditableProduct | null) => {
     if (!productToSave || !productToSave.firebaseId) return;
 
+    // The ID of the document in the 'products' collection is firebaseId
+    const productDocId = productToSave.id;
+    // The ID of the document in the 'scan_history' collection is productToSave.firebaseId (when editing from history)
+    // or productToSave.scanId (when editing after a new scan)
+    const scanHistoryDocId = productToSave.scanId || (editingScanRecord ? productToSave.firebaseId : null);
+
+    if (!productDocId) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Falta el ID del producto principal.' });
+        return;
+    }
+
     setIsLoading(true);
     try {
-        const productDocRef = doc(db, "products", productToSave.firebaseId);
+        const productQuery = query(collection(db, "products"), where("id", "==", productDocId));
+        const productSnapshot = await getDocs(productQuery);
 
-        const { firebaseId, ...productData } = productToSave;
-        await updateDoc(productDocRef, productData);
+        if (productSnapshot.empty) {
+            throw new Error(`No se encontró ningún producto con el id: ${productDocId}`);
+        }
+        
+        const mainProductDocRef = productSnapshot.docs[0].ref;
+
+        const { firebaseId, scanId, scannedAt, scannedBy, ...productData } = productToSave;
+        
+        // Update the main product document
+        await updateDoc(mainProductDocRef, productData);
+        
+        let toastDescription = "Los cambios se han guardado correctamente en la base de datos de inmobiliarios.";
+
+        // If there's a related scan history record, update it too
+        if (scanHistoryDocId) {
+            const scanHistoryDocRef = doc(db, "scan_history", scanHistoryDocId);
+            await updateDoc(scanHistoryDocRef, productData);
+            toastDescription += " El registro de historial también ha sido actualizado.";
+        }
 
         toast({
-            title: "Inmobiliario Actualizado",
-            description: "Los cambios se han guardado correctamente en la base de datos de inmobiliarios.",
+            title: "Actualización Completa",
+            description: toastDescription,
         });
 
     } catch (error) {
@@ -321,11 +363,12 @@ export default function ScanPage() {
         toast({
             variant: "destructive",
             title: "Error al Guardar",
-            description: "No se pudo actualizar el inmobiliario.",
+            description: "No se pudo actualizar el inmobiliario y/o el historial.",
         });
     } finally {
         setIsLoading(false);
-        setEditingScanRecord(null);
+        setEditingScanRecord(null); // Close the dialog
+        setEditableProduct(null); // Clear the result form
     }
   };
   
@@ -482,7 +525,7 @@ export default function ScanPage() {
                         <AlertTitle>Verificación Exitosa</AlertTitle>
                         <AlertDescription>El escaneo se guardó en el historial.</AlertDescription>
                     </Alert>
-                    {Object.entries(editableProduct).filter(([key]) => key !== 'firebaseId').map(([key, value]) => (
+                    {Object.entries(editableProduct).filter(([key]) => key !== 'firebaseId' && key !== 'scanId').map(([key, value]) => (
                         <div key={key} className="grid grid-cols-3 items-center gap-4">
                             <Label htmlFor={key} className="text-right capitalize">{key.replace(/_/g, ' ')}</Label>
                             <Input
@@ -505,8 +548,8 @@ export default function ScanPage() {
             </Card>
         )}
         
-        {(error && !isLoading && !isVerifying && !editableProduct) && (
-             <Alert variant="destructive"><XCircle className="h-4 w-4" /><AlertTitle>Verificación Fallida</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>
+        {(result && !result.isValid && !isLoading && !isVerifying && !editableProduct) && (
+             <Alert variant="destructive"><XCircle className="h-4 w-4" /><AlertTitle>Verificación Fallida</AlertTitle><AlertDescription>{error || "No se encontró el inmobiliario con el código proporcionado."}</AlertDescription></Alert>
         )}
 
       </div>
@@ -518,7 +561,7 @@ export default function ScanPage() {
                       <CardTitle>Historial de Escaneos</CardTitle>
                       <CardDescription>Aquí se muestran los escaneos registrados.</CardDescription>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                   <div className="flex items-center gap-2 flex-wrap justify-end">
                       <Popover>
                           <PopoverTrigger asChild>
                            <Button
@@ -546,7 +589,7 @@ export default function ScanPage() {
                           />
                           </PopoverContent>
                       </Popover>
-                      <Button onClick={handleExportHistory} size="sm" variant="outline" className="h-10 gap-1">
+                       <Button onClick={handleExportHistory} size="sm" variant="outline" className="h-10 gap-1">
                           <Download className="h-3.5 w-3.5" />
                           <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                               Exportar
@@ -664,7 +707,7 @@ export default function ScanPage() {
             <DialogHeader>
               <DialogTitle>Editar Inmobiliario desde Historial</DialogTitle>
               <DialogDescription>
-                Los cambios se guardarán en la base de datos principal de inmobiliarios.
+                Los cambios se guardarán en la base de datos principal de inmobiliarios y en este registro del historial.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-6">
@@ -713,5 +756,3 @@ export default function ScanPage() {
     </div>
   );
 }
-
-    
