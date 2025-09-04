@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format, startOfDay, endOfDay, isSameDay } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import * as XLSX from "xlsx";
 import { 
@@ -317,24 +317,23 @@ export default function ScanPage() {
   const handleSaveChanges = async (productToSave: EditableProduct | null) => {
     if (!productToSave || !productToSave.firebaseId) return;
 
-    // The ID of the document in the 'products' collection is firebaseId
-    const productDocId = productToSave.id;
-    // The ID of the document in the 'scan_history' collection is productToSave.firebaseId (when editing from history)
-    // or productToSave.scanId (when editing after a new scan)
+    const mainProductIdField = productToSave.Codbien ? 'Codbien' : 'id';
+    const mainProductIdValue = productToSave[mainProductIdField];
+    
     const scanHistoryDocId = productToSave.scanId || (editingScanRecord ? productToSave.firebaseId : null);
 
-    if (!productDocId) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Falta el ID del producto principal.' });
+    if (!mainProductIdValue) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Falta el ID del producto principal (Codbien o id).' });
         return;
     }
 
     setIsLoading(true);
     try {
-        const productQuery = query(collection(db, "products"), where("id", "==", productDocId));
+        const productQuery = query(collection(db, "products"), where(mainProductIdField, "==", mainProductIdValue));
         const productSnapshot = await getDocs(productQuery);
 
         if (productSnapshot.empty) {
-            throw new Error(`No se encontró ningún producto con el id: ${productDocId}`);
+            throw new Error(`No se encontró ningún producto con ${mainProductIdField}: ${mainProductIdValue}`);
         }
         
         const mainProductDocRef = productSnapshot.docs[0].ref;
@@ -373,7 +372,7 @@ export default function ScanPage() {
   };
   
   const filteredHistory = useMemo(() => {
-    if (!selectedDates || selectedDates.length === 0) return scanHistory;
+    if (!selectedDates || selectedDates.length === 0) return [];
     
     return scanHistory.filter(scan => {
         const scanDate = scan.scannedAt.toDate();
@@ -570,7 +569,7 @@ export default function ScanPage() {
                               className="w-full sm:w-[280px] justify-start text-left font-normal"
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
-                              {selectedDates?.length === 1 && isSameDay(selectedDates[0], new Date()) ? (
+                              {selectedDates?.length === 1 ? (
                                 format(selectedDates[0], "PPP", { locale: es })
                               ) : selectedDates?.length ? (
                                 `${selectedDates.length} día(s) seleccionado(s)`
@@ -711,7 +710,7 @@ export default function ScanPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-6">
-              {Object.keys(editingScanRecord).filter(key => key !== 'firebaseId' && key !== 'scannedAt' && key !== 'scannedBy').map(key => (
+              {Object.keys(editingScanRecord).filter(key => key !== 'firebaseId' && key !== 'scannedAt' && key !== 'scannedBy' && key !== 'scanId').map(key => (
                 <div key={key} className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor={key} className="text-right capitalize">{key.replace(/_/g, ' ')}</Label>
                   <Input
