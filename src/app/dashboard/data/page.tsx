@@ -168,6 +168,17 @@ export default function DataManagementPage() {
         const worksheet = workbook.Sheets[sheetName];
         // Use header: 1 to get an array of arrays, so we can get the header order from the first row.
         const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        if (!jsonData || jsonData.length < 1) {
+             toast({
+                variant: "destructive",
+                title: "Archivo Inválido",
+                description: "El archivo de Excel parece estar vacío o no tiene un encabezado.",
+            });
+            setIsUploading(false);
+            return;
+        }
+
         const headersFromExcel: string[] = jsonData[0];
         const newProductsData = XLSX.utils.sheet_to_json(worksheet) as Product[];
 
@@ -206,7 +217,7 @@ export default function DataManagementPage() {
         };
 
         newProductsData.forEach((newProduct) => {
-          const productId = String(newProduct.id);
+          const productId = String(newProduct.id).trim();
 
           if (!newProduct.id || productId === 'undefined') {
               console.warn("Inmobiliario sin ID encontrado en el archivo Excel, será tratado como nuevo:", newProduct);
@@ -477,7 +488,7 @@ export default function DataManagementPage() {
                   <DialogHeader>
                   <DialogTitle>Carga de Datos desde Excel</DialogTitle>
                   <DialogDescription>
-                      Seleccione un archivo .xlsx o .xls para cargar los datos de sus inmobiliarios en Firebase. La primera hoja del archivo será procesada.
+                      Seleccione un archivo .xlsx o .xls para cargar. El sistema añadirá nuevos inmobiliarios y actualizará los existentes basándose en la columna 'id'.
                   </DialogDescription>
                   </DialogHeader>
                   {isUploading ? (
@@ -782,3 +793,5 @@ export default function DataManagementPage() {
   );
 }
 
+
+    
