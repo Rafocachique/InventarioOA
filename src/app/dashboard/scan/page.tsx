@@ -314,22 +314,25 @@ export default function ScanPage() {
     setRecord({ ...record, [id]: e.target.type === 'number' ? Number(value) : value });
   };
   
-  const handleSaveChanges = async (productToSave: EditableProduct | null) => {
-    if (!productToSave || !productToSave.firebaseId) return;
+const handleSaveChanges = async (productToSave: EditableProduct | null) => {
+    if (!productToSave) return;
 
     const mainProductIdField = productToSave.Codbien ? 'Codbien' : 'id';
     const mainProductIdValue = productToSave[mainProductIdField];
-    
-    const scanHistoryDocId = productToSave.scanId || (editingScanRecord ? productToSave.firebaseId : null);
+    const originalProductFirebaseId = productToSave.firebaseId;
 
     if (!mainProductIdValue) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Falta el ID del producto principal (Codbien o id).' });
+        toast({ variant: 'destructive', title: 'Error de Identificación', description: 'Falta el ID del producto principal (Codbien o id).' });
         return;
     }
+    
+    // Determine the ID of the scan history document we might need to update
+    const scanHistoryDocId = editingScanRecord ? originalProductFirebaseId : productToSave.scanId;
 
     setIsLoading(true);
     try {
-        const productQuery = query(collection(db, "products"), where(mainProductIdField, "==", mainProductIdValue));
+        const productsRef = collection(db, "products");
+        const productQuery = query(productsRef, where(mainProductIdField, "==", mainProductIdValue));
         const productSnapshot = await getDocs(productQuery);
 
         if (productSnapshot.empty) {
@@ -338,14 +341,15 @@ export default function ScanPage() {
         
         const mainProductDocRef = productSnapshot.docs[0].ref;
 
+        // Prepare data for update, removing fields that shouldn't be in Firestore documents directly.
         const { firebaseId, scanId, scannedAt, scannedBy, ...productData } = productToSave;
         
-        // Update the main product document
+        // Update the main product document in the 'products' collection
         await updateDoc(mainProductDocRef, productData);
         
         let toastDescription = "Los cambios se han guardado correctamente en la base de datos de inmobiliarios.";
 
-        // If there's a related scan history record, update it too
+        // If we are editing a record from history, update that history record as well.
         if (scanHistoryDocId) {
             const scanHistoryDocRef = doc(db, "scan_history", scanHistoryDocId);
             await updateDoc(scanHistoryDocRef, productData);
@@ -366,10 +370,13 @@ export default function ScanPage() {
         });
     } finally {
         setIsLoading(false);
-        setEditingScanRecord(null); // Close the dialog
-        setEditableProduct(null); // Clear the result form
+        setEditingScanRecord(null); // Close the dialog if it was open
+        if (!editingScanRecord) {
+            setEditableProduct(null); // Clear the result form if we weren't editing from the history table
+        }
     }
-  };
+};
+
   
   const filteredHistory = useMemo(() => {
     if (!selectedDates || selectedDates.length === 0) return [];
@@ -512,7 +519,7 @@ export default function ScanPage() {
             </CardContent>
         </Card>
 
-        {editableProduct && !isVerifying && (
+        {editableProduct && !isVerifying && !editingScanRecord && (
             <Card>
                 <CardHeader>
                     <CardTitle>Resultados de Verificación</CardTitle>
@@ -598,7 +605,7 @@ export default function ScanPage() {
                         <AlertDialogTrigger asChild>
                            <Button size="sm" variant="destructive" className="h-10 gap-1" disabled={filteredHistory.length === 0}>
                               <Trash2 className="h-3.5 w-3.5" />
-                              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                              <span className="sr-only sm:not-sr-only sm:whitespace-rap">
                                   Eliminar Seleccionados
                               </span>
                           </Button>
@@ -755,3 +762,5 @@ export default function ScanPage() {
     </div>
   );
 }
+
+    
