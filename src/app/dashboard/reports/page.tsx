@@ -60,7 +60,6 @@ export default function AssetSearchPage() {
     const { toast } = useToast();
     const [selectedFormat, setSelectedFormat] = React.useState<ReportFormat>("");
     
-    // State for scan history
     const [scanHistory, setScanHistory] = React.useState<ScanRecord[]>([]);
     const [isHistoryLoading, setIsHistoryLoading] = React.useState(true);
     const [selectedDates, setSelectedDates] = React.useState<Date[] | undefined>([new Date()]);
@@ -155,7 +154,7 @@ export default function AssetSearchPage() {
             const unsubscribe = onSnapshot(q, (querySnapshot) => {
                 const history: ScanRecord[] = [];
                 querySnapshot.forEach((doc) => {
-                    history.push({ scanId: doc.id, ...doc.data() } as ScanRecord);
+                    history.push({ scanId: doc.id, firebaseId: doc.data().firebaseId, ...doc.data() } as ScanRecord);
                 });
                 setScanHistory(history);
                 setIsHistoryLoading(false);
@@ -213,14 +212,12 @@ export default function AssetSearchPage() {
         const currentFirebaseIdsInSelected = new Set(selectedProducts.map(p => p.firebaseId));
         
         if (isChecked) {
-            // Add only products from filtered history that are not already selected
             const newProductsToAdd = filteredHistory
                 .filter(scan => !currentFirebaseIdsInSelected.has(scan.firebaseId))
                 .map(scan => ({ ...scan, Observacion_Reporte: scan.Observacion || "" }));
 
             setSelectedProducts(prev => [...prev, ...newProductsToAdd]);
         } else {
-            // Remove all products that are present in the filtered history
             const firebaseIdsInHistory = new Set(filteredHistory.map(scan => scan.firebaseId));
             setSelectedProducts(prev => prev.filter(p => !firebaseIdsInHistory.has(p.firebaseId)));
         }
