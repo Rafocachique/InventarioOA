@@ -25,15 +25,15 @@ interface Product {
 type ReportFormat = "asignacion" | "baja" | "transferencia" | "";
 
 const reportColumnMapping: Record<string, string> = {
-    'Codigo Patrimonial': 'Codbien',
-    'Codigo Interno': 'Codanterio',
-    'Denominacion': 'Descrip',
-    'Marca': 'Marca',
-    'Modelo': 'Modelo',
-    'Color': 'Color',
-    'Serie': 'Serie',
+    'Codigo Patrimonial': 'codbien',
+    'Codigo Interno': 'codanterio',
+    'Denominacion': 'descrip',
+    'Marca': 'marca',
+    'Modelo': 'modelo',
+    'Color': 'color',
+    'Serie': 'serie',
     'Otros': 'OTROS',
-    'Estado de Conservacion': 'Estado',
+    'Estado de Conservacion': 'estado',
 };
 
 const reportHeaders = [
@@ -109,7 +109,6 @@ export default function AssetSearchPage() {
         );
         setSelectedProducts(newSelectedProducts);
         
-        // Also update in allProducts to persist the observation if the user deselects and reselects it
         const newAllProducts = allProducts.map(p => 
             p.firebaseId === firebaseId ? { ...p, Observacion_Reporte: value } : p
         );
@@ -165,7 +164,6 @@ export default function AssetSearchPage() {
 
     const handleSelectProduct = (product: Product, isSelected: boolean) => {
         if (isSelected) {
-            // Add product, initializing Observacion_Reporte from existing Observacion field or empty string
             setSelectedProducts(prev => [...prev, { ...product, Observacion_Reporte: product.Observacion || "" }]);
         } else {
             setSelectedProducts(prev => prev.filter(p => p.firebaseId !== product.firebaseId));
@@ -279,24 +277,29 @@ export default function AssetSearchPage() {
                                     <TableBody>
                                         {selectedProducts.map((p, index) => (
                                             <TableRow key={p.firebaseId}>
-                                                <TableCell className="whitespace-nowrap">{index + 1}</TableCell>
-                                                <TableCell className="whitespace-nowrap">{String(p[reportColumnMapping['Codigo Patrimonial']] ?? '')}</TableCell>
-                                                <TableCell className="whitespace-nowrap">{String(p[reportColumnMapping['Codigo Interno']] ?? '')}</TableCell>
-                                                <TableCell className="whitespace-nowrap">{String(p[reportColumnMapping['Denominacion']] ?? '')}</TableCell>
-                                                <TableCell className="whitespace-nowrap">{String(p[reportColumnMapping['Marca']] ?? '')}</TableCell>
-                                                <TableCell className="whitespace-nowrap">{String(p[reportColumnMapping['Modelo']] ?? '')}</TableCell>
-                                                <TableCell className="whitespace-nowrap">{String(p[reportColumnMapping['Color']] ?? '')}</TableCell>
-                                                <TableCell className="whitespace-nowrap">{String(p[reportColumnMapping['Serie']] ?? '')}</TableCell>
-                                                <TableCell className="whitespace-nowrap">{String(p[reportColumnMapping['Otros']] ?? '')}</TableCell>
-                                                <TableCell className="whitespace-nowrap">{String(p[reportColumnMapping['Estado de Conservacion']] ?? '')}</TableCell>
-                                                <TableCell className="whitespace-nowrap">
-                                                    <Input 
-                                                        type="text"
-                                                        value={p.Observacion_Reporte || ''}
-                                                        onChange={(e) => handleObservationChange(p.firebaseId, e.target.value)}
-                                                        className="h-8 min-w-[150px]"
-                                                    />
-                                                </TableCell>
+                                                {reportHeaders.map(header => {
+                                                    if (header === 'Item') {
+                                                        return <TableCell key={header} className="whitespace-nowrap">{index + 1}</TableCell>;
+                                                    }
+                                                    if (header === 'Observaciones') {
+                                                        return (
+                                                            <TableCell key={header} className="whitespace-nowrap">
+                                                                <Input 
+                                                                    type="text"
+                                                                    value={p.Observacion_Reporte || ''}
+                                                                    onChange={(e) => handleObservationChange(p.firebaseId, e.target.value)}
+                                                                    className="h-8 min-w-[150px]"
+                                                                />
+                                                            </TableCell>
+                                                        );
+                                                    }
+                                                    const dbField = reportColumnMapping[header];
+                                                    return (
+                                                        <TableCell key={header} className="whitespace-nowrap">
+                                                            {String(p[dbField] ?? '')}
+                                                        </TableCell>
+                                                    );
+                                                })}
                                             </TableRow>
                                         ))}
                                     </TableBody>
