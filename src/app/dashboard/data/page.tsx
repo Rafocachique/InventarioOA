@@ -71,7 +71,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Image from "next/image";
 import { db, auth } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, writeBatch, deleteDoc, query, orderBy, limit } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, writeBatch, deleteDoc, query, orderBy, limit, getDoc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 import { EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
@@ -104,26 +104,26 @@ export default function DataManagementPage() {
   const [allHeaders, setAllHeaders] = React.useState<string[]>([]);
   const [visibleHeaders, setVisibleHeaders] = React.useState<Set<string>>(new Set());
 
-  const fetchProducts = async () => {
+  const fetchProducts = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      const querySnapshot = await getDocs(collection(db, "products"));
-      const productsData = querySnapshot.docs.map(doc => ({ firebaseId: doc.id, ...doc.data() } as Product));
-      setProducts(productsData);
+        const columnOrderDocRef = doc(db, "_config", "columnOrder");
+        const columnOrderDoc = await getDoc(columnOrderDocRef);
+        const storedHeaders = columnOrderDoc.exists() ? columnOrderDoc.data().headers : [];
 
-      if (productsData.length > 0) {
-        // Get headers from the first product to maintain order.
-        const firstProductHeaders = Object.keys(productsData[0]);
-        const headers = firstProductHeaders.filter(key => key !== 'firebaseId');
-        setAllHeaders(headers);
+        const querySnapshot = await getDocs(collection(db, "products"));
+        const productsData = querySnapshot.docs.map(doc => ({ firebaseId: doc.id, ...doc.data() } as Product));
+        setProducts(productsData);
 
-        if (visibleHeaders.size === 0 && headers.length > 0) {
-            setVisibleHeaders(new Set(headers));
+        const headersToUse = storedHeaders.length > 0 ? storedHeaders : 
+            (productsData.length > 0 ? Object.keys(productsData[0]).filter(key => key !== 'firebaseId') : []);
+        
+        setAllHeaders(headersToUse);
+
+        if (visibleHeaders.size === 0 && headersToUse.length > 0) {
+            setVisibleHeaders(new Set(headersToUse));
         }
-      } else {
-        setAllHeaders([]);
-        setVisibleHeaders(new Set());
-      }
+
     } catch (error) {
       console.error("Error fetching products: ", error);
       toast({
@@ -134,11 +134,11 @@ export default function DataManagementPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast, visibleHeaders.size]);
 
   React.useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [fetchProducts]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -166,7 +166,6 @@ export default function DataManagementPage() {
         const workbook = XLSX.read(data, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        // Use header: 1 to get an array of arrays, so we can get the header order from the first row.
         const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
         
         if (!jsonData || jsonData.length < 1) {
@@ -178,10 +177,9 @@ export default function DataManagementPage() {
             setIsUploading(false);
             return;
         }
-
-        const headersFromExcel: string[] = jsonData[0];
+        
+        const headersFromExcel: string[] = jsonData[0].map(header => String(header).trim());
         const newProductsData = XLSX.utils.sheet_to_json(worksheet) as Product[];
-
 
         if (newProductsData.length === 0) {
           toast({
@@ -200,6 +198,8 @@ export default function DataManagementPage() {
           const productData = doc.data() as Product;
           if (productData.id) {
             existingProductsMap.set(String(productData.id), { firebaseId: doc.id, data: productData });
+          } else if (productData.Codbien) {
+            existingProductsMap.set(String(productData.Codbien), { firebaseId: doc.id, data: productData });
           }
         });
 
@@ -215,12 +215,13 @@ export default function DataManagementPage() {
           const currentProgress = Math.min(Math.round((completedSteps / totalSteps) * 100), 90);
           setProgress(currentProgress);
         };
+        
+        const identifierKey = headersFromExcel.includes('Codbien') ? 'Codbien' : 'id';
 
         newProductsData.forEach((newProduct) => {
-          const productId = String(newProduct.id).trim();
+          const productId = String(newProduct[identifierKey] || '').trim();
 
-          if (!newProduct.id || productId === 'undefined') {
-              console.warn("Inmobiliario sin ID encontrado en el archivo Excel, será tratado como nuevo:", newProduct);
+          if (!productId || productId === 'undefined') {
               const docRef = doc(collection(db, "products"));
               batch.set(docRef, newProduct);
               newCount++;
@@ -240,6 +241,11 @@ export default function DataManagementPage() {
 
         await batch.commit();
 
+        // Save column order
+        const columnOrderDocRef = doc(db, "_config", "columnOrder");
+        await setDoc(columnOrderDocRef, { headers: headersFromExcel });
+
+
         setProgress(100);
 
         toast({
@@ -251,10 +257,8 @@ export default function DataManagementPage() {
           setIsUploading(false);
           setIsUploadDialogOpen(false);
           setUploadFile(null);
-          // Set headers based on the original order from Excel
-          const filteredHeaders = headersFromExcel.filter(key => key !== 'firebaseId');
-          setAllHeaders(filteredHeaders);
-          setVisibleHeaders(new Set(filteredHeaders));
+          setAllHeaders(headersFromExcel);
+          setVisibleHeaders(new Set(headersFromExcel));
           fetchProducts();
           setProgress(0);
         }, 1000);
@@ -488,7 +492,7 @@ export default function DataManagementPage() {
                   <DialogHeader>
                   <DialogTitle>Carga de Datos desde Excel</DialogTitle>
                   <DialogDescription>
-                      Seleccione un archivo .xlsx o .xls para cargar. El sistema añadirá nuevos inmobiliarios y actualizará los existentes basándose en la columna 'id'.
+                      Seleccione un archivo .xlsx o .xls para cargar. El sistema añadirá nuevos inmobiliarios y actualizará los existentes basándose en la columna 'id' o 'Codbien'.
                   </DialogDescription>
                   </DialogHeader>
                   {isUploading ? (
@@ -689,7 +693,7 @@ export default function DataManagementPage() {
                             ))}
                             <TableCell>
                             <div className="flex items-center justify-end gap-2">
-                                {product.id && 
+                                {(product.id || product.Codbien) && 
                                 <Dialog>
                                 <DialogTrigger asChild>
                                     <Button variant="ghost" size="icon">
@@ -698,15 +702,15 @@ export default function DataManagementPage() {
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
-                                    <DialogTitle>Código QR para {product.name || product.id}</DialogTitle>
+                                    <DialogTitle>Código QR para {product.name || product.id || product.Codbien}</DialogTitle>
                                     <DialogDescription>
                                         Escanea este código para acceder a la información del inmobiliario.
                                     </DialogDescription>
                                     </DialogHeader>
                                     <div className="flex justify-center p-4">
                                     <Image
-                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${product.id}`}
-                                        alt={`Código QR para ${product.id}`}
+                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${product.id || product.Codbien}`}
+                                        alt={`Código QR para ${product.id || product.Codbien}`}
                                         width={200}
                                         height={200}
                                         data-ai-hint="qr code"
@@ -749,7 +753,7 @@ export default function DataManagementPage() {
         <Dialog open={!!editingProduct} onOpenChange={() => setEditingProduct(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Editar Inmobiliario: {editingProduct.id}</DialogTitle>
+              <DialogTitle>Editar Inmobiliario: {editingProduct.id || editingProduct.Codbien}</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-6">
               {Object.keys(editingProduct).filter(key => key !== 'firebaseId').map(key => (
@@ -779,7 +783,7 @@ export default function DataManagementPage() {
                     <AlertDialogTitle>¿Está seguro de que desea eliminar este inmobiliario?</AlertDialogTitle>
                     <AlertDialogDescription>
                         Esta acción no se puede deshacer. Se eliminará permanentemente el inmobiliario
-                        <span className="font-bold"> {productToDelete.name || productToDelete.id}</span>.
+                        <span className="font-bold"> {productToDelete.name || productToDelete.id || productToDelete.Codbien}</span>.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -792,6 +796,5 @@ export default function DataManagementPage() {
     </div>
   );
 }
-
 
     

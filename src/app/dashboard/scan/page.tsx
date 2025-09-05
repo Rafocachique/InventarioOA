@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { extractTextFromImage } from "@/ai/flows/extract-text-from-image";
 import { saveScan, SaveScanInput } from "@/ai/flows/save-scan";
 import { Loader2, CheckCircle, XCircle, Camera, Save, ScanLine, Download, MoreHorizontal, Settings, Calendar as CalendarIcon, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { doc, getDocs, updateDoc, collection, query, where, Timestamp, onSnapshot, orderBy, deleteDoc, writeBatch } from "firebase/firestore";
+import { doc, getDocs, updateDoc, collection, query, where, Timestamp, onSnapshot, orderBy, deleteDoc, writeBatch, getDoc } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -84,6 +84,24 @@ export default function ScanPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
+  
+  const fetchColumnOrder = useCallback(async () => {
+    try {
+        const columnOrderDocRef = doc(db, "_config", "columnOrder");
+        const columnOrderDoc = await getDoc(columnOrderDocRef);
+        if (columnOrderDoc.exists()) {
+            const headers = columnOrderDoc.data().headers as string[];
+            const filteredHeaders = headers.filter(key => key !== 'firebaseId' && key !== 'scannedAt' && key !== 'scannedBy' && key !== 'scanId');
+            setScanHistoryHeaders(filteredHeaders);
+            if (visibleScanHistoryHeaders.size === 0 && filteredHeaders.length > 0) { 
+                setVisibleScanHistoryHeaders(new Set(filteredHeaders));
+            }
+        }
+    } catch (error) {
+        console.error("Error fetching column order: ", error);
+    }
+  }, [visibleScanHistoryHeaders.size]);
+
 
   useEffect(() => {
     const getCameraPermission = async () => {
@@ -126,26 +144,24 @@ export default function ScanPage() {
     };
 
     getCameraPermission();
+    fetchColumnOrder();
 
     const q = query(collection(db, "scan_history"), orderBy("scannedAt", "desc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const history: ScanRecord[] = [];
         querySnapshot.forEach((doc) => {
-            // The document ID in scan_history is the scanId. The original product's firebaseId is stored as a field.
             history.push({ scanId: doc.id, ...doc.data() } as ScanRecord);
         });
         setScanHistory(history);
         
-        if(history.length > 0) {
-            const headers = Array.from(history.reduce((acc, curr) => {
+        if(history.length > 0 && scanHistoryHeaders.length === 0) {
+             const headersFromData = Array.from(history.reduce((acc, curr) => {
                 Object.keys(curr).forEach(key => acc.add(key));
                 return acc;
             }, new Set<string>()));
-            
-            const filteredHeaders = headers.filter(key => key !== 'firebaseId' && key !== 'scannedAt' && key !== 'scannedBy' && key !== 'scanId');
+            const filteredHeaders = headersFromData.filter(key => key !== 'firebaseId' && key !== 'scannedAt' && key !== 'scannedBy' && key !== 'scanId');
             setScanHistoryHeaders(filteredHeaders);
-
-            if (visibleScanHistoryHeaders.size === 0 && filteredHeaders.length > 0) { 
+             if (visibleScanHistoryHeaders.size === 0 && filteredHeaders.length > 0) { 
                 setVisibleScanHistoryHeaders(new Set(filteredHeaders));
             }
         }
@@ -168,7 +184,7 @@ export default function ScanPage() {
       }
       unsubscribe();
     };
-  }, [toast, visibleScanHistoryHeaders.size]);
+  }, [toast, fetchColumnOrder, scanHistoryHeaders.length, visibleScanHistoryHeaders.size]);
 
  const performVerification = async (code: string): Promise<boolean> => {
     if (!code) return false;
@@ -702,7 +718,7 @@ const handleSaveChanges = async (productToSave: EditableProduct | null) => {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-6">
-              {Object.keys(editingScanRecord).filter(key => key !== 'firebaseId' && key !== 'scannedAt' && key !== 'scannedBy' && key !== 'scanId').map(key => (
+              {scanHistoryHeaders.map(key => (
                 <div key={key} className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor={key} className="text-right capitalize">{key.replace(/_/g, ' ')}</Label>
                   <Input

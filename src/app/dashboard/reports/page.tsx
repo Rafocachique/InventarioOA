@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react";
@@ -6,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from '@/components/ui/input';
 import { Loader2, Search } from 'lucide-react';
 import { db } from "@/lib/firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 
 interface Product {
@@ -23,13 +24,21 @@ export default function AssetSearchPage() {
     const { toast } = useToast();
 
     React.useEffect(() => {
-        const fetchAllProducts = async () => {
+        const fetchInitialData = async () => {
             setIsLoading(true);
             try {
+                // Fetch column order first
+                const columnOrderDocRef = doc(db, "_config", "columnOrder");
+                const columnOrderDoc = await getDoc(columnOrderDocRef);
+                const storedHeaders = columnOrderDoc.exists() ? columnOrderDoc.data().headers : [];
+                setHeaders(storedHeaders);
+
+                // Fetch all products
                 const productsRef = collection(db, "products");
                 const querySnapshot = await getDocs(productsRef);
                 const productsData: Product[] = querySnapshot.docs.map(doc => ({ firebaseId: doc.id, ...doc.data() } as Product));
                 setAllProducts(productsData);
+
             } catch (error) {
                 console.error("Error fetching assets: ", error);
                 toast({
@@ -41,13 +50,12 @@ export default function AssetSearchPage() {
                 setIsLoading(false);
             }
         };
-        fetchAllProducts();
+        fetchInitialData();
     }, [toast]);
 
     React.useEffect(() => {
         if (!searchTerm) {
             setFilteredResults([]);
-            setHeaders([]);
             return;
         }
 
@@ -60,16 +68,6 @@ export default function AssetSearchPage() {
         );
 
         setFilteredResults(results);
-
-        if (results.length > 0) {
-            const allKeys = results.reduce((acc, product) => {
-                Object.keys(product).forEach(key => acc.add(key));
-                return acc;
-            }, new Set<string>());
-
-            const sortedHeaders = Array.from(allKeys).filter(key => key !== 'firebaseId');
-            setHeaders(sortedHeaders);
-        }
 
     }, [searchTerm, allProducts]);
 
@@ -142,3 +140,5 @@ export default function AssetSearchPage() {
     </div>
   );
 }
+
+    
