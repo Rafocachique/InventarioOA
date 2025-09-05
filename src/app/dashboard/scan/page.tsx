@@ -307,6 +307,7 @@ export default function ScanPage() {
         return;
       }
       await processAndVerifyCodes(codeToVerify);
+      setManualCode("");
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, record: EditableProduct | null, setRecord: React.Dispatch<React.SetStateAction<EditableProduct | null>>) => {
@@ -316,34 +317,26 @@ export default function ScanPage() {
   };
   
 const handleSaveChanges = async (productToSave: EditableProduct | null) => {
-    if (!productToSave) return;
-    
-    // The firebaseId from the product itself, which is the ID in the 'products' collection
-    const mainProductDocId = productToSave.firebaseId; 
-    // The scanId, which is the document ID from the 'scan_history' collection
-    const scanHistoryDocId = productToSave.scanId;
-
-    if (!mainProductDocId) {
-        toast({ variant: 'destructive', title: 'Error de Identificación', description: 'No se encontró el ID del producto principal en los datos.' });
+    if (!productToSave || !productToSave.firebaseId) {
+        toast({ variant: 'destructive', title: 'Error de Identificación', description: 'Falta el ID del producto principal.' });
         return;
     }
 
+    const mainProductDocId = productToSave.firebaseId;
+    const scanHistoryDocId = productToSave.scanId;
+
     setIsLoading(true);
     try {
-        // Prepare data for update, removing fields that shouldn't be in Firestore documents directly.
-        const { scanId, scannedAt, scannedBy, ...productData } = productToSave;
+        const { firebaseId, scanId, scannedAt, scannedBy, ...productData } = productToSave;
         
-        // 1. Update the main product document in the 'products' collection
         const mainProductDocRef = doc(db, "products", mainProductDocId);
         await updateDoc(mainProductDocRef, productData);
         
         let toastDescription = "Los cambios se han guardado correctamente en la base de datos de inmobiliarios.";
 
-        // 2. If we are editing a record that has a history record, update that too.
         if (scanHistoryDocId) {
-            const { firebaseId, ...historyData } = productData; // remove main firebaseId from history record
             const scanHistoryDocRef = doc(db, "scan_history", scanHistoryDocId);
-            await updateDoc(scanHistoryDocRef, historyData);
+            await updateDoc(scanHistoryDocRef, productData);
             toastDescription += " El registro de historial también ha sido actualizado.";
         }
 
@@ -361,10 +354,8 @@ const handleSaveChanges = async (productToSave: EditableProduct | null) => {
         });
     } finally {
         setIsLoading(false);
-        setEditingScanRecord(null); // Close the dialog if it was open
-        if (!editingScanRecord) {
-            setEditableProduct(null); // Clear the result form if we weren't editing from the history table
-        }
+        setEditingScanRecord(null);
+        setEditableProduct(null);
     }
 };
 
@@ -536,10 +527,11 @@ const handleSaveChanges = async (productToSave: EditableProduct | null) => {
                         </div>
                     ))}
                 </CardContent>
-                <CardFooter>
-                    <Button onClick={() => handleSaveChanges(editableProduct)} disabled={isLoading} className="w-full">
+                <CardFooter className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setEditableProduct(null)}>Cancelar</Button>
+                    <Button onClick={() => handleSaveChanges(editableProduct)} disabled={isLoading}>
                         {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                        Guardar Cambios en Inmobiliario
+                        Guardar Cambios
                     </Button>
                 </CardFooter>
             </Card>
@@ -567,7 +559,9 @@ const handleSaveChanges = async (productToSave: EditableProduct | null) => {
                               className="w-full sm:w-[280px] justify-start text-left font-normal"
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
-                              {selectedDates?.length === 1 ? (
+                              {selectedDates?.length === 1 && isSameDay(selectedDates[0], new Date()) ? (
+                                `Hoy, ${format(selectedDates[0], "PPP", { locale: es })}`
+                              ) : selectedDates?.length === 1 ? (
                                 format(selectedDates[0], "PPP", { locale: es })
                               ) : selectedDates?.length ? (
                                 `${selectedDates.length} día(s) seleccionado(s)`
