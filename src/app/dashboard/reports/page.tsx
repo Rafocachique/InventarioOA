@@ -107,10 +107,10 @@ export default function AssetSearchPage() {
         setReportHeaderData(prev => ({...prev, [id]: value}));
     };
     
-    const handleObservationChange = (scanId: string, value: string) => {
+    const handleObservationChange = (firebaseId: string, value: string) => {
         const updateProductState = (products: ScanRecord[]) => 
             products.map(p => 
-                p.scanId === scanId ? { ...p, Observacion_Reporte: value } : p
+                p.firebaseId === firebaseId ? { ...p, Observacion_Reporte: value } : p
             );
 
         setSelectedProducts(updateProductState);
@@ -193,51 +193,50 @@ export default function AssetSearchPage() {
         setFilteredResults(results);
     }, [searchTerm, allProducts]);
 
-    const handleSelectProduct = (product: ScanRecord, isSelected: boolean) => {
+    const handleSelectProduct = (product: Product, isSelected: boolean) => {
         if (isSelected) {
-            setSelectedProducts(prev => [...prev, { ...product, Observacion_Reporte: product.Observacion || "" }]);
+            // Prevent adding duplicates based on firebaseId
+            if (!selectedProducts.some(p => p.firebaseId === product.firebaseId)) {
+                setSelectedProducts(prev => [...prev, { ...product, Observacion_Reporte: product.Observacion || "" } as ScanRecord]);
+            }
         } else {
-            // If it's from history, use scanId. If from general search, firebaseId.
-            const idKey = product.scanId ? 'scanId' : 'firebaseId';
-            setSelectedProducts(prev => {
-                const indexToRemove = prev.findIndex(p => p[idKey] === product[idKey]);
-                if (indexToRemove > -1) {
-                    const newArr = [...prev];
-                    newArr.splice(indexToRemove, 1);
-                    return newArr;
-                }
-                return prev;
-            });
+            // Remove product by firebaseId
+            setSelectedProducts(prev => prev.filter(p => p.firebaseId !== product.firebaseId));
         }
     };
     
-    const isProductSelected = (product: ScanRecord) => {
-        const idKey = product.scanId ? 'scanId' : 'firebaseId';
-        return selectedProducts.some(p => p[idKey] === product[idKey]);
+    const isProductSelected = (product: Product) => {
+        return selectedProducts.some(p => p.firebaseId === product.firebaseId);
     };
 
     const handleSelectAllHistory = (isChecked: boolean) => {
         const visibleHistoryScans = filteredHistory;
-        
+
         if (isChecked) {
-            // Add only those scans from visible history that are not already selected
-            const currentSelectedScanIds = new Set(selectedProducts.map(p => p.scanId));
+            // Add all unique scans from visible history that are not already selected
+            const currentFirebaseIdsInSelected = new Set(selectedProducts.map(p => p.firebaseId));
             const newProductsToAdd = visibleHistoryScans
-                .filter(scan => !currentSelectedScanIds.has(scan.scanId))
-                .map(scan => ({ ...scan, Observacion_Reporte: scan.Observacion || "" }));
-            
+                .filter(scan => !currentFirebaseIdsInSelected.has(scan.firebaseId))
+                .reduce((acc, current) => { // Deduplicate within the history itself
+                    if (!acc.find(item => item.firebaseId === current.firebaseId)) {
+                        acc.push({ ...current, Observacion_Reporte: current.Observacion || "" });
+                    }
+                    return acc;
+                }, [] as ScanRecord[]);
+
             setSelectedProducts(prev => [...prev, ...newProductsToAdd]);
         } else {
             // Remove all scans that are present in the visible history
-            const visibleHistoryScanIds = new Set(visibleHistoryScans.map(scan => scan.scanId));
-            setSelectedProducts(prev => prev.filter(p => !visibleHistoryScanIds.has(p.scanId)));
+            const visibleFirebaseIds = new Set(visibleHistoryScans.map(scan => scan.firebaseId));
+            setSelectedProducts(prev => prev.filter(p => !visibleFirebaseIds.has(p.firebaseId)));
         }
     };
+
     
     const allVisibleHistorySelected = React.useMemo(() => {
-        const visibleIds = new Set(filteredHistory.map(s => s.scanId));
+        const visibleIds = new Set(filteredHistory.map(s => s.firebaseId));
         if (visibleIds.size === 0) return false;
-        return filteredHistory.every(scan => selectedProducts.some(p => p.scanId === scan.scanId));
+        return Array.from(visibleIds).every(id => selectedProducts.some(p => p.firebaseId === id));
     }, [filteredHistory, selectedProducts]);
 
     const handleGeneratePDF = () => {
@@ -289,11 +288,11 @@ export default function AssetSearchPage() {
                                     <TableRow><TableCell colSpan={headers.length + 1} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
                                 ) : filteredResults.length > 0 ? (
                                     filteredResults.map(product => (
-                                        <TableRow key={product.firebaseId} data-state={isProductSelected(product as ScanRecord) ? "selected" : ""}>
+                                        <TableRow key={product.firebaseId} data-state={isProductSelected(product) ? "selected" : ""}>
                                             <TableCell>
                                                 <Checkbox
-                                                    checked={isProductSelected(product as ScanRecord)}
-                                                    onCheckedChange={(checked) => handleSelectProduct(product as ScanRecord, !!checked)}
+                                                    checked={isProductSelected(product)}
+                                                    onCheckedChange={(checked) => handleSelectProduct(product, !!checked)}
                                                     aria-label="Seleccionar fila"
                                                 />
                                             </TableCell>
@@ -424,7 +423,7 @@ export default function AssetSearchPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {selectedProducts.map((p, index) => (
-                                            <TableRow key={`${p.scanId}-${index}`}>
+                                            <TableRow key={`${p.firebaseId}-${index}`}>
                                                 {reportHeaders.map(header => {
                                                     const dbField = reportColumnMapping[header as keyof typeof reportColumnMapping];
                                                     if (header === 'Item') {
@@ -436,7 +435,7 @@ export default function AssetSearchPage() {
                                                                 <Input 
                                                                     type="text"
                                                                     value={p.Observacion_Reporte || ''}
-                                                                    onChange={(e) => handleObservationChange(p.scanId, e.target.value)}
+                                                                    onChange={(e) => handleObservationChange(p.firebaseId, e.target.value)}
                                                                     className="h-8 min-w-[150px]"
                                                                     placeholder="Añadir observación..."
                                                                 />
@@ -590,4 +589,3 @@ export default function AssetSearchPage() {
   );
 }
 
-    
