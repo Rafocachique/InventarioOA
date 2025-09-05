@@ -24,8 +24,7 @@ interface Product {
 
 type ReportFormat = "asignacion" | "baja" | "transferencia" | "";
 
-const reportColumnMapping: Record<string, string | ((product: Product, index: number) => any)> = {
-    'Item': (product: Product, index: number) => index + 1,
+const reportColumnMapping: Record<string, string> = {
     'Codigo Patrimonial': 'Codbien',
     'Codigo Interno': 'Codanterio',
     'Denominacion': 'Descrip',
@@ -35,7 +34,6 @@ const reportColumnMapping: Record<string, string | ((product: Product, index: nu
     'Serie': 'Serie',
     'Otros': 'OTROS',
     'Estado de Conservacion': 'Estado',
-    'Observaciones': 'Observacion_Reporte'
 };
 
 const reportHeaders = [
@@ -281,27 +279,24 @@ export default function AssetSearchPage() {
                                     <TableBody>
                                         {selectedProducts.map((p, index) => (
                                             <TableRow key={p.firebaseId}>
-                                                {reportHeaders.map(header => {
-                                                    const keyOrFn = reportColumnMapping[header];
-                                                    let cellContent;
-
-                                                    if (typeof keyOrFn === 'function') {
-                                                        cellContent = keyOrFn(p, index);
-                                                    } else if (keyOrFn === 'Observacion_Reporte') {
-                                                        cellContent = (
-                                                            <Input 
-                                                                type="text"
-                                                                value={p.Observacion_Reporte || ''}
-                                                                onChange={(e) => handleObservationChange(p.firebaseId, e.target.value)}
-                                                                className="h-8 min-w-[150px]"
-                                                            />
-                                                        );
-                                                    } else {
-                                                        cellContent = String(p[keyOrFn] ?? '');
-                                                    }
-
-                                                    return <TableCell key={header} className="whitespace-nowrap">{cellContent}</TableCell>;
-                                                })}
+                                                <TableCell className="whitespace-nowrap">{index + 1}</TableCell>
+                                                <TableCell className="whitespace-nowrap">{String(p[reportColumnMapping['Codigo Patrimonial']] ?? '')}</TableCell>
+                                                <TableCell className="whitespace-nowrap">{String(p[reportColumnMapping['Codigo Interno']] ?? '')}</TableCell>
+                                                <TableCell className="whitespace-nowrap">{String(p[reportColumnMapping['Denominacion']] ?? '')}</TableCell>
+                                                <TableCell className="whitespace-nowrap">{String(p[reportColumnMapping['Marca']] ?? '')}</TableCell>
+                                                <TableCell className="whitespace-nowrap">{String(p[reportColumnMapping['Modelo']] ?? '')}</TableCell>
+                                                <TableCell className="whitespace-nowrap">{String(p[reportColumnMapping['Color']] ?? '')}</TableCell>
+                                                <TableCell className="whitespace-nowrap">{String(p[reportColumnMapping['Serie']] ?? '')}</TableCell>
+                                                <TableCell className="whitespace-nowrap">{String(p[reportColumnMapping['Otros']] ?? '')}</TableCell>
+                                                <TableCell className="whitespace-nowrap">{String(p[reportColumnMapping['Estado de Conservacion']] ?? '')}</TableCell>
+                                                <TableCell className="whitespace-nowrap">
+                                                    <Input 
+                                                        type="text"
+                                                        value={p.Observacion_Reporte || ''}
+                                                        onChange={(e) => handleObservationChange(p.firebaseId, e.target.value)}
+                                                        className="h-8 min-w-[150px]"
+                                                    />
+                                                </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
@@ -442,5 +437,3 @@ export default function AssetSearchPage() {
     </div>
   );
 }
-
-    
