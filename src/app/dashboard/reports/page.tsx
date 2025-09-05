@@ -272,7 +272,7 @@ export default function AssetSearchPage() {
                                     <TableBody>
                                         {selectedProducts.map(p => (
                                             <TableRow key={p.firebaseId}>
-                                                <TableCell className="font-medium whitespace-nowrap">{p.Codbien || p.id || 'N/A'}</TableCell>
+                                                <TableCell className="font-medium whitespace-nowrap">{p.Codbien || 'N/A'}</TableCell>
                                                 <TableCell className="whitespace-nowrap">{p.Descrip || 'N/A'}</TableCell>
                                                 <TableCell>
                                                     <Input 
@@ -422,5 +422,3 @@ export default function AssetSearchPage() {
     </div>
   );
 }
-
-    
