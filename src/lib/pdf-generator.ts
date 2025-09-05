@@ -64,12 +64,12 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     doc.setFont('helvetica', 'bold');
     doc.text('ENTIDAD U ORGANIZACIÓN DE LA ENTIDAD:', 14, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(headerData.entidad, 80, y);
+    doc.text(headerData.entidad, 85, y);
     doc.setFont('helvetica', 'bold');
     doc.text('FECHA:', 160, y);
     doc.setFont('helvetica', 'normal');
     doc.text(headerData.fecha, 175, y);
-    y += 7;
+    y += 10;
 
     // Datos del Usuario
     doc.setFont('helvetica', 'bold');
@@ -97,6 +97,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     doc.text('Direccion:', leftColumnX, y);
     doc.setFont('helvetica', 'normal');
     doc.text(headerData.direccion, 35, y);
+    y += 7;
     
     // Columna Derecha
     y = initialY;
@@ -138,8 +139,9 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         head: [tableHeaders],
         body: tableBody,
         startY: y + 2,
+        theme: 'grid',
         headStyles: { fillColor: [22, 160, 133], textColor: [255,255,255], fontSize: 8, halign: 'center' },
-        styles: { fontSize: 8, cellPadding: 1.5, halign: 'center' },
+        styles: { fontSize: 8, cellPadding: 1.5, halign: 'center', lineColor: [44, 62, 80], lineWidth: 0.1 },
         alternateRowStyles: { fillColor: [240, 240, 240] },
         columnStyles: {
             'Denominacion': { halign: 'left' },
@@ -173,17 +175,17 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     });
 
     // Pie de página (Firmas)
-    const signatureY = finalY + 30;
+    const signatureY = finalY + 25;
     
-    doc.line(30, signatureY, 80, signatureY); 
-    doc.text("Responsable", 45, signatureY + 5);
+    doc.line(30, signatureY, 90, signatureY); 
+    doc.text("Responsable", 60, signatureY + 5, { align: 'center' });
 
-    doc.line(130, signatureY, 180, signatureY); 
-    doc.text("Jefe del area", 145, signatureY + 5);
+    doc.line(120, signatureY, 180, signatureY); 
+    doc.text("Jefe del area", 150, signatureY + 5, { align: 'center' });
 
     const signatureY2 = signatureY + 25;
-    doc.line(80, signatureY2, 130, signatureY2); 
-    doc.text("Oficina Administracion", 85, signatureY2 + 5);
+    doc.line(75, signatureY2, 135, signatureY2); 
+    doc.text("Oficina Administracion", 105, signatureY2 + 5, { align: 'center' });
 
 
     doc.save(`Acta_Asignacion_${headerData.dni || 'usuario'}.pdf`);
