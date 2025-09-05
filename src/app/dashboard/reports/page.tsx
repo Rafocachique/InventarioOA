@@ -17,6 +17,7 @@ import { format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { generateAsignacionPDF } from "@/lib/pdf-generator";
 
 
 interface Product {
@@ -70,9 +71,9 @@ export default function AssetSearchPage() {
         nombreApellidos: "",
         dni: "",
         correo: "",
-        organo: "",
-        localSede: "",
-        direccion: "",
+        organo: "OFICINA DE ABASTECIMIENTO Y SERVICIOS GENERALES",
+        localSede: "SEDE LOCAL 01 - SL01",
+        direccion: "JR. CARLOS GONZALES 285 URB. MARANGA - SAN MIGUEL",
         oficinaArea: "",
         numeroMovimiento: "",
         motivo: "",
@@ -113,8 +114,6 @@ export default function AssetSearchPage() {
             );
 
         setSelectedProducts(updateProductState);
-        setAllProducts(updateProductState);
-        setScanHistory(prevHistory => updateProductState(prevHistory) as ScanRecord[]);
     };
 
     React.useEffect(() => {
@@ -228,6 +227,18 @@ export default function AssetSearchPage() {
         if (visibleIds.size === 0) return false;
         return filteredHistory.every(scan => selectedProducts.some(p => p.firebaseId === scan.firebaseId));
     }, [filteredHistory, selectedProducts]);
+
+    const handleGeneratePDF = () => {
+      if (selectedFormat === 'asignacion') {
+        generateAsignacionPDF(reportHeaderData, selectedProducts);
+      } else {
+        toast({
+            variant: "destructive",
+            title: "Formato no implementado",
+            description: "La generación de PDF para este formato aún no está disponible.",
+        });
+      }
+    }
 
     
   return (
@@ -403,7 +414,7 @@ export default function AssetSearchPage() {
                                         {selectedProducts.map((p, index) => (
                                             <TableRow key={p.firebaseId}>
                                                 {reportHeaders.map(header => {
-                                                    const dbField = reportColumnMapping[header];
+                                                    const dbField = reportColumnMapping[header as keyof typeof reportColumnMapping];
                                                     if (header === 'Item') {
                                                         return <TableCell key={header} className="whitespace-nowrap">{index + 1}</TableCell>;
                                                     }
@@ -455,7 +466,7 @@ export default function AssetSearchPage() {
                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div className="space-y-2 sm:col-span-2">
                                                 <Label htmlFor="entidad">Entidad u Organización</Label>
-                                                <Input id="entidad" value={reportHeaderData.entidad} onChange={handleReportDataChange} />
+                                                <Input id="entidad" value={reportHeaderData.entidad} onChange={handleReportDataChange} disabled />
                                             </div>
                                              <div className="space-y-2">
                                                 <Label htmlFor="fecha">Fecha</Label>
@@ -475,15 +486,15 @@ export default function AssetSearchPage() {
                                             </div>
                                              <div className="space-y-2 sm:col-span-2">
                                                 <Label htmlFor="organo">Órgano o Unidad Orgánica</Label>
-                                                <Input id="organo" value={reportHeaderData.organo} onChange={handleReportDataChange} />
+                                                <Input id="organo" value={reportHeaderData.organo} onChange={handleReportDataChange} disabled />
                                             </div>
                                             <div className="space-y-2 sm:col-span-2">
                                                 <Label htmlFor="direccion">Dirección</Label>
-                                                <Input id="direccion" value={reportHeaderData.direccion} onChange={handleReportDataChange} />
+                                                <Input id="direccion" value={reportHeaderData.direccion} onChange={handleReportDataChange} disabled/>
                                             </div>
                                             <div className="space-y-2">
                                                 <Label htmlFor="localSede">Local o Sede</Label>
-                                                <Input id="localSede" value={reportHeaderData.localSede} onChange={handleReportDataChange} />
+                                                <Input id="localSede" value={reportHeaderData.localSede} onChange={handleReportDataChange} disabled/>
                                             </div>
                                             <div className="space-y-2">
                                                 <Label htmlFor="oficinaArea">Oficina o Área</Label>
@@ -556,9 +567,9 @@ export default function AssetSearchPage() {
             </CardContent>
              {selectedProducts.length > 0 && (
                 <CardFooter className="flex justify-end border-t pt-6">
-                    <Button disabled={!selectedFormat} >
+                    <Button onClick={handleGeneratePDF} disabled={!selectedFormat} >
                         <FileDown className="mr-2 h-4 w-4" />
-                        Generar PDF (Próximamente)
+                        Generar PDF
                     </Button>
                 </CardFooter>
             )}
@@ -566,3 +577,4 @@ export default function AssetSearchPage() {
     </div>
   );
 }
+
