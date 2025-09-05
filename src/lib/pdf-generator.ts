@@ -63,7 +63,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
             styles: { fontSize: 9, cellPadding: 1.5, ...options },
             didDrawCell: (data: any) => {
                 if (data.row.index === data.table.body.length - 1) {
-                    doc.line(data.table.margins.left, data.cell.y + data.cell.height, pageWidth - data.table.margins.right, data.cell.y + data.cell.height);
+                    doc.line(data.table.settings.margin.left, data.cell.y + data.cell.height, pageWidth - data.table.settings.margin.right, data.cell.y + data.cell.height);
                 }
             },
             margin: { left: margin, right: margin }
@@ -142,7 +142,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         body: tableBody,
         startY: y + 2,
         theme: 'grid',
-        headStyles: { fillColor: [22, 160, 133], textColor: [255,255,255], fontSize: 8, halign: 'center' },
+        headStyles: { fillColor: [22, 160, 133], textColor: [255,255,255], fontSize: 8, halign: 'center', lineColor: [44, 62, 80], lineWidth: 0.1 },
         styles: { fontSize: 8, cellPadding: 1.5, halign: 'center', lineColor: [44, 62, 80], lineWidth: 0.1 },
         alternateRowStyles: { fillColor: [240, 240, 240] },
         columnStyles: {
