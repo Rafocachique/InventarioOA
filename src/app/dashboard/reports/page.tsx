@@ -33,10 +33,13 @@ export default function AssetSearchPage() {
     const { toast } = useToast();
     const [selectedFormat, setSelectedFormat] = React.useState<ReportFormat>("");
     
-    // State for editable fields based on the provided PDF format
+    // State for editable fields for all report types
     const [reportHeaderData, setReportHeaderData] = React.useState({
+        // Common fields
         entidad: "UNIVERSIDAD NACIONAL FEDERICO VILLARREAL",
         fecha: format(new Date(), "dd.MM.yyyy"),
+
+        // Asignacion fields
         nombreApellidos: "",
         dni: "",
         correo: "",
@@ -44,7 +47,37 @@ export default function AssetSearchPage() {
         localSede: "",
         direccion: "",
         oficinaArea: "",
+
+        // Baja & Transferencia fields
+        numeroMovimiento: "",
+        motivo: "",
+        tipo: "",
+        salida: "",
+        mantenimiento: "",
+        reingreso: "",
+        comisionServicio: "",
+        desplazamiento: "",
+        capacitacionEvento: "",
+
+        remiteNombre: "",
+        remiteDNI: "",
+        remiteCorreo: "",
+        remiteUnidadOrganica: "",
+        remiteLocalSede: "",
+        remiteOficio: "",
+
+        recibeNombre: "",
+        recibeDNI: "",
+        recibeCorreo: "",
+        recibeUnidadOrganica: "",
+        recibeLocalSede: "",
+        recibeDocumento: "",
+        
+        datosVehiculo: "",
+        nombreResponsableTraslado: "",
+        nombreUnidadPatrimonio: "",
     });
+
 
     const handleReportDataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value } = e.target;
@@ -285,11 +318,58 @@ export default function AssetSearchPage() {
                                          </div>
                                      </div>
                                 )}
-                                {selectedFormat && selectedFormat !== 'asignacion' && (
-                                    <div className="text-center text-muted-foreground border-t pt-4">
-                                        <p>Los formularios para actas de '{selectedFormat}' estarán disponibles próximamente.</p>
+                                {(selectedFormat === 'baja' || selectedFormat === 'transferencia') && (
+                                    <div className="space-y-6 border-t pt-4">
+                                        <h4 className="font-medium">2. Complete los datos para el Acta de {selectedFormat.charAt(0).toUpperCase() + selectedFormat.slice(1)}</h4>
+                                        
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                                            <div className="space-y-2 sm:col-span-2"><Label htmlFor="entidad">Entidad</Label><Input id="entidad" value={reportHeaderData.entidad} onChange={handleReportDataChange} /></div>
+                                            
+                                            <div className="space-y-2"><Label htmlFor="tipo">Tipo</Label><Input id="tipo" value={reportHeaderData.tipo} onChange={handleReportDataChange} /></div>
+                                            <div className="space-y-2"><Label htmlFor="motivo">Motivo</Label><Input id="motivo" value={reportHeaderData.motivo} onChange={handleReportDataChange} /></div>
+                                            <div className="space-y-2"><Label htmlFor="salida">Salida</Label><Input id="salida" value={reportHeaderData.salida} onChange={handleReportDataChange} /></div>
+                                            <div className="space-y-2"><Label htmlFor="mantenimiento">Mantenimiento</Label><Input id="mantenimiento" value={reportHeaderData.mantenimiento} onChange={handleReportDataChange} /></div>
+                                            <div className="space-y-2"><Label htmlFor="reingreso">Reingreso</Label><Input id="reingreso" value={reportHeaderData.reingreso} onChange={handleReportDataChange} /></div>
+                                            <div className="space-y-2"><Label htmlFor="comisionServicio">Comisión Servicio</Label><Input id="comisionServicio" value={reportHeaderData.comisionServicio} onChange={handleReportDataChange} /></div>
+                                            <div className="space-y-2"><Label htmlFor="numeroMovimiento">Número Movimiento</Label><Input id="numeroMovimiento" value={reportHeaderData.numeroMovimiento} onChange={handleReportDataChange} /></div>
+                                            <div className="space-y-2"><Label htmlFor="desplazamiento">Desplazamiento</Label><Input id="desplazamiento" value={reportHeaderData.desplazamiento} onChange={handleReportDataChange} /></div>
+                                            <div className="space-y-2 sm:col-span-2"><Label htmlFor="capacitacionEvento">Capacitación o Evento</Label><Input id="capacitacionEvento" value={reportHeaderData.capacitacionEvento} onChange={handleReportDataChange} /></div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 pt-4 border-t">
+                                            <div>
+                                                <h5 className="font-semibold mb-2">Datos del Responsable del Remite</h5>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="remiteNombre">Nombre y Apellidos</Label><Input id="remiteNombre" value={reportHeaderData.remiteNombre} onChange={handleReportDataChange} />
+                                                    <Label htmlFor="remiteDNI">DNI</Label><Input id="remiteDNI" value={reportHeaderData.remiteDNI} onChange={handleReportDataChange} />
+                                                    <Label htmlFor="remiteCorreo">Correo Electrónico</Label><Input id="remiteCorreo" value={reportHeaderData.remiteCorreo} onChange={handleReportDataChange} />
+                                                    <Label htmlFor="remiteUnidadOrganica">Unidad Orgánica</Label><Input id="remiteUnidadOrganica" value={reportHeaderData.remiteUnidadOrganica} onChange={handleReportDataChange} />
+                                                    <Label htmlFor="remiteLocalSede">Local o Sede</Label><Input id="remiteLocalSede" value={reportHeaderData.remiteLocalSede} onChange={handleReportDataChange} />
+                                                    <Label htmlFor="remiteOficio">Oficio</Label><Input id="remiteOficio" value={reportHeaderData.remiteOficio} onChange={handleReportDataChange} />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h5 className="font-semibold mb-2">Datos del Responsable del Recibe</h5>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="recibeNombre">Nombre y Apellidos</Label><Input id="recibeNombre" value={reportHeaderData.recibeNombre} onChange={handleReportDataChange} />
+                                                    <Label htmlFor="recibeDNI">DNI</Label><Input id="recibeDNI" value={reportHeaderData.recibeDNI} onChange={handleReportDataChange} />
+                                                    <Label htmlFor="recibeCorreo">Correo Electrónico</Label><Input id="recibeCorreo" value={reportHeaderData.recibeCorreo} onChange={handleReportDataChange} />
+                                                    <Label htmlFor="recibeUnidadOrganica">Unidad Orgánica</Label><Input id="recibeUnidadOrganica" value={reportHeaderData.recibeUnidadOrganica} onChange={handleReportDataChange} />
+                                                    <Label htmlFor="recibeLocalSede">Local o Sede</Label><Input id="recibeLocalSede" value={reportHeaderData.recibeLocalSede} onChange={handleReportDataChange} />
+                                                    <Label htmlFor="recibeDocumento">Documento</Label><Input id="recibeDocumento" value={reportHeaderData.recibeDocumento} onChange={handleReportDataChange} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                         {selectedFormat === 'transferencia' && (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 pt-4 border-t">
+                                                <div className="space-y-2"><Label htmlFor="datosVehiculo">Datos Vehículo</Label><Input id="datosVehiculo" value={reportHeaderData.datosVehiculo} onChange={handleReportDataChange} /></div>
+                                                <div className="space-y-2"><Label htmlFor="nombreResponsableTraslado">Nombre y firma Responsable del traslado</Label><Input id="nombreResponsableTraslado" value={reportHeaderData.nombreResponsableTraslado} onChange={handleReportDataChange} /></div>
+                                                <div className="space-y-2 sm:col-span-2"><Label htmlFor="nombreUnidadPatrimonio">Nombre y firma Unidad Patrimonio</Label><Input id="nombreUnidadPatrimonio" value={reportHeaderData.nombreUnidadPatrimonio} onChange={handleReportDataChange} /></div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
+
 
                             </div>
                         </div>
