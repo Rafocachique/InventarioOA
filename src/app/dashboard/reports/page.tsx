@@ -111,6 +111,7 @@ export default function AssetSearchPage() {
         );
         setSelectedProducts(newSelectedProducts);
         
+        // Also update in allProducts to persist the observation if the user deselects and reselects it
         const newAllProducts = allProducts.map(p => 
             p.firebaseId === firebaseId ? { ...p, Observacion_Reporte: value } : p
         );
@@ -166,6 +167,7 @@ export default function AssetSearchPage() {
 
     const handleSelectProduct = (product: Product, isSelected: boolean) => {
         if (isSelected) {
+            // Add product, initializing Observacion_Reporte from existing Observacion field or empty string
             setSelectedProducts(prev => [...prev, { ...product, Observacion_Reporte: product.Observacion || "" }]);
         } else {
             setSelectedProducts(prev => prev.filter(p => p.firebaseId !== product.firebaseId));
