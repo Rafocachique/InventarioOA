@@ -9,11 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Search, FileDown } from 'lucide-react';
+import { Loader2, Search, FileDown, Calendar as CalendarIcon } from 'lucide-react';
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where, Timestamp, onSnapshot, orderBy } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, isSameDay } from "date-fns";
+import { es } from "date-fns/locale";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 
 interface Product {
@@ -22,9 +25,16 @@ interface Product {
   [key: string]: any;
 }
 
+interface ScanRecord extends Product {
+    scannedAt: Timestamp;
+    scannedBy: string;
+    scanId: string;
+}
+
 type ReportFormat = "asignacion" | "baja" | "transferencia" | "";
 
 const reportColumnMapping: Record<string, string> = {
+    'Item': 'item',
     'Codigo Patrimonial': 'codbien',
     'Codigo Interno': 'codanterio',
     'Denominacion': 'descrip',
@@ -34,21 +44,10 @@ const reportColumnMapping: Record<string, string> = {
     'Serie': 'serie',
     'Otros': 'OTROS',
     'Estado de Conservacion': 'estado',
+    'Observaciones': 'Observacion_Reporte',
 };
 
-const reportHeaders = [
-    'Item',
-    'Codigo Patrimonial',
-    'Codigo Interno',
-    'Denominacion',
-    'Marca',
-    'Modelo',
-    'Color',
-    'Serie',
-    'Otros',
-    'Estado de Conservacion',
-    'Observaciones'
-];
+const reportHeaders = Object.keys(reportColumnMapping);
 
 
 export default function AssetSearchPage() {
@@ -60,6 +59,11 @@ export default function AssetSearchPage() {
     const [headers, setHeaders] = React.useState<string[]>([]);
     const { toast } = useToast();
     const [selectedFormat, setSelectedFormat] = React.useState<ReportFormat>("");
+    
+    // State for scan history
+    const [scanHistory, setScanHistory] = React.useState<ScanRecord[]>([]);
+    const [isHistoryLoading, setIsHistoryLoading] = React.useState(true);
+    const [selectedDates, setSelectedDates] = React.useState<Date[] | undefined>([new Date()]);
     
     const [reportHeaderData, setReportHeaderData] = React.useState({
         entidad: "UNIVERSIDAD NACIONAL FEDERICO VILLARREAL",
@@ -104,15 +108,14 @@ export default function AssetSearchPage() {
     };
     
     const handleObservationChange = (firebaseId: string, value: string) => {
-        const newSelectedProducts = selectedProducts.map(p => 
-            p.firebaseId === firebaseId ? { ...p, Observacion_Reporte: value } : p
-        );
-        setSelectedProducts(newSelectedProducts);
-        
-        const newAllProducts = allProducts.map(p => 
-            p.firebaseId === firebaseId ? { ...p, Observacion_Reporte: value } : p
-        );
-        setAllProducts(newAllProducts);
+        const updateProductState = (products: Product[]) => 
+            products.map(p => 
+                p.firebaseId === firebaseId ? { ...p, Observacion_Reporte: value } : p
+            );
+
+        setSelectedProducts(updateProductState);
+        setAllProducts(updateProductState);
+        setScanHistory(prevHistory => updateProductState(prevHistory) as ScanRecord[]);
     };
 
     React.useEffect(() => {
@@ -145,8 +148,38 @@ export default function AssetSearchPage() {
                 setIsLoading(false);
             }
         };
+
+        const subscribeToScanHistory = () => {
+            setIsHistoryLoading(true);
+            const q = query(collection(db, "scan_history"), orderBy("scannedAt", "desc"));
+            const unsubscribe = onSnapshot(q, (querySnapshot) => {
+                const history: ScanRecord[] = [];
+                querySnapshot.forEach((doc) => {
+                    history.push({ scanId: doc.id, firebaseId: doc.data().firebaseId, ...doc.data() } as ScanRecord);
+                });
+                setScanHistory(history);
+                setIsHistoryLoading(false);
+            }, (error) => {
+                console.error("Error fetching scan history: ", error);
+                toast({ variant: "destructive", title: "Error", description: "No se pudo cargar el historial." });
+                setIsHistoryLoading(false);
+            });
+            return unsubscribe;
+        };
+
         fetchInitialData();
+        const unsubscribeHistory = subscribeToScanHistory();
+        return () => unsubscribeHistory();
+
     }, [toast]);
+    
+    const filteredHistory = React.useMemo(() => {
+        if (!selectedDates || selectedDates.length === 0) return [];
+        return scanHistory.filter(scan => {
+            const scanDate = scan.scannedAt.toDate();
+            return selectedDates.some(selectedDate => isSameDay(scanDate, selectedDate));
+        });
+    }, [scanHistory, selectedDates]);
 
     React.useEffect(() => {
         if (!searchTerm) {
@@ -164,7 +197,10 @@ export default function AssetSearchPage() {
 
     const handleSelectProduct = (product: Product, isSelected: boolean) => {
         if (isSelected) {
-            setSelectedProducts(prev => [...prev, { ...product, Observacion_Reporte: product.Observacion || "" }]);
+            // Add only if not already present
+            if (!selectedProducts.some(p => p.firebaseId === product.firebaseId)) {
+                setSelectedProducts(prev => [...prev, { ...product, Observacion_Reporte: product.Observacion || "" }]);
+            }
         } else {
             setSelectedProducts(prev => prev.filter(p => p.firebaseId !== product.firebaseId));
         }
@@ -176,78 +212,139 @@ export default function AssetSearchPage() {
     
   return (
     <div className="flex flex-col gap-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            <div className="lg:col-span-1">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Búsqueda General de Activos</CardTitle>
-                        <CardDescription>
-                            Escriba para buscar en tiempo real cualquier activo por cualquiera de sus datos.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="relative w-full">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                                type="search" 
-                                placeholder="Buscar por ID, nombre, responsable..." 
-                                className="pl-8 w-full"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-            
-            <div className="lg:col-span-2 flex flex-col h-full">
-                 <Card className="flex flex-col flex-grow">
-                    <CardHeader>
-                        <CardTitle>Resultados de la Búsqueda</CardTitle>
-                        <CardDescription>
-                            {searchTerm ? `Se encontraron ${filteredResults.length} activos para "${searchTerm}".` : "Ingrese un término de búsqueda para ver los resultados."}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-grow p-0">
-                        <div className="relative w-full h-full overflow-auto max-h-[40vh]">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-[50px]"><span className="sr-only">Seleccionar</span></TableHead>
-                                        {headers.map(header => (
-                                            <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>
-                                        ))}
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {isLoading && searchTerm ? (
-                                        <TableRow><TableCell colSpan={headers.length + 1} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
-                                    ) : filteredResults.length > 0 ? (
-                                        filteredResults.map(product => (
-                                            <TableRow key={product.firebaseId} data-state={isProductSelected(product.firebaseId) ? "selected" : ""}>
-                                                <TableCell>
-                                                    <Checkbox
-                                                        checked={isProductSelected(product.firebaseId)}
-                                                        onCheckedChange={(checked) => handleSelectProduct(product, !!checked)}
-                                                        aria-label="Seleccionar fila"
-                                                    />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <Card className="lg:col-span-1">
+                <CardHeader>
+                    <CardTitle>Búsqueda General de Activos</CardTitle>
+                    <CardDescription>
+                        Busque y seleccione activos para añadir al reporte.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="relative w-full">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                            type="search" 
+                            placeholder="Buscar por ID, nombre, responsable..." 
+                            className="pl-8 w-full"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                     <div className="mt-4 border rounded-lg flex-grow max-h-[40vh] overflow-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[50px]"><span className="sr-only">Seleccionar</span></TableHead>
+                                    {headers.slice(0, 7).map(header => (
+                                        <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>
+                                    ))}
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isLoading && searchTerm ? (
+                                    <TableRow><TableCell colSpan={headers.length + 1} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                                ) : filteredResults.length > 0 ? (
+                                    filteredResults.map(product => (
+                                        <TableRow key={product.firebaseId} data-state={isProductSelected(product.firebaseId) ? "selected" : ""}>
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={isProductSelected(product.firebaseId)}
+                                                    onCheckedChange={(checked) => handleSelectProduct(product, !!checked)}
+                                                    aria-label="Seleccionar fila"
+                                                />
+                                            </TableCell>
+                                            {headers.slice(0, 7).map(header => (
+                                                <TableCell key={header} className="whitespace-nowrap">
+                                                    {String(product[header] ?? '')}
                                                 </TableCell>
-                                                {headers.map(header => (
-                                                    <TableCell key={header} className="whitespace-nowrap">
-                                                        {String(product[header] ?? '')}
-                                                    </TableCell>
-                                                ))}
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow><TableCell colSpan={headers.length + 1} className="text-center h-24">{searchTerm ? "No se encontraron activos que coincidan." : "Los resultados aparecerán aquí."}</TableCell></TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+                                            ))}
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow><TableCell colSpan={headers.length + 1} className="text-center h-24">{searchTerm ? "No se encontraron activos." : "Los resultados aparecerán aquí."}</TableCell></TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+            
+            <Card className="lg:col-span-1">
+                 <CardHeader>
+                    <CardTitle>Historial de Escaneos</CardTitle>
+                    <CardDescription>
+                        Seleccione una fecha para ver y añadir activos escaneados al reporte.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                     <Popover>
+                        <PopoverTrigger asChild>
+                         <Button
+                            id="date"
+                            variant={"outline"}
+                            className="w-full sm:w-[280px] justify-start text-left font-normal mb-4"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {selectedDates?.length === 1 && isSameDay(selectedDates[0], new Date()) ? (
+                              `Hoy, ${format(selectedDates[0], "PPP", { locale: es })}`
+                            ) : selectedDates?.length === 1 ? (
+                              format(selectedDates[0], "PPP", { locale: es })
+                            ) : selectedDates?.length ? (
+                              `${selectedDates.length} día(s) seleccionado(s)`
+                            ) : (
+                              <span>Seleccione fechas</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                            initialFocus
+                            mode="multiple"
+                            selected={selectedDates}
+                            onSelect={setSelectedDates}
+                            locale={es}
+                        />
+                        </PopoverContent>
+                    </Popover>
+                    <div className="mt-4 border rounded-lg flex-grow max-h-[40vh] overflow-auto">
+                        <Table>
+                             <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[50px]"><span className="sr-only">Select</span></TableHead>
+                                    <TableHead>Codbien</TableHead>
+                                    <TableHead>Descripción</TableHead>
+                                    <TableHead>Escaneado Por</TableHead>
+                                    <TableHead>Fecha</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isHistoryLoading ? (
+                                    <TableRow><TableCell colSpan={5} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                                ) : filteredHistory.length > 0 ? (
+                                    filteredHistory.map(scan => (
+                                        <TableRow key={scan.scanId} data-state={isProductSelected(scan.firebaseId) ? "selected" : ""}>
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={isProductSelected(scan.firebaseId)}
+                                                    onCheckedChange={(checked) => handleSelectProduct(scan, !!checked)}
+                                                    aria-label={`Seleccionar escaneo ${scan.codbien}`}
+                                                />
+                                            </TableCell>
+                                            <TableCell>{scan.codbien || 'N/A'}</TableCell>
+                                            <TableCell>{scan.descrip || 'N/A'}</TableCell>
+                                            <TableCell>{scan.scannedBy}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{format(scan.scannedAt.toDate(), 'Pp', { locale: es })}</TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                     <TableRow><TableCell colSpan={5} className="text-center h-24">No hay escaneos para las fechas seleccionadas.</TableCell></TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
 
         <Card>
@@ -256,7 +353,7 @@ export default function AssetSearchPage() {
                 <CardDescription>
                     {selectedProducts.length > 0 
                         ? `Has seleccionado ${selectedProducts.length} activo(s). Elige un formato, completa los datos y genera el reporte.`
-                        : "Seleccione uno o más activos de la tabla de resultados para empezar a generar un reporte."
+                        : "Seleccione uno o más activos para empezar a generar un reporte."
                     }
                 </CardDescription>
             </CardHeader>
@@ -278,6 +375,7 @@ export default function AssetSearchPage() {
                                         {selectedProducts.map((p, index) => (
                                             <TableRow key={p.firebaseId}>
                                                 {reportHeaders.map(header => {
+                                                    const dbField = reportColumnMapping[header];
                                                     if (header === 'Item') {
                                                         return <TableCell key={header} className="whitespace-nowrap">{index + 1}</TableCell>;
                                                     }
@@ -289,11 +387,11 @@ export default function AssetSearchPage() {
                                                                     value={p.Observacion_Reporte || ''}
                                                                     onChange={(e) => handleObservationChange(p.firebaseId, e.target.value)}
                                                                     className="h-8 min-w-[150px]"
+                                                                    placeholder="Añadir observación..."
                                                                 />
                                                             </TableCell>
                                                         );
                                                     }
-                                                    const dbField = reportColumnMapping[header];
                                                     return (
                                                         <TableCell key={header} className="whitespace-nowrap">
                                                             {String(p[dbField] ?? '')}
