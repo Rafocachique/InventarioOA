@@ -51,7 +51,6 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     const doc = new jsPDF({ orientation: 'landscape' });
     let y = 15;
 
-    // --- Start of Header Table ---
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 14;
 
@@ -63,7 +62,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
             styles: { fontSize: 9, cellPadding: 1.5, ...options },
             didDrawCell: (data: any) => {
                 if (data.row.index === data.table.body.length - 1) {
-                    doc.line(data.table.settings.margin.left, data.cell.y + data.cell.height, pageWidth - data.table.settings.margin.right, data.cell.y + data.cell.height);
+                     doc.line(data.table.settings.margin.left, data.cell.y + data.cell.height, pageWidth - data.table.settings.margin.right, data.cell.y + data.cell.height);
                 }
             },
             margin: { left: margin, right: margin }
@@ -78,9 +77,9 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         [[{ content: 'ANEXO N° 03', styles: { halign: 'center' } }]],
         y
     );
-    y = createHeaderTable(
+     y = createHeaderTable(
         [[{ content: 'FICHA ASIGNACION EN USO Y DEVOLUCION DE BIENES MUEBLES PATRIMONIALES', styles: { halign: 'center' } }]],
-        y
+        y + 2
     );
     
     // Cabecera Entidad y Fecha
@@ -89,7 +88,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
             `ENTIDAD U ORGANIZACIÓN DE LA ENTIDAD: ${headerData.entidad.toUpperCase()}`,
             { content: `FECHA: ${headerData.fecha.toUpperCase()}`, styles: { halign: 'right' } }
         ]],
-        y
+        y + 2
     );
     
     // Datos del Usuario Header
@@ -98,30 +97,24 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         y
     );
 
-    // Datos del Usuario Content
-    y = createHeaderTable(
-        [[
+    // Datos del Usuario Content en dos columnas
+    const userDataBody = [
+        [
             `Nombre y apellidos: ${headerData.nombreApellidos.toUpperCase()}`,
             `N° DNI: ${headerData.dni.toUpperCase()}`,
-            `Correo Electronico: ${headerData.correo}`
-        ]],
-        y, { cellWidth: 'wrap' }
-    );
-     y = createHeaderTable(
-        [[
+            `Correo Electronico: ${headerData.correo.toUpperCase()}`
+        ],
+        [
             `Organo o Unidad Organica: ${headerData.organo.toUpperCase()}`,
-            `Local o sede: ${headerData.localSede.toUpperCase()}`
-        ]],
-        y, { cellWidth: 'wrap' }
-    );
-    y = createHeaderTable(
-        [[
+            { content: `Local o sede: ${headerData.localSede.toUpperCase()}`, colSpan: 2 }
+        ],
+        [
             `Direccion: ${headerData.direccion.toUpperCase()}`,
-            `Oficina o area: ${headerData.oficinaArea.toUpperCase()}`
-        ]],
-        y, { cellWidth: 'wrap' }
-    );
-    // --- End of Header Table ---
+            { content: `Oficina o area: ${headerData.oficinaArea.toUpperCase()}`, colSpan: 2 }
+        ]
+    ];
+
+    y = createHeaderTable(userDataBody, y);
 
 
     // Tabla de productos
