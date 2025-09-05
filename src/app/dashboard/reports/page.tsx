@@ -42,7 +42,7 @@ const reportColumnMapping: Record<string, string> = {
     'Modelo': 'modelo',
     'Color': 'color',
     'Serie': 'serie',
-    'Otros': 'OTROS',
+    'Otros': 'otros',
     'Estado de Conservacion': 'estado',
     'Observaciones': 'Observacion_Reporte',
 };
@@ -154,7 +154,7 @@ export default function AssetSearchPage() {
             const unsubscribe = onSnapshot(q, (querySnapshot) => {
                 const history: ScanRecord[] = [];
                 querySnapshot.forEach((doc) => {
-                    history.push({ scanId: doc.id, firebaseId: doc.data().firebaseId, ...doc.data() } as ScanRecord);
+                    history.push({ scanId: doc.id, ...doc.data() } as ScanRecord);
                 });
                 setScanHistory(history);
                 setIsHistoryLoading(false);
@@ -228,15 +228,6 @@ export default function AssetSearchPage() {
         if (visibleIds.size === 0) return false;
         return filteredHistory.every(scan => selectedProducts.some(p => p.firebaseId === scan.firebaseId));
     }, [filteredHistory, selectedProducts]);
-
-    const historyTableHeaders = React.useMemo(() => {
-        if (scanHistory.length === 0) return [];
-        const headersSet = new Set<string>();
-        scanHistory.forEach(scan => {
-            Object.keys(scan).forEach(key => headersSet.add(key));
-        });
-        return Array.from(headersSet).filter(h => !['scanId', 'firebaseId', 'scannedAt', 'scannedBy', 'Observacion_Reporte']);
-    }, [scanHistory]);
 
     
   return (
@@ -347,7 +338,7 @@ export default function AssetSearchPage() {
                                             aria-label="Seleccionar todo"
                                         />
                                     </TableHead>
-                                    {historyTableHeaders.map(header => (
+                                    {headers.map(header => (
                                          <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>
                                     ))}
                                     <TableHead>Escaneado Por</TableHead>
@@ -356,7 +347,7 @@ export default function AssetSearchPage() {
                             </TableHeader>
                             <TableBody>
                                 {isHistoryLoading ? (
-                                    <TableRow><TableCell colSpan={historyTableHeaders.length + 3} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={headers.length + 3} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
                                 ) : filteredHistory.length > 0 ? (
                                     filteredHistory.map(scan => (
                                         <TableRow key={scan.scanId} data-state={isProductSelected(scan.firebaseId) ? "selected" : ""}>
@@ -367,15 +358,15 @@ export default function AssetSearchPage() {
                                                     aria-label={`Seleccionar escaneo ${scan.codbien}`}
                                                 />
                                             </TableCell>
-                                            {historyTableHeaders.map(header => (
-                                                <TableCell key={header}>{scan[header] ?? 'N/A'}</TableCell>
+                                            {headers.map(header => (
+                                                <TableCell key={header} className="whitespace-nowrap">{scan[header] ?? ''}</TableCell>
                                             ))}
                                             <TableCell>{scan.scannedBy}</TableCell>
                                             <TableCell className="whitespace-nowrap">{format(scan.scannedAt.toDate(), 'Pp', { locale: es })}</TableCell>
                                         </TableRow>
                                     ))
                                 ) : (
-                                     <TableRow><TableCell colSpan={historyTableHeaders.length + 3} className="text-center h-24">No hay escaneos para las fechas seleccionadas.</TableCell></TableRow>
+                                     <TableRow><TableCell colSpan={headers.length + 3} className="text-center h-24">No hay escaneos para las fechas seleccionadas.</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>
@@ -575,5 +566,3 @@ export default function AssetSearchPage() {
     </div>
   );
 }
-
-    
