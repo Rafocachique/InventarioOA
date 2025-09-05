@@ -244,7 +244,7 @@ export default function AssetSearchPage() {
   return (
     <div className="flex flex-col gap-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-            <Card className="lg:col-span-1">
+             <Card className="lg:col-span-1">
                 <CardHeader>
                     <CardTitle>Búsqueda General de Activos</CardTitle>
                     <CardDescription>
@@ -370,7 +370,7 @@ export default function AssetSearchPage() {
                                                 />
                                             </TableCell>
                                             {headers.map(header => (
-                                                <TableCell key={header} className="whitespace-nowrap">{scan[header] ?? ''}</TableCell>
+                                                <TableCell key={header} className="whitespace-nowrap">{String(scan[header] ?? '')}</TableCell>
                                             ))}
                                             <TableCell>{scan.scannedBy}</TableCell>
                                             <TableCell className="whitespace-nowrap">{format(scan.scannedAt.toDate(), 'Pp', { locale: es })}</TableCell>
@@ -412,7 +412,7 @@ export default function AssetSearchPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {selectedProducts.map((p, index) => (
-                                            <TableRow key={p.firebaseId}>
+                                            <TableRow key={`${p.firebaseId}-${index}`}>
                                                 {reportHeaders.map(header => {
                                                     const dbField = reportColumnMapping[header as keyof typeof reportColumnMapping];
                                                     if (header === 'Item') {
@@ -577,5 +577,3 @@ export default function AssetSearchPage() {
     </div>
   );
 }
-
-
