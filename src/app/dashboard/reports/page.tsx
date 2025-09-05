@@ -169,8 +169,6 @@ export default function AssetSearchPage() {
         return selectedProducts.some(p => p.firebaseId === productId);
     };
     
-    const displayedHeaders = headers.slice(0, 7);
-
   return (
     <div className="flex flex-col gap-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -211,14 +209,14 @@ export default function AssetSearchPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="w-[50px]"><span className="sr-only">Seleccionar</span></TableHead>
-                                        {displayedHeaders.map(header => (
+                                        {headers.map(header => (
                                             <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>
                                         ))}
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {isLoading && searchTerm ? (
-                                        <TableRow><TableCell colSpan={displayedHeaders.length + 2} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={headers.length + 2} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
                                     ) : filteredResults.length > 0 ? (
                                         filteredResults.map(product => (
                                             <TableRow key={product.firebaseId} data-state={isProductSelected(product.firebaseId) ? "selected" : ""}>
@@ -229,7 +227,7 @@ export default function AssetSearchPage() {
                                                         aria-label="Seleccionar fila"
                                                     />
                                                 </TableCell>
-                                                {displayedHeaders.map(header => (
+                                                {headers.map(header => (
                                                     <TableCell key={header} className="whitespace-nowrap">
                                                         {String(product[header] ?? '')}
                                                     </TableCell>
@@ -237,7 +235,7 @@ export default function AssetSearchPage() {
                                             </TableRow>
                                         ))
                                     ) : (
-                                        <TableRow><TableCell colSpan={displayedHeaders.length + 2} className="text-center h-24">{searchTerm ? "No se encontraron activos que coincidan." : "Los resultados aparecerán aquí."}</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={headers.length + 2} className="text-center h-24">{searchTerm ? "No se encontraron activos que coincidan." : "Los resultados aparecerán aquí."}</TableCell></TableRow>
                                     )}
                                 </TableBody>
                             </Table>
@@ -424,3 +422,5 @@ export default function AssetSearchPage() {
     </div>
   );
 }
+
+    
