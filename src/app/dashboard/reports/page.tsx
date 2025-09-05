@@ -71,9 +71,9 @@ export default function AssetSearchPage() {
         nombreApellidos: "",
         dni: "",
         correo: "",
-        organo: "OFICINA DE ABASTECIMIENTO Y SERVICIOS GENERALES",
-        localSede: "SEDE LOCAL 01 - SL01",
-        direccion: "JR. CARLOS GONZALES 285 URB. MARANGA - SAN MIGUEL",
+        organo: "FACULTAD DE ADMINISTRACION",
+        localSede: "PREDIO PROPIO Nro 008 (SL07)",
+        direccion: "OSCAR R. BENAVIDES 450-458 (COLONIAL)",
         oficinaArea: "",
         numeroMovimiento: "",
         motivo: "",
@@ -466,7 +466,7 @@ export default function AssetSearchPage() {
                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div className="space-y-2 sm:col-span-2">
                                                 <Label htmlFor="entidad">Entidad u Organización</Label>
-                                                <Input id="entidad" value={reportHeaderData.entidad} onChange={handleReportDataChange} disabled />
+                                                <Input id="entidad" value={reportHeaderData.entidad} onChange={handleReportDataChange} />
                                             </div>
                                              <div className="space-y-2">
                                                 <Label htmlFor="fecha">Fecha</Label>
@@ -484,21 +484,21 @@ export default function AssetSearchPage() {
                                                 <Label htmlFor="correo">Correo Electrónico</Label>
                                                 <Input id="correo" placeholder="Correo del usuario" value={reportHeaderData.correo} onChange={handleReportDataChange} />
                                             </div>
-                                             <div className="space-y-2 sm:col-span-2">
+                                             <div className="space-y-2">
                                                 <Label htmlFor="organo">Órgano o Unidad Orgánica</Label>
-                                                <Input id="organo" value={reportHeaderData.organo} onChange={handleReportDataChange} disabled />
+                                                <Input id="organo" value={reportHeaderData.organo} onChange={handleReportDataChange} />
                                             </div>
-                                            <div className="space-y-2 sm:col-span-2">
+                                            <div className="space-y-2">
                                                 <Label htmlFor="direccion">Dirección</Label>
-                                                <Input id="direccion" value={reportHeaderData.direccion} onChange={handleReportDataChange} disabled/>
+                                                <Input id="direccion" value={reportHeaderData.direccion} onChange={handleReportDataChange} />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label htmlFor="localSede">Local o Sede</Label>
-                                                <Input id="localSede" value={reportHeaderData.localSede} onChange={handleReportDataChange} disabled/>
+                                                <Input id="localSede" value={reportHeaderData.localSede} onChange={handleReportDataChange} />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label htmlFor="oficinaArea">Oficina o Área</Label>
-                                                <Input id="oficinaArea" value={reportHeaderData.oficinaArea} onChange={handleReportDataChange} />
+                                                <Input id="oficinaArea" placeholder="Oficina o Área del usuario" value={reportHeaderData.oficinaArea} onChange={handleReportDataChange} />
                                             </div>
                                          </div>
                                      </div>
@@ -577,4 +577,5 @@ export default function AssetSearchPage() {
     </div>
   );
 }
+
 
