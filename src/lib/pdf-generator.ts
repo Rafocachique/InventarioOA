@@ -48,7 +48,7 @@ const tableHeaders = [
 
 
 export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Product[]) => {
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: 'landscape' });
     let y = 15;
 
     // Título
@@ -64,11 +64,11 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     doc.setFont('helvetica', 'bold');
     doc.text('ENTIDAD U ORGANIZACIÓN DE LA ENTIDAD:', 14, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(headerData.entidad, 85, y);
+    doc.text(headerData.entidad, 95, y);
     doc.setFont('helvetica', 'bold');
-    doc.text('FECHA:', 160, y);
+    doc.text('FECHA:', 240, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(headerData.fecha, 175, y);
+    doc.text(headerData.fecha, 255, y);
     y += 10;
 
     // Datos del Usuario
@@ -76,53 +76,55 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     doc.text('DATOS DEL USUARIO', 14, y);
     y += 7;
 
-    const leftColumnX = 14;
-    const rightColumnX = 110;
+    const leftColumnX1 = 14;
+    const leftColumnX2 = 58;
+    const rightColumnX1 = 150;
+    const rightColumnX2 = 180;
     let initialY = y;
 
     // Columna Izquierda
     doc.setFont('helvetica', 'bold');
-    doc.text('Nombre y apellidos:', leftColumnX, y);
+    doc.text('Nombre y apellidos:', leftColumnX1, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(headerData.nombreApellidos, 50, y);
+    doc.text(headerData.nombreApellidos, leftColumnX2, y);
     y += 7;
     
     doc.setFont('helvetica', 'bold');
-    doc.text('Organo o Unidad Organica:', leftColumnX, y);
+    doc.text('Organo o Unidad Organica:', leftColumnX1, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(headerData.organo, 58, y);
+    doc.text(headerData.organo, leftColumnX2, y);
     y += 7;
     
     doc.setFont('helvetica', 'bold');
-    doc.text('Direccion:', leftColumnX, y);
+    doc.text('Direccion:', leftColumnX1, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(headerData.direccion, 35, y);
+    doc.text(headerData.direccion, leftColumnX2, y);
     y += 7;
     
     // Columna Derecha
     y = initialY;
     doc.setFont('helvetica', 'bold');
-    doc.text('N° DNI:', rightColumnX, y);
+    doc.text('N° DNI:', rightColumnX1, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(headerData.dni, 125, y);
+    doc.text(headerData.dni, rightColumnX2, y);
     y += 7;
     
     doc.setFont('helvetica', 'bold');
-    doc.text('Correo Electronico:', rightColumnX, y);
+    doc.text('Correo Electronico:', rightColumnX1, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(headerData.correo, 145, y);
+    doc.text(headerData.correo, rightColumnX2, y);
     y += 7;
     
     doc.setFont('helvetica', 'bold');
-    doc.text('Local o sede:', rightColumnX, y);
+    doc.text('Local o sede:', rightColumnX1, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(headerData.localSede, 132, y);
+    doc.text(headerData.localSede, rightColumnX2, y);
     y += 7;
     
     doc.setFont('helvetica', 'bold');
-    doc.text('Oficina o area:', rightColumnX, y);
+    doc.text('Oficina o area:', rightColumnX1, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(headerData.oficinaArea, 135, y);
+    doc.text(headerData.oficinaArea, rightColumnX2, y);
     y += 7;
 
 
@@ -130,7 +132,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     const tableBody = products.map((product, index) => {
         return tableHeaders.map(header => {
             if (header === 'Nro de Orden') return index + 1;
-            const dbField = reportColumnMapping[header];
+            const dbField = reportColumnMapping[header as keyof typeof reportColumnMapping];
             return String(product[dbField] ?? '');
         });
     });
@@ -144,8 +146,8 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         styles: { fontSize: 8, cellPadding: 1.5, halign: 'center', lineColor: [44, 62, 80], lineWidth: 0.1 },
         alternateRowStyles: { fillColor: [240, 240, 240] },
         columnStyles: {
-            'Denominacion': { halign: 'left' },
-            'Observaciones': { halign: 'left' },
+            'Denominacion': { halign: 'left', cellWidth: 50 },
+            'Observaciones': { halign: 'left', cellWidth: 50 },
         }
     });
 
@@ -169,25 +171,24 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         '> El usuario es responsable de la permanencia y conservación de cada uno de los bienes descritos, recomendándose tomar las precauciones del caso para evitar sustracciones, deterioros, etc.',
         '> Cualquier necesidad de traslado del bien mueble patrimonial dentro o fuera del local de la Entidad u Organización de la Entidad, es previamente comunicado al encargado de la OCP.',
     ];
-    considerationsText.forEach(line => {
-        doc.text(line, 14, finalY);
-        finalY += 5;
-    });
+    
+    const splitText = doc.splitTextToSize(considerationsText.join('\n'), doc.internal.pageSize.getWidth() - 28);
+    doc.text(splitText, 14, finalY);
 
     // Pie de página (Firmas)
-    const signatureY = finalY + 25;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const signatureY = pageHeight - 45;
     
-    doc.line(30, signatureY, 90, signatureY); 
-    doc.text("Responsable", 60, signatureY + 5, { align: 'center' });
+    doc.line(50, signatureY, 110, signatureY); 
+    doc.text("Responsable", 80, signatureY + 5, { align: 'center' });
 
-    doc.line(120, signatureY, 180, signatureY); 
-    doc.text("Jefe del area", 150, signatureY + 5, { align: 'center' });
+    doc.line(180, signatureY, 240, signatureY); 
+    doc.text("Jefe del area", 210, signatureY + 5, { align: 'center' });
 
-    const signatureY2 = signatureY + 25;
-    doc.line(75, signatureY2, 135, signatureY2); 
-    doc.text("Oficina Administracion", 105, signatureY2 + 5, { align: 'center' });
+    const signatureY2 = signatureY + 20;
+    doc.line(115, signatureY2, 175, signatureY2); 
+    doc.text("Oficina Administracion", 145, signatureY2 + 5, { align: 'center' });
 
 
     doc.save(`Acta_Asignacion_${headerData.dni || 'usuario'}.pdf`);
 };
-
