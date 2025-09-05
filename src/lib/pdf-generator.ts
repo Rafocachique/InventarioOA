@@ -71,15 +71,12 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         return (doc as any).lastAutoTable.finalY;
     };
     
-    // Linea superior
-    doc.line(margin, 10, pageWidth - margin, 10);
-
-    // Título
+    // Títulos
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     y = createHeaderTable(
         [[{ content: 'ANEXO N° 03', styles: { halign: 'center' } }]],
-        10
+        y
     );
     y = createHeaderTable(
         [[{ content: 'FICHA ASIGNACION EN USO Y DEVOLUCION DE BIENES MUEBLES PATRIMONIALES', styles: { halign: 'center' } }]],
