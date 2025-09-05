@@ -18,7 +18,7 @@ import { format } from "date-fns";
 
 interface Product {
   firebaseId: string;
-  Observacion_Reporte?: string; // Add this field for the editable observation
+  Observacion_Reporte?: string;
   [key: string]: any;
 }
 
@@ -35,8 +35,23 @@ const reportColumnMapping: Record<string, string | ((product: Product, index: nu
     'Serie': 'Serie',
     'Otros': 'OTROS',
     'Estado de Conservacion': 'Estado',
-    'Observaciones': 'Observacion_Reporte' // Use the new editable field
+    'Observaciones': 'Observacion_Reporte'
 };
+
+const reportHeaders = [
+    'Item',
+    'Codigo Patrimonial',
+    'Codigo Interno',
+    'Denominacion',
+    'Marca',
+    'Modelo',
+    'Color',
+    'Serie',
+    'Otros',
+    'Estado de Conservacion',
+    'Observaciones'
+];
+
 
 export default function AssetSearchPage() {
     const [searchTerm, setSearchTerm] = React.useState("");
@@ -48,13 +63,9 @@ export default function AssetSearchPage() {
     const { toast } = useToast();
     const [selectedFormat, setSelectedFormat] = React.useState<ReportFormat>("");
     
-    // State for editable fields for all report types
     const [reportHeaderData, setReportHeaderData] = React.useState({
-        // Common fields
         entidad: "UNIVERSIDAD NACIONAL FEDERICO VILLARREAL",
         fecha: format(new Date(), "dd.MM.yyyy"),
-
-        // Asignacion fields
         nombreApellidos: "",
         dni: "",
         correo: "",
@@ -62,8 +73,6 @@ export default function AssetSearchPage() {
         localSede: "",
         direccion: "",
         oficinaArea: "",
-
-        // Baja & Transferencia fields
         numeroMovimiento: "",
         motivo: "",
         tipo: "",
@@ -73,21 +82,18 @@ export default function AssetSearchPage() {
         comisionServicio: "",
         desplazamiento: "",
         capacitacionEvento: "",
-
         remiteNombre: "",
         remiteDNI: "",
         remiteCorreo: "",
         remiteUnidadOrganica: "",
         remiteLocalSede: "",
         remiteOficio: "",
-
         recibeNombre: "",
         recibeDNI: "",
         recibeCorreo: "",
         recibeUnidadOrganica: "",
         recibeLocalSede: "",
         recibeDocumento: "",
-        
         datosVehiculo: "",
         nombreResponsableTraslado: "",
         nombreUnidadPatrimonio: "",
@@ -105,7 +111,6 @@ export default function AssetSearchPage() {
         );
         setSelectedProducts(newSelectedProducts);
         
-        // Also update the copy in allProducts to persist changes if the user deselects and reselects
         const newAllProducts = allProducts.map(p => 
             p.firebaseId === firebaseId ? { ...p, Observacion_Reporte: value } : p
         );
@@ -129,9 +134,6 @@ export default function AssetSearchPage() {
                     setHeaders(storedHeaders);
                 } else if (productsData.length > 0) {
                     setHeaders(Object.keys(productsData[0]).filter(key => key !== 'firebaseId'));
-                } else {
-                    const defaultHeaders = ['Codbien', 'Descrip', 'Marca', 'Modelo', 'Serie', 'Color', 'Observacion'];
-                    setHeaders(defaultHeaders);
                 }
 
             } catch (error) {
@@ -164,7 +166,6 @@ export default function AssetSearchPage() {
 
     const handleSelectProduct = (product: Product, isSelected: boolean) => {
         if (isSelected) {
-            // Add the product with an initial value for Observacion_Reporte if it doesn't exist
             setSelectedProducts(prev => [...prev, { ...product, Observacion_Reporte: product.Observacion || "" }]);
         } else {
             setSelectedProducts(prev => prev.filter(p => p.firebaseId !== product.firebaseId));
@@ -222,7 +223,7 @@ export default function AssetSearchPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {isLoading && searchTerm ? (
-                                        <TableRow><TableCell colSpan={headers.length + 2} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={headers.length + 1} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
                                     ) : filteredResults.length > 0 ? (
                                         filteredResults.map(product => (
                                             <TableRow key={product.firebaseId} data-state={isProductSelected(product.firebaseId) ? "selected" : ""}>
@@ -241,7 +242,7 @@ export default function AssetSearchPage() {
                                             </TableRow>
                                         ))
                                     ) : (
-                                        <TableRow><TableCell colSpan={headers.length + 2} className="text-center h-24">{searchTerm ? "No se encontraron activos que coincidan." : "Los resultados aparecerán aquí."}</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={headers.length + 1} className="text-center h-24">{searchTerm ? "No se encontraron activos que coincidan." : "Los resultados aparecerán aquí."}</TableCell></TableRow>
                                     )}
                                 </TableBody>
                             </Table>
@@ -270,7 +271,7 @@ export default function AssetSearchPage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            {Object.keys(reportColumnMapping).map(header => (
+                                            {reportHeaders.map(header => (
                                                 <TableHead key={header}>{header}</TableHead>
                                             ))}
                                         </TableRow>
@@ -278,7 +279,7 @@ export default function AssetSearchPage() {
                                     <TableBody>
                                         {selectedProducts.map((p, index) => (
                                             <TableRow key={p.firebaseId}>
-                                                {Object.keys(reportColumnMapping).map(header => {
+                                                {reportHeaders.map(header => {
                                                     const keyOrFn = reportColumnMapping[header];
                                                     let cellContent;
 
@@ -290,7 +291,7 @@ export default function AssetSearchPage() {
                                                                 type="text"
                                                                 value={p.Observacion_Reporte || ''}
                                                                 onChange={(e) => handleObservationChange(p.firebaseId, e.target.value)}
-                                                                className="h-8"
+                                                                className="h-8 min-w-[150px]"
                                                             />
                                                         );
                                                     } else {
@@ -439,5 +440,3 @@ export default function AssetSearchPage() {
     </div>
   );
 }
-
-    
