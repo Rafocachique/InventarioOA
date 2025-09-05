@@ -131,7 +131,8 @@ export default function ScanPage() {
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const history: ScanRecord[] = [];
         querySnapshot.forEach((doc) => {
-            history.push({ firebaseId: doc.id, ...doc.data() } as ScanRecord);
+            // The document ID in scan_history is the scanId. The original product's firebaseId is stored as a field.
+            history.push({ scanId: doc.id, ...doc.data() } as ScanRecord);
         });
         setScanHistory(history);
         
@@ -193,7 +194,7 @@ export default function ScanPage() {
                 return false;
             }
             
-            const { firebaseId, ...dataToSaveInHistory } = productData;
+            const { ...dataToSaveInHistory } = productData;
 
             const scanInput: SaveScanInput = {
                 scannedBy: currentUser.email || 'unknown',
@@ -316,43 +317,33 @@ export default function ScanPage() {
   
 const handleSaveChanges = async (productToSave: EditableProduct | null) => {
     if (!productToSave) return;
+    
+    // The firebaseId from the product itself, which is the ID in the 'products' collection
+    const mainProductDocId = productToSave.firebaseId; 
+    // The scanId, which is the document ID from the 'scan_history' collection
+    const scanHistoryDocId = productToSave.scanId;
 
-    const mainProductIdField = productToSave.Codbien ? 'Codbien' : 'id';
-    const mainProductIdValue = productToSave[mainProductIdField];
-    const originalProductFirebaseId = productToSave.firebaseId;
-
-    if (!mainProductIdValue) {
-        toast({ variant: 'destructive', title: 'Error de Identificación', description: 'Falta el ID del producto principal (Codbien o id).' });
+    if (!mainProductDocId) {
+        toast({ variant: 'destructive', title: 'Error de Identificación', description: 'No se encontró el ID del producto principal en los datos.' });
         return;
     }
-    
-    // Determine the ID of the scan history document we might need to update
-    const scanHistoryDocId = editingScanRecord ? originalProductFirebaseId : productToSave.scanId;
 
     setIsLoading(true);
     try {
-        const productsRef = collection(db, "products");
-        const productQuery = query(productsRef, where(mainProductIdField, "==", mainProductIdValue));
-        const productSnapshot = await getDocs(productQuery);
-
-        if (productSnapshot.empty) {
-            throw new Error(`No se encontró ningún producto con ${mainProductIdField}: ${mainProductIdValue}`);
-        }
-        
-        const mainProductDocRef = productSnapshot.docs[0].ref;
-
         // Prepare data for update, removing fields that shouldn't be in Firestore documents directly.
-        const { firebaseId, scanId, scannedAt, scannedBy, ...productData } = productToSave;
+        const { scanId, scannedAt, scannedBy, ...productData } = productToSave;
         
-        // Update the main product document in the 'products' collection
+        // 1. Update the main product document in the 'products' collection
+        const mainProductDocRef = doc(db, "products", mainProductDocId);
         await updateDoc(mainProductDocRef, productData);
         
         let toastDescription = "Los cambios se han guardado correctamente en la base de datos de inmobiliarios.";
 
-        // If we are editing a record from history, update that history record as well.
+        // 2. If we are editing a record that has a history record, update that too.
         if (scanHistoryDocId) {
+            const { firebaseId, ...historyData } = productData; // remove main firebaseId from history record
             const scanHistoryDocRef = doc(db, "scan_history", scanHistoryDocId);
-            await updateDoc(scanHistoryDocRef, productData);
+            await updateDoc(scanHistoryDocRef, historyData);
             toastDescription += " El registro de historial también ha sido actualizado.";
         }
 
@@ -366,7 +357,7 @@ const handleSaveChanges = async (productToSave: EditableProduct | null) => {
         toast({
             variant: "destructive",
             title: "Error al Guardar",
-            description: "No se pudo actualizar el inmobiliario y/o el historial.",
+            description: `No se pudo actualizar el inmobiliario y/o el historial. ${error instanceof Error ? error.message : ''}`,
         });
     } finally {
         setIsLoading(false);
@@ -395,7 +386,7 @@ const handleSaveChanges = async (productToSave: EditableProduct | null) => {
       }
 
       const dataToExport = filteredHistory.map(scan => {
-          const { firebaseId, scannedAt, ...rest } = scan;
+          const { firebaseId, scanId, scannedAt, ...rest } = scan;
           return {
               ...rest,
               scannedAt: scannedAt.toDate().toLocaleString('es-ES')
@@ -416,7 +407,7 @@ const handleSaveChanges = async (productToSave: EditableProduct | null) => {
   const handleDeleteScan = async () => {
     if (!scanToDelete) return;
     try {
-        await deleteDoc(doc(db, "scan_history", scanToDelete.firebaseId));
+        await deleteDoc(doc(db, "scan_history", scanToDelete.scanId));
         toast({
             title: "Escaneo Eliminado",
             description: "El registro de escaneo ha sido eliminado del historial.",
@@ -436,7 +427,7 @@ const handleSaveChanges = async (productToSave: EditableProduct | null) => {
       
       const batch = writeBatch(db);
       filteredHistory.forEach(scan => {
-          const docRef = doc(db, "scan_history", scan.firebaseId);
+          const docRef = doc(db, "scan_history", scan.scanId);
           batch.delete(docRef);
       });
 
@@ -605,7 +596,7 @@ const handleSaveChanges = async (productToSave: EditableProduct | null) => {
                         <AlertDialogTrigger asChild>
                            <Button size="sm" variant="destructive" className="h-10 gap-1" disabled={filteredHistory.length === 0}>
                               <Trash2 className="h-3.5 w-3.5" />
-                              <span className="sr-only sm:not-sr-only sm:whitespace-rap">
+                              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                                   Eliminar Seleccionados
                               </span>
                           </Button>
@@ -674,7 +665,7 @@ const handleSaveChanges = async (productToSave: EditableProduct | null) => {
                         </TableRow>
                     ) : (
                         filteredHistory.map((scan) => (
-                        <TableRow key={scan.firebaseId}>
+                        <TableRow key={scan.scanId}>
                             {displayedHistoryHeaders.map(header => (
                                 <TableCell key={header} className="whitespace-nowrap">
                                 {String(scan[header] ?? '')}
