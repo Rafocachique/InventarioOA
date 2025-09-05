@@ -196,10 +196,9 @@ export default function DataManagementPage() {
         const existingProductsMap = new Map<string, { firebaseId: string, data: Product }>();
         querySnapshot.docs.forEach(doc => {
           const productData = doc.data() as Product;
-          if (productData.id) {
-            existingProductsMap.set(String(productData.id), { firebaseId: doc.id, data: productData });
-          } else if (productData.Codbien) {
-            existingProductsMap.set(String(productData.Codbien), { firebaseId: doc.id, data: productData });
+          const identifierKey = Object.keys(productData).find(k => k.toLowerCase() === 'codbien' || k.toLowerCase() === 'id');
+          if (identifierKey && productData[identifierKey]) {
+            existingProductsMap.set(String(productData[identifierKey]), { firebaseId: doc.id, data: productData });
           }
         });
 
@@ -216,10 +215,10 @@ export default function DataManagementPage() {
           setProgress(currentProgress);
         };
         
-        const identifierKey = headersFromExcel.includes('Codbien') ? 'Codbien' : 'id';
+        const identifierKeyInExcel = headersFromExcel.find(h => h.toLowerCase() === 'codbien' || h.toLowerCase() === 'id') || headersFromExcel[0];
 
         newProductsData.forEach((newProduct) => {
-          const productId = String(newProduct[identifierKey] || '').trim();
+          const productId = String(newProduct[identifierKeyInExcel] || '').trim();
 
           if (!productId || productId === 'undefined') {
               const docRef = doc(collection(db, "products"));

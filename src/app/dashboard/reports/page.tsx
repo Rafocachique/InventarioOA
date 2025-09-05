@@ -31,13 +31,21 @@ export default function AssetSearchPage() {
                 const columnOrderDocRef = doc(db, "_config", "columnOrder");
                 const columnOrderDoc = await getDoc(columnOrderDocRef);
                 const storedHeaders = columnOrderDoc.exists() ? columnOrderDoc.data().headers : [];
-                setHeaders(storedHeaders);
+                
 
                 // Fetch all products
                 const productsRef = collection(db, "products");
                 const querySnapshot = await getDocs(productsRef);
                 const productsData: Product[] = querySnapshot.docs.map(doc => ({ firebaseId: doc.id, ...doc.data() } as Product));
                 setAllProducts(productsData);
+
+                if (storedHeaders.length > 0) {
+                    setHeaders(storedHeaders);
+                } else if (productsData.length > 0) {
+                    // Fallback to keys from first product if no order is stored
+                    setHeaders(Object.keys(productsData[0]).filter(key => key !== 'firebaseId'));
+                }
+
 
             } catch (error) {
                 console.error("Error fetching assets: ", error);
