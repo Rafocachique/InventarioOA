@@ -24,8 +24,8 @@ interface Product {
 
 type ReportFormat = "asignacion" | "baja" | "transferencia" | "";
 
-const reportColumnMapping = {
-    'Item': (index: number) => index + 1,
+const reportColumnMapping: Record<string, string | ((product: Product, index: number) => any)> = {
+    'Item': (product: Product, index: number) => index + 1,
     'Codigo Patrimonial': 'Codbien',
     'Codigo Interno': 'Codanterio',
     'Denominacion': 'Descrip',
@@ -100,11 +100,15 @@ export default function AssetSearchPage() {
     };
     
     const handleObservationChange = (firebaseId: string, value: string) => {
-        setSelectedProducts(prevSelected => 
-            prevSelected.map(p => 
-                p.firebaseId === firebaseId ? { ...p, Observacion_Reporte: value } : p
-            )
+        const newSelectedProducts = selectedProducts.map(p => 
+            p.firebaseId === firebaseId ? { ...p, Observacion_Reporte: value } : p
         );
+        setSelectedProducts(newSelectedProducts);
+        
+        const newAllProducts = allProducts.map(p => 
+            p.firebaseId === firebaseId ? { ...p, Observacion_Reporte: value } : p
+        );
+        setAllProducts(newAllProducts);
     };
 
     React.useEffect(() => {
@@ -120,12 +124,12 @@ export default function AssetSearchPage() {
                 const productsData: Product[] = querySnapshot.docs.map(doc => ({ firebaseId: doc.id, ...doc.data() } as Product));
                 setAllProducts(productsData);
 
-                const defaultHeaders = ['Codbien', 'Descrip', 'Marca', 'Modelo', 'Serie', 'Color', 'Observacion'];
                 if (storedHeaders.length > 0) {
                     setHeaders(storedHeaders);
                 } else if (productsData.length > 0) {
                     setHeaders(Object.keys(productsData[0]).filter(key => key !== 'firebaseId'));
                 } else {
+                    const defaultHeaders = ['Codbien', 'Descrip', 'Marca', 'Modelo', 'Serie', 'Color', 'Observacion'];
                     setHeaders(defaultHeaders);
                 }
 
@@ -258,38 +262,47 @@ export default function AssetSearchPage() {
             <CardContent>
                 {selectedProducts.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="md:col-span-1">
+                        <div className="md:col-span-3">
                            <h3 className="font-semibold mb-4">Activos Seleccionados</h3>
                            <div className="border rounded-lg max-h-80 overflow-y-auto">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Codbien</TableHead>
-                                            <TableHead>Descripción</TableHead>
-                                            <TableHead>Observaciones</TableHead>
+                                            {Object.keys(reportColumnMapping).map(header => (
+                                                <TableHead key={header}>{header}</TableHead>
+                                            ))}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {selectedProducts.map(p => (
+                                        {selectedProducts.map((p, index) => (
                                             <TableRow key={p.firebaseId}>
-                                                <TableCell className="font-medium whitespace-nowrap">{p.Codbien || 'N/A'}</TableCell>
-                                                <TableCell className="whitespace-nowrap">{p.Descrip || 'N/A'}</TableCell>
-                                                <TableCell>
-                                                    <Input 
-                                                        type="text"
-                                                        value={p.Observacion_Reporte || ''}
-                                                        onChange={(e) => handleObservationChange(p.firebaseId, e.target.value)}
-                                                        className="h-8"
-                                                    />
-                                                </TableCell>
+                                                {Object.keys(reportColumnMapping).map(header => {
+                                                    const keyOrFn = reportColumnMapping[header];
+                                                    if (typeof keyOrFn === 'function') {
+                                                        return <TableCell key={header} className="font-medium whitespace-nowrap">{keyOrFn(p, index)}</TableCell>
+                                                    }
+                                                    if (keyOrFn === 'Observacion_Reporte') {
+                                                        return (
+                                                            <TableCell key={header}>
+                                                                <Input 
+                                                                    type="text"
+                                                                    value={p.Observacion_Reporte || ''}
+                                                                    onChange={(e) => handleObservationChange(p.firebaseId, e.target.value)}
+                                                                    className="h-8"
+                                                                />
+                                                            </TableCell>
+                                                        )
+                                                    }
+                                                    return <TableCell key={header} className="whitespace-nowrap">{String(p[keyOrFn] ?? '')}</TableCell>
+                                                })}
                                             </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
                            </div>
                         </div>
-                        <div className="md:col-span-2">
-                            <h3 className="font-semibold mb-4">Opciones y Datos del Reporte</h3>
+                        <div className="md:col-span-3">
+                            <h3 className="font-semibold mb-4 mt-6">Opciones y Datos del Reporte</h3>
                             <div className="space-y-6">
                                 <div className="space-y-2">
                                     <Label htmlFor="format-select">1. Seleccione el Formato del Reporte</Label>
