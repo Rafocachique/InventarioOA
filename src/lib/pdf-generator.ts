@@ -51,81 +51,80 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     const doc = new jsPDF({ orientation: 'landscape' });
     let y = 15;
 
+    // --- Start of Header Table ---
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 14;
+
+    const createHeaderTable = (body: any[], startY: number, options = {}) => {
+        (doc as any).autoTable({
+            body: body,
+            startY: startY,
+            theme: 'plain',
+            styles: { fontSize: 9, cellPadding: 1.5, ...options },
+            didDrawCell: (data: any) => {
+                if (data.row.index === data.table.body.length - 1) {
+                    doc.line(data.table.margins.left, data.cell.y + data.cell.height, pageWidth - data.table.margins.right, data.cell.y + data.cell.height);
+                }
+            },
+            margin: { left: margin, right: margin }
+        });
+        return (doc as any).lastAutoTable.finalY;
+    };
+    
+    // Linea superior
+    doc.line(margin, 10, pageWidth - margin, 10);
+
     // Título
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text("ANEXO N° 03", doc.internal.pageSize.getWidth() / 2, y, { align: 'center' });
-    y += 7;
-    doc.text("FICHA ASIGNACION EN USO Y DEVOLUCION DE BIENES MUEBLES PATRIMONIALES", doc.internal.pageSize.getWidth() / 2, y, { align: 'center' });
-    y += 10;
+    y = createHeaderTable(
+        [[{ content: 'ANEXO N° 03', styles: { halign: 'center' } }]],
+        10
+    );
+    y = createHeaderTable(
+        [[{ content: 'FICHA ASIGNACION EN USO Y DEVOLUCION DE BIENES MUEBLES PATRIMONIALES', styles: { halign: 'center' } }]],
+        y
+    );
     
     // Cabecera Entidad y Fecha
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('ENTIDAD U ORGANIZACIÓN DE LA ENTIDAD:', 14, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(headerData.entidad, 95, y);
-    doc.setFont('helvetica', 'bold');
-    doc.text('FECHA:', 240, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(headerData.fecha, 255, y);
-    y += 10;
+    y = createHeaderTable(
+        [[
+            `ENTIDAD U ORGANIZACIÓN DE LA ENTIDAD: ${headerData.entidad.toUpperCase()}`,
+            { content: `FECHA: ${headerData.fecha.toUpperCase()}`, styles: { halign: 'right' } }
+        ]],
+        y
+    );
+    
+    // Datos del Usuario Header
+    y = createHeaderTable(
+        [[{ content: 'DATOS DEL USUARIO', styles: { fontStyle: 'bold' } }]],
+        y
+    );
 
-    // Datos del Usuario
-    doc.setFont('helvetica', 'bold');
-    doc.text('DATOS DEL USUARIO', 14, y);
-    y += 7;
-
-    const leftColumnX1 = 14;
-    const leftColumnX2 = 58;
-    const rightColumnX1 = 150;
-    const rightColumnX2 = 180;
-    let initialY = y;
-
-    // Columna Izquierda
-    doc.setFont('helvetica', 'bold');
-    doc.text('Nombre y apellidos:', leftColumnX1, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(headerData.nombreApellidos, leftColumnX2, y);
-    y += 7;
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Organo o Unidad Organica:', leftColumnX1, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(headerData.organo, leftColumnX2, y);
-    y += 7;
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Direccion:', leftColumnX1, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(headerData.direccion, leftColumnX2, y);
-    y += 7;
-    
-    // Columna Derecha
-    y = initialY;
-    doc.setFont('helvetica', 'bold');
-    doc.text('N° DNI:', rightColumnX1, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(headerData.dni, rightColumnX2, y);
-    y += 7;
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Correo Electronico:', rightColumnX1, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(headerData.correo, rightColumnX2, y);
-    y += 7;
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Local o sede:', rightColumnX1, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(headerData.localSede, rightColumnX2, y);
-    y += 7;
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Oficina o area:', rightColumnX1, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(headerData.oficinaArea, rightColumnX2, y);
-    y += 7;
+    // Datos del Usuario Content
+    y = createHeaderTable(
+        [[
+            `Nombre y apellidos: ${headerData.nombreApellidos.toUpperCase()}`,
+            `N° DNI: ${headerData.dni.toUpperCase()}`,
+            `Correo Electronico: ${headerData.correo}`
+        ]],
+        y, { cellWidth: 'wrap' }
+    );
+     y = createHeaderTable(
+        [[
+            `Organo o Unidad Organica: ${headerData.organo.toUpperCase()}`,
+            `Local o sede: ${headerData.localSede.toUpperCase()}`
+        ]],
+        y, { cellWidth: 'wrap' }
+    );
+    y = createHeaderTable(
+        [[
+            `Direccion: ${headerData.direccion.toUpperCase()}`,
+            `Oficina o area: ${headerData.oficinaArea.toUpperCase()}`
+        ]],
+        y, { cellWidth: 'wrap' }
+    );
+    // --- End of Header Table ---
 
 
     // Tabla de productos
@@ -133,7 +132,8 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         return tableHeaders.map(header => {
             if (header === 'Nro de Orden') return index + 1;
             const dbField = reportColumnMapping[header as keyof typeof reportColumnMapping];
-            return String(product[dbField] ?? '');
+            const value = product[dbField] ?? '';
+            return String(value).toUpperCase();
         });
     });
 
