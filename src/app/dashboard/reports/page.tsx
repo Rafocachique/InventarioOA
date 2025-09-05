@@ -155,7 +155,7 @@ export default function AssetSearchPage() {
             const unsubscribe = onSnapshot(q, (querySnapshot) => {
                 const history: ScanRecord[] = [];
                 querySnapshot.forEach((doc) => {
-                    history.push({ scanId: doc.id, firebaseId: doc.data().firebaseId, ...doc.data() } as ScanRecord);
+                    history.push({ scanId: doc.id, ...doc.data() } as ScanRecord);
                 });
                 setScanHistory(history);
                 setIsHistoryLoading(false);
@@ -197,7 +197,6 @@ export default function AssetSearchPage() {
 
     const handleSelectProduct = (product: Product, isSelected: boolean) => {
         if (isSelected) {
-            // Add only if not already present
             if (!selectedProducts.some(p => p.firebaseId === product.firebaseId)) {
                 setSelectedProducts(prev => [...prev, { ...product, Observacion_Reporte: product.Observacion || "" }]);
             }
@@ -209,6 +208,39 @@ export default function AssetSearchPage() {
     const isProductSelected = (productId: string) => {
         return selectedProducts.some(p => p.firebaseId === productId);
     };
+
+    const handleSelectAllHistory = (isChecked: boolean) => {
+        const currentFirebaseIdsInSelected = new Set(selectedProducts.map(p => p.firebaseId));
+        
+        if (isChecked) {
+            // Add only products from filtered history that are not already selected
+            const newProductsToAdd = filteredHistory
+                .filter(scan => !currentFirebaseIdsInSelected.has(scan.firebaseId))
+                .map(scan => ({ ...scan, Observacion_Reporte: scan.Observacion || "" }));
+
+            setSelectedProducts(prev => [...prev, ...newProductsToAdd]);
+        } else {
+            // Remove all products that are present in the filtered history
+            const firebaseIdsInHistory = new Set(filteredHistory.map(scan => scan.firebaseId));
+            setSelectedProducts(prev => prev.filter(p => !firebaseIdsInHistory.has(p.firebaseId)));
+        }
+    };
+    
+    const allVisibleHistorySelected = React.useMemo(() => {
+        const visibleIds = new Set(filteredHistory.map(s => s.firebaseId));
+        if (visibleIds.size === 0) return false;
+        return filteredHistory.every(scan => selectedProducts.some(p => p.firebaseId === scan.firebaseId));
+    }, [filteredHistory, selectedProducts]);
+
+    const historyTableHeaders = React.useMemo(() => {
+        if (filteredHistory.length === 0) return [];
+        const headersSet = new Set<string>();
+        filteredHistory.forEach(scan => {
+            Object.keys(scan).forEach(key => headersSet.add(key));
+        });
+        return Array.from(headersSet).filter(h => !['scanId', 'firebaseId', 'scannedAt', 'scannedBy', 'Observacion_Reporte'].includes(h));
+    }, [filteredHistory]);
+
     
   return (
     <div className="flex flex-col gap-8">
@@ -236,7 +268,7 @@ export default function AssetSearchPage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="w-[50px]"><span className="sr-only">Seleccionar</span></TableHead>
-                                    {headers.slice(0, 7).map(header => (
+                                    {headers.map(header => (
                                         <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>
                                     ))}
                                 </TableRow>
@@ -254,7 +286,7 @@ export default function AssetSearchPage() {
                                                     aria-label="Seleccionar fila"
                                                 />
                                             </TableCell>
-                                            {headers.slice(0, 7).map(header => (
+                                            {headers.map(header => (
                                                 <TableCell key={header} className="whitespace-nowrap">
                                                     {String(product[header] ?? '')}
                                                 </TableCell>
@@ -311,16 +343,23 @@ export default function AssetSearchPage() {
                         <Table>
                              <TableHeader>
                                 <TableRow>
-                                    <TableHead className="w-[50px]"><span className="sr-only">Select</span></TableHead>
-                                    <TableHead>Codbien</TableHead>
-                                    <TableHead>Descripción</TableHead>
+                                    <TableHead className="w-[50px]">
+                                       <Checkbox
+                                            checked={allVisibleHistorySelected}
+                                            onCheckedChange={(checked) => handleSelectAllHistory(!!checked)}
+                                            aria-label="Seleccionar todo"
+                                        />
+                                    </TableHead>
+                                    {historyTableHeaders.map(header => (
+                                         <TableHead key={header}>{header.charAt(0).toUpperCase() + header.slice(1)}</TableHead>
+                                    ))}
                                     <TableHead>Escaneado Por</TableHead>
                                     <TableHead>Fecha</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isHistoryLoading ? (
-                                    <TableRow><TableCell colSpan={5} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={historyTableHeaders.length + 3} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
                                 ) : filteredHistory.length > 0 ? (
                                     filteredHistory.map(scan => (
                                         <TableRow key={scan.scanId} data-state={isProductSelected(scan.firebaseId) ? "selected" : ""}>
@@ -331,14 +370,15 @@ export default function AssetSearchPage() {
                                                     aria-label={`Seleccionar escaneo ${scan.codbien}`}
                                                 />
                                             </TableCell>
-                                            <TableCell>{scan.codbien || 'N/A'}</TableCell>
-                                            <TableCell>{scan.descrip || 'N/A'}</TableCell>
+                                            {historyTableHeaders.map(header => (
+                                                <TableCell key={header}>{scan[header] ?? 'N/A'}</TableCell>
+                                            ))}
                                             <TableCell>{scan.scannedBy}</TableCell>
                                             <TableCell className="whitespace-nowrap">{format(scan.scannedAt.toDate(), 'Pp', { locale: es })}</TableCell>
                                         </TableRow>
                                     ))
                                 ) : (
-                                     <TableRow><TableCell colSpan={5} className="text-center h-24">No hay escaneos para las fechas seleccionadas.</TableCell></TableRow>
+                                     <TableRow><TableCell colSpan={historyTableHeaders.length + 3} className="text-center h-24">No hay escaneos para las fechas seleccionadas.</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>
