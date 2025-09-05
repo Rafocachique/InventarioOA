@@ -105,6 +105,7 @@ export default function AssetSearchPage() {
         );
         setSelectedProducts(newSelectedProducts);
         
+        // Also update the copy in allProducts to persist changes if the user deselects and reselects
         const newAllProducts = allProducts.map(p => 
             p.firebaseId === firebaseId ? { ...p, Observacion_Reporte: value } : p
         );
@@ -163,6 +164,7 @@ export default function AssetSearchPage() {
 
     const handleSelectProduct = (product: Product, isSelected: boolean) => {
         if (isSelected) {
+            // Add the product with an initial value for Observacion_Reporte if it doesn't exist
             setSelectedProducts(prev => [...prev, { ...product, Observacion_Reporte: product.Observacion || "" }]);
         } else {
             setSelectedProducts(prev => prev.filter(p => p.firebaseId !== product.firebaseId));
@@ -278,22 +280,24 @@ export default function AssetSearchPage() {
                                             <TableRow key={p.firebaseId}>
                                                 {Object.keys(reportColumnMapping).map(header => {
                                                     const keyOrFn = reportColumnMapping[header];
+                                                    let cellContent;
+
                                                     if (typeof keyOrFn === 'function') {
-                                                        return <TableCell key={header} className="font-medium whitespace-nowrap">{keyOrFn(p, index)}</TableCell>
+                                                        cellContent = keyOrFn(p, index);
+                                                    } else if (keyOrFn === 'Observacion_Reporte') {
+                                                        cellContent = (
+                                                            <Input 
+                                                                type="text"
+                                                                value={p.Observacion_Reporte || ''}
+                                                                onChange={(e) => handleObservationChange(p.firebaseId, e.target.value)}
+                                                                className="h-8"
+                                                            />
+                                                        );
+                                                    } else {
+                                                        cellContent = String(p[keyOrFn] ?? '');
                                                     }
-                                                    if (keyOrFn === 'Observacion_Reporte') {
-                                                        return (
-                                                            <TableCell key={header}>
-                                                                <Input 
-                                                                    type="text"
-                                                                    value={p.Observacion_Reporte || ''}
-                                                                    onChange={(e) => handleObservationChange(p.firebaseId, e.target.value)}
-                                                                    className="h-8"
-                                                                />
-                                                            </TableCell>
-                                                        )
-                                                    }
-                                                    return <TableCell key={header} className="whitespace-nowrap">{String(p[keyOrFn] ?? '')}</TableCell>
+
+                                                    return <TableCell key={header} className="whitespace-nowrap">{cellContent}</TableCell>;
                                                 })}
                                             </TableRow>
                                         ))}
@@ -435,3 +439,5 @@ export default function AssetSearchPage() {
     </div>
   );
 }
+
+    
