@@ -13,6 +13,8 @@ import { Loader2, Search, FileDown } from 'lucide-react';
 import { db } from "@/lib/firebase";
 import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+
 
 interface Product {
   firebaseId: string;
@@ -31,14 +33,17 @@ export default function AssetSearchPage() {
     const { toast } = useToast();
     const [selectedFormat, setSelectedFormat] = React.useState<ReportFormat>("");
     
-    // State for editable fields
+    // State for editable fields based on the provided PDF format
     const [reportHeaderData, setReportHeaderData] = React.useState({
-        sede: "SEDE CENTRAL",
-        oficina: "OFICINA DE ABASTECIMIENTO Y SERVICIOS AUXILIARES",
-        responsableRecibe: "",
-        cargoResponsableRecibe: "",
-        responsableEntrega: "",
-        cargoResponsableEntrega: "",
+        entidad: "UNIVERSIDAD NACIONAL FEDERICO VILLARREAL",
+        fecha: format(new Date(), "dd.MM.yyyy"),
+        nombreApellidos: "",
+        dni: "",
+        correo: "",
+        organo: "",
+        localSede: "",
+        direccion: "",
+        oficinaArea: "",
     });
 
     const handleReportDataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -241,29 +246,41 @@ export default function AssetSearchPage() {
                                      <div className="space-y-4 border-t pt-4">
                                         <h4 className="font-medium">2. Complete los datos para el Acta de Asignación</h4>
                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-2 sm:col-span-2">
+                                                <Label htmlFor="entidad">Entidad u Organización</Label>
+                                                <Input id="entidad" value={reportHeaderData.entidad} onChange={handleReportDataChange} />
+                                            </div>
+                                             <div className="space-y-2">
+                                                <Label htmlFor="fecha">Fecha</Label>
+                                                <Input id="fecha" value={reportHeaderData.fecha} onChange={handleReportDataChange} />
+                                            </div>
+                                             <div className="space-y-2">
+                                                 <Label htmlFor="nombreApellidos">Nombre y Apellidos</Label>
+                                                <Input id="nombreApellidos" placeholder="Nombre completo del usuario" value={reportHeaderData.nombreApellidos} onChange={handleReportDataChange} />
+                                            </div>
+                                             <div className="space-y-2">
+                                                <Label htmlFor="dni">N° DNI</Label>
+                                                <Input id="dni" placeholder="DNI del usuario" value={reportHeaderData.dni} onChange={handleReportDataChange} />
+                                            </div>
                                             <div className="space-y-2">
-                                                <Label htmlFor="sede">Sede</Label>
-                                                <Input id="sede" value={reportHeaderData.sede} onChange={handleReportDataChange} />
+                                                <Label htmlFor="correo">Correo Electrónico</Label>
+                                                <Input id="correo" placeholder="Correo del usuario" value={reportHeaderData.correo} onChange={handleReportDataChange} />
                                             </div>
-                                             <div className="space-y-2">
-                                                <Label htmlFor="oficina">Oficina</Label>
-                                                <Input id="oficina" value={reportHeaderData.oficina} onChange={handleReportDataChange} />
+                                             <div className="space-y-2 sm:col-span-2">
+                                                <Label htmlFor="organo">Órgano o Unidad Orgánica</Label>
+                                                <Input id="organo" value={reportHeaderData.organo} onChange={handleReportDataChange} />
                                             </div>
-                                             <div className="space-y-2">
-                                                <Label htmlFor="responsableRecibe">Responsable (Recibe)</Label>
-                                                <Input id="responsableRecibe" placeholder="Nombre completo de quien recibe" value={reportHeaderData.responsableRecibe} onChange={handleReportDataChange} />
+                                            <div className="space-y-2 sm:col-span-2">
+                                                <Label htmlFor="direccion">Dirección</Label>
+                                                <Input id="direccion" value={reportHeaderData.direccion} onChange={handleReportDataChange} />
                                             </div>
-                                             <div className="space-y-2">
-                                                <Label htmlFor="cargoResponsableRecibe">Cargo (Recibe)</Label>
-                                                <Input id="cargoResponsableRecibe" placeholder="Cargo de quien recibe" value={reportHeaderData.cargoResponsableRecibe} onChange={handleReportDataChange} />
+                                            <div className="space-y-2">
+                                                <Label htmlFor="localSede">Local o Sede</Label>
+                                                <Input id="localSede" value={reportHeaderData.localSede} onChange={handleReportDataChange} />
                                             </div>
-                                             <div className="space-y-2">
-                                                <Label htmlFor="responsableEntrega">Responsable (Entrega)</Label>
-                                                <Input id="responsableEntrega" placeholder="Nombre completo de quien entrega" value={reportHeaderData.responsableEntrega} onChange={handleReportDataChange} />
-                                            </div>
-                                             <div className="space-y-2">
-                                                <Label htmlFor="cargoResponsableEntrega">Cargo (Entrega)</Label>
-                                                <Input id="cargoResponsableEntrega" placeholder="Cargo de quien entrega" value={reportHeaderData.cargoResponsableEntrega} onChange={handleReportDataChange} />
+                                            <div className="space-y-2">
+                                                <Label htmlFor="oficinaArea">Oficina o Área</Label>
+                                                <Input id="oficinaArea" value={reportHeaderData.oficinaArea} onChange={handleReportDataChange} />
                                             </div>
                                          </div>
                                      </div>
@@ -295,3 +312,5 @@ export default function AssetSearchPage() {
     </div>
   );
 }
+
+    
