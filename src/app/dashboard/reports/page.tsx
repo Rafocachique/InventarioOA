@@ -233,13 +233,13 @@ export default function AssetSearchPage() {
     }, [filteredHistory, selectedProducts]);
 
     const historyTableHeaders = React.useMemo(() => {
-        if (filteredHistory.length === 0) return [];
+        if (scanHistory.length === 0) return [];
         const headersSet = new Set<string>();
-        filteredHistory.forEach(scan => {
+        scanHistory.forEach(scan => {
             Object.keys(scan).forEach(key => headersSet.add(key));
         });
-        return Array.from(headersSet).filter(h => !['scanId', 'firebaseId', 'scannedAt', 'scannedBy', 'Observacion_Reporte'].includes(h));
-    }, [filteredHistory]);
+        return Array.from(headersSet).filter(h => !['scanId', 'firebaseId', 'scannedAt', 'scannedBy', 'Observacion_Reporte']);
+    }, [scanHistory]);
 
     
   return (
@@ -578,3 +578,5 @@ export default function AssetSearchPage() {
     </div>
   );
 }
+
+    
