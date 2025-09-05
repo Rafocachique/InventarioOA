@@ -18,10 +18,25 @@ import { format } from "date-fns";
 
 interface Product {
   firebaseId: string;
+  Observacion_Reporte?: string; // Add this field for the editable observation
   [key: string]: any;
 }
 
 type ReportFormat = "asignacion" | "baja" | "transferencia" | "";
+
+const reportColumnMapping = {
+    'Item': (index: number) => index + 1,
+    'Codigo Patrimonial': 'Codbien',
+    'Codigo Interno': 'Codanterio',
+    'Denominacion': 'Descrip',
+    'Marca': 'Marca',
+    'Modelo': 'Modelo',
+    'Color': 'Color',
+    'Serie': 'Serie',
+    'Otros': 'OTROS',
+    'Estado de Conservacion': 'Estado',
+    'Observaciones': 'Observacion_Reporte' // Use the new editable field
+};
 
 export default function AssetSearchPage() {
     const [searchTerm, setSearchTerm] = React.useState("");
@@ -83,6 +98,14 @@ export default function AssetSearchPage() {
         const { id, value } = e.target;
         setReportHeaderData(prev => ({...prev, [id]: value}));
     };
+    
+    const handleObservationChange = (firebaseId: string, value: string) => {
+        setSelectedProducts(prevSelected => 
+            prevSelected.map(p => 
+                p.firebaseId === firebaseId ? { ...p, Observacion_Reporte: value } : p
+            )
+        );
+    };
 
     React.useEffect(() => {
         const fetchInitialData = async () => {
@@ -136,7 +159,7 @@ export default function AssetSearchPage() {
 
     const handleSelectProduct = (product: Product, isSelected: boolean) => {
         if (isSelected) {
-            setSelectedProducts(prev => [...prev, product]);
+            setSelectedProducts(prev => [...prev, { ...product, Observacion_Reporte: product.Observacion || "" }]);
         } else {
             setSelectedProducts(prev => prev.filter(p => p.firebaseId !== product.firebaseId));
         }
@@ -245,13 +268,22 @@ export default function AssetSearchPage() {
                                         <TableRow>
                                             <TableHead>Codbien</TableHead>
                                             <TableHead>Descripción</TableHead>
+                                            <TableHead>Observaciones</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {selectedProducts.map(p => (
                                             <TableRow key={p.firebaseId}>
-                                                <TableCell className="font-medium">{p.Codbien || p.id || 'N/A'}</TableCell>
-                                                <TableCell>{p.Descrip || p.description || 'N/A'}</TableCell>
+                                                <TableCell className="font-medium whitespace-nowrap">{p.Codbien || p.id || 'N/A'}</TableCell>
+                                                <TableCell className="whitespace-nowrap">{p.Descrip || 'N/A'}</TableCell>
+                                                <TableCell>
+                                                    <Input 
+                                                        type="text"
+                                                        value={p.Observacion_Reporte || ''}
+                                                        onChange={(e) => handleObservationChange(p.firebaseId, e.target.value)}
+                                                        className="h-8"
+                                                    />
+                                                </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
@@ -392,5 +424,3 @@ export default function AssetSearchPage() {
     </div>
   );
 }
-
-    
