@@ -76,6 +76,41 @@ const reportReasons: Record<ReportType, string[]> = {
     ]
 };
 
+const initialReportHeaderData = {
+    entidad: "UNIVERSIDAD NACIONAL FEDERICO VILLARREAL",
+    fecha: format(new Date(), "dd.MM.yyyy"),
+    nombreApellidos: "",
+    dni: "",
+    correo: "",
+    organo: "FACULTAD DE ADMINISTRACION",
+    localSede: "PREDIO PROPIO Nro 008 (SL07)",
+    direccion: "OSCAR R. BENAVIDES 450-458 (COLONIAL)",
+    oficinaArea: "",
+    numeroMovimiento: "",
+    motivo: reportReasons['Baja'][0],
+    tipo: "Baja" as ReportType,
+    salida: "",
+    mantenimiento: "",
+    reingreso: "",
+    comisionServicio: "",
+    desplazamiento: "",
+    capacitacionEvento: "",
+    remiteNombre: "",
+    remiteDNI: "",
+    remiteCorreo: "",
+    remiteUnidadOrganica: "FACULTAD DE ADMINISTRACION",
+    remiteLocalSede: "PREDIO PROPIO Nro 008 - (SL07)",
+    remiteOficio: "",
+    recibeNombre: "",
+    recibeDNI: "",
+    recibeCorreo: "",
+    recibeUnidadOrganica: "",
+    recibeLocalSede: "",
+    recibeDocumento: "",
+    datosVehiculo: "",
+    nombreResponsableTraslado: "",
+    nombreUnidadPatrimonio: "",
+};
 
 export default function SearchAndReportsPage() {
     const [searchTerm, setSearchTerm] = React.useState("");
@@ -92,41 +127,7 @@ export default function SearchAndReportsPage() {
     const [isHistoryLoading, setIsHistoryLoading] = React.useState(true);
     const [selectedDates, setSelectedDates] = React.useState<Date[] | undefined>([new Date()]);
     
-    const [reportHeaderData, setReportHeaderData] = React.useState({
-        entidad: "UNIVERSIDAD NACIONAL FEDERICO VILLARREAL",
-        fecha: format(new Date(), "dd.MM.yyyy"),
-        nombreApellidos: "",
-        dni: "",
-        correo: "",
-        organo: "FACULTAD DE ADMINISTRACION",
-        localSede: "PREDIO PROPIO Nro 008 (SL07)",
-        direccion: "OSCAR R. BENAVIDES 450-458 (COLONIAL)",
-        oficinaArea: "",
-        numeroMovimiento: "",
-        motivo: "",
-        tipo: "Baja" as ReportType,
-        salida: "",
-        mantenimiento: "",
-        reingreso: "",
-        comisionServicio: "",
-        desplazamiento: "",
-        capacitacionEvento: "",
-        remiteNombre: "",
-        remiteDNI: "",
-        remiteCorreo: "",
-        remiteUnidadOrganica: "FACULTAD DE ADMINISTRACION",
-        remiteLocalSede: "PREDIO PROPIO Nro 008 - (SL07)",
-        remiteOficio: "",
-        recibeNombre: "",
-        recibeDNI: "",
-        recibeCorreo: "",
-        recibeUnidadOrganica: "",
-        recibeLocalSede: "",
-        recibeDocumento: "",
-        datosVehiculo: "",
-        nombreResponsableTraslado: "",
-        nombreUnidadPatrimonio: "",
-    });
+    const [reportHeaderData, setReportHeaderData] = React.useState(initialReportHeaderData);
 
 
     const handleReportDataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -135,25 +136,21 @@ export default function SearchAndReportsPage() {
     };
     
     const handleSelectChange = (id: string, value: string) => {
-        const prev = {...reportHeaderData, [id]: value};
-        
-        if (id === 'tipo') {
-            const newType = value as ReportType;
-            const reasons = reportReasons[newType] || [];
-            setAvailableReasons(reasons);
-            // Reset motivo when tipo changes
-            prev.motivo = reasons[0] || ""; 
-        }
-
-        setReportHeaderData(prev);
+        setReportHeaderData(prev => {
+            const newState = {...prev, [id]: value};
+            if (id === 'tipo') {
+                const newType = value as ReportType;
+                const reasons = reportReasons[newType] || [];
+                setAvailableReasons(reasons);
+                newState.motivo = reasons[0] || ""; 
+            }
+            return newState;
+        });
     }
     
     React.useEffect(() => {
         // Set initial reasons based on default type
         setAvailableReasons(reportReasons[reportHeaderData.tipo]);
-        if(reportHeaderData.motivo === "") {
-             setReportHeaderData(prev => ({...prev, motivo: reportReasons[prev.tipo][0]}));
-        }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -284,6 +281,40 @@ export default function SearchAndReportsPage() {
         return filteredHistory.every(scan => selectedProducts.some(p => p.scanId === scan.scanId));
     }, [filteredHistory, selectedProducts]);
 
+    const resetFormButKeepUserData = () => {
+        setReportHeaderData(currentData => ({
+            ...initialReportHeaderData,
+            fecha: format(new Date(), "dd.MM.yyyy"),
+            // Preserve user-entered fields
+            nombreApellidos: currentData.nombreApellidos,
+            dni: currentData.dni,
+            correo: currentData.correo,
+            oficinaArea: currentData.oficinaArea,
+            numeroMovimiento: currentData.numeroMovimiento,
+            salida: currentData.salida,
+            mantenimiento: currentData.mantenimiento,
+            reingreso: currentData.reingreso,
+            comisionServicio: currentData.comisionServicio,
+            desplazamiento: currentData.desplazamiento,
+            capacitacionEvento: currentData.capacitacionEvento,
+            remiteNombre: currentData.remiteNombre,
+            remiteDNI: currentData.remiteDNI,
+            remiteCorreo: currentData.remiteCorreo,
+            remiteOficio: currentData.remiteOficio,
+            recibeNombre: currentData.recibeNombre,
+            recibeDNI: currentData.recibeDNI,
+            recibeCorreo: currentData.recibeCorreo,
+            recibeUnidadOrganica: currentData.recibeUnidadOrganica,
+            recibeLocalSede: currentData.recibeLocalSede,
+            recibeDocumento: currentData.recibeDocumento,
+            datosVehiculo: currentData.datosVehiculo,
+            nombreResponsableTraslado: currentData.nombreResponsableTraslado,
+            nombreUnidadPatrimonio: currentData.nombreUnidadPatrimonio,
+        }));
+        setSelectedProducts([]);
+        setSelectedFormat("");
+    };
+
     const handleGeneratePDF = () => {
       if (selectedFormat === 'asignacion') {
         generateAsignacionPDF(reportHeaderData, selectedProducts);
@@ -295,7 +326,9 @@ export default function SearchAndReportsPage() {
             title: "Formato no implementado",
             description: "La generación de PDF para este formato aún no está disponible.",
         });
+        return;
       }
+      resetFormButKeepUserData();
     }
 
     
@@ -659,6 +692,5 @@ export default function SearchAndReportsPage() {
     </div>
   );
 }
-
 
     
