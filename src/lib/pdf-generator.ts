@@ -194,25 +194,6 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     doc.text('ORDEN DE SALIDA, REINGRESO Y DESPLAZAMIENTO INTERNO DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
     y += 8;
 
-    const drawStyledCellText = (doc: jsPDF, data: any, cell: any) => {
-        if (typeof data !== 'string') return;
-        
-        const {x, y, width, height} = cell;
-        const textParts = data.split(': ');
-        
-        const label = textParts[0];
-        const value = textParts.slice(1).join(': ');
-        const yPos = y + height / 2 + doc.getLineHeight() / 2 - 2;
-
-        if (label) {
-            doc.setFont('helvetica', 'bold');
-            doc.text(`${label}:`, x + 2, yPos);
-            const labelWidth = doc.getTextWidth(`${label}: `);
-            
-            doc.setFont('helvetica', 'normal');
-            doc.text(String(value || ''), x + 2 + labelWidth, yPos);
-        }
-    };
     
     // Header section
     (doc as any).autoTable({
@@ -236,11 +217,6 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         startY: y,
         theme: 'grid',
         styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'normal' },
-        didDrawCell: (data: any) => {
-             if (data.section === 'body') {
-                drawStyledCellText(doc, data.cell.text[0], data.cell);
-             }
-        }
     });
     y = (doc as any).lastAutoTable.finalY + 2;
 
@@ -262,11 +238,6 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         theme: 'grid',
         styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'normal' },
         headStyles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontStyle: 'bold'},
-        didDrawCell: (data: any) => {
-             if (data.section === 'body') {
-                drawStyledCellText(doc, data.cell.text[0], data.cell);
-             }
-        }
     });
     y = (doc as any).lastAutoTable.finalY + 2;
 
