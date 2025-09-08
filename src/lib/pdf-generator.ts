@@ -16,7 +16,7 @@ interface ReportHeaderData {
 }
 
 interface Product {
-    [key: string]: any;
+    [key:string]: any;
 }
 
 const reportColumnMapping: Record<string, string> = {
@@ -45,6 +45,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     let y = 15;
 
     // --- Títulos ---
+    doc.setTextColor(0, 0, 0);
     applyStyles(doc, true);
     doc.setFontSize(11);
     doc.text('FICHA ASIGNACION EN USO Y DEVOLUCION DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
@@ -60,17 +61,16 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         ],
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255] },
+        styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
     });
     y = (doc as any).lastAutoTable.finalY + 2;
 
     // --- Datos del Usuario con Recuadro ---
-    applyStyles(doc, true);
     (doc as any).autoTable({
         head: [[{ content: 'DATOS DEL USUARIO', styles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 9, halign: 'center' } }]],
         startY: y,
         theme: 'grid', 
-        styles: { lineColor: [0,0,0], lineWidth: 0.1 },
+        styles: { lineColor: [0,0,0], lineWidth: 0.1, textColor: [0, 0, 0] },
     });
     y = (doc as any).lastAutoTable.finalY;
 
@@ -94,7 +94,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         body: userDataBody,
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255] },
+        styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
         columnStyles: {
             0: { cellWidth: 90 },
             1: { cellWidth: 90 },
@@ -130,7 +130,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         startY: y,
         theme: 'grid',
         headStyles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 8, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1 },
-        styles: { fontSize: 7, cellPadding: 1.5, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1 },
+        styles: { fontSize: 7, cellPadding: 1.5, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1, textColor: [0, 0, 0] },
         columnStyles: {
             'DENOMINACION': { halign: 'left', cellWidth: 50 },
             'OBSERVACIONES': { halign: 'left', cellWidth: 50 },
@@ -145,6 +145,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     }
     
     // --- Consideraciones ---
+    doc.setTextColor(0, 0, 0);
     applyStyles(doc, true);
     doc.setFontSize(8);
     doc.text('CONSIDERACIONES:', margin, finalY);
@@ -185,6 +186,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     const pageWidth = doc.internal.pageSize.getWidth();
     let y = 15;
 
+    doc.setTextColor(0, 0, 0);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.text('ORDEN DE SALIDA, REINGRESO Y DESPLAZAMIENTO INTERNO DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
@@ -195,7 +197,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
             body: data,
             startY: startY,
             theme: 'grid',
-            styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, ...options },
+            styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0], ...options },
             columnStyles: { 0: { fontStyle: 'bold' } },
         });
         return (doc as any).lastAutoTable.finalY;
@@ -258,7 +260,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         startY: y,
         theme: 'grid',
         headStyles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 7, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1 },
-        styles: { fontSize: 7, cellPadding: 1, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1 },
+        styles: { fontSize: 7, cellPadding: 1, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1, textColor: [0, 0, 0] },
         columnStyles: {
             'DENOMINACION': { halign: 'left', cellWidth: 60 },
             'OBSERVACIONES': { halign: 'left', cellWidth: 40 },
@@ -274,6 +276,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     }
 
     const drawSignatureLine = (textLines: (string | null)[], x: number, y: number, width: number) => {
+        doc.setTextColor(0, 0, 0);
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
     
