@@ -194,40 +194,54 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     doc.text('ORDEN DE SALIDA, REINGRESO Y DESPLAZAMIENTO INTERNO DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
     y += 8;
 
-    // Helper function to create styled text objects for autoTable
-    const createStyledText = (label: string, value: any) => {
-        const doc_ = new jsPDF(); // Temporary doc to measure text
-        doc_.setFont('helvetica', 'bold');
-        const labelText = `${label}: `;
-        const labelWidth = doc_.getTextWidth(labelText);
-        doc_.setFont('helvetica', 'normal');
-        const valueText = String(value || '').toUpperCase();
+    // Helper to draw styled text inside a cell after autotable renders it
+    const drawStyledCellText = (docInstance: jsPDF, data: any) => {
+        const { cell, settings } = data;
         
-        // This returns an array that autoTable can process to draw styled text in one cell
-        return [
-            { text: labelText, styles: { fontStyle: 'bold' } },
-            { text: valueText, styles: { fontStyle: 'normal' } }
-        ];
-    };
+        // Safety checks for all required properties
+        if (!cell || !cell.raw || typeof cell.raw !== 'object' || !('label' in cell.raw)) {
+            return;
+        }
+        if (typeof cell.x !== 'number' || typeof cell.y !== 'number' || !isFinite(cell.x) || !isFinite(cell.y)) {
+            return;
+        }
+        
+        const { label, value } = cell.raw as {label: string, value: any};
+        if (!label) return;
 
+        const x = cell.x + settings.cellPadding;
+        const yPos = cell.y + cell.height / 2 + (settings.fontSize / 2.2) - 1;
+
+        // Erase the default '[object Object]' text
+        docInstance.setFillColor(255, 255, 255);
+        docInstance.rect(cell.x, cell.y, cell.width, cell.height, 'F');
+        
+        docInstance.setFont('helvetica', 'bold');
+        docInstance.text(`${label}: `, x, yPos);
+        
+        const labelWidth = docInstance.getTextWidth(`${label}: `);
+        
+        docInstance.setFont('helvetica', 'normal');
+        docInstance.text(String(value || '').toUpperCase(), x + labelWidth, yPos);
+    };
 
     // --- Bloque de Datos Superior ---
     const topTableBody = [
         [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 4, styles: { fontStyle: 'bold', fontSize: 8, textColor: [0,0,0], fillColor: [255, 255, 255] } }],
         [
-            { content: createStyledText('TIPO', headerData.tipo) },
-            { content: createStyledText('SALIDA', headerData.salida) },
-            { content: createStyledText('REINGRESO', headerData.reingreso) },
-            { content: createStyledText('NUMERO MOVIMIENTO', headerData.numeroMovimiento) }
+            { content: { label: 'TIPO', value: headerData.tipo } },
+            { content: { label: 'SALIDA', value: headerData.salida } },
+            { content: { label: 'REINGRESO', value: headerData.reingreso } },
+            { content: { label: 'NUMERO MOVIMIENTO', value: headerData.numeroMovimiento } }
         ],
         [
-            { content: createStyledText('MOTIVO', headerData.motivo), colSpan: 2 },
-            { content: createStyledText('MANTENIMIENTO', headerData.mantenimiento) },
-            { content: createStyledText('COMISION SERVICIO', headerData.comisionServicio) },
+            { content: { label: 'MOTIVO', value: headerData.motivo }, colSpan: 2 },
+            { content: { label: 'MANTENIMIENTO', value: headerData.mantenimiento } },
+            { content: { label: 'COMISION SERVICIO', value: headerData.comisionServicio } },
         ],
         [
-           { content: createStyledText('DESPLAZAMIENTO', headerData.desplazamiento), colSpan: 2 },
-           { content: createStyledText('CAPACITACION O EVENTO', headerData.capacitacionEvento), colSpan: 2 },
+           { content: { label: 'DESPLAZAMIENTO', value: headerData.desplazamiento }, colSpan: 2 },
+           { content: { label: 'CAPACITACION O EVENTO', value: headerData.capacitacionEvento }, colSpan: 2 },
         ]
     ];
 
@@ -236,6 +250,12 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         startY: y,
         theme: 'grid',
         styles: { fontSize: 7, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+        didDrawCell: (data: any) => {
+            // We only want to apply custom drawing to the top table (section 0)
+            if (data.table.id === undefined && data.section.index === 0) {
+                 drawStyledCellText(doc, data);
+            }
+        }
     });
     y = (doc as any).lastAutoTable.finalY + 2;
 
@@ -258,9 +278,8 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         body: remiteRecibeBody,
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+        styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'normal' },
         headStyles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontStyle: 'bold', halign: 'center', fontSize: 8},
-        bodyStyles: { fontStyle: 'normal' },
     });
     y = (doc as any).lastAutoTable.finalY + 2;
 
@@ -343,7 +362,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     const numSignatures2 = sigs2.length;
     const sigWidth2 = (pageWidth - margin * 2) / numSignatures2;
     sigs2.forEach((sig, index) => {
-        const text = String(headerData[sig.key] || sig.default).toUpperCase();
+        const text = String(headerData[sig.key] || '').toUpperCase() || sig.default;
         drawSignatureLine([text], margin + (index * sigWidth2), signatureBlock2Y, sigWidth2);
     });
 
