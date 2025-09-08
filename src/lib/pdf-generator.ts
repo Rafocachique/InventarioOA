@@ -193,19 +193,33 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     doc.text('ORDEN DE SALIDA, REINGRESO Y DESPLAZAMIENTO INTERNO DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
     y += 8;
 
+    // --- Main Info Box ---
     const topTableBody = [
-        [`ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, `Numero Movimiento: ${String(headerData.numeroMovimiento || '').toUpperCase()}`],
-        [`Tipo: ${String(headerData.tipo || '').toUpperCase()}`, `Salida: ${String(headerData.salida || '').toUpperCase()}`],
-        [`Motivo: ${String(headerData.motivo || '').toUpperCase()}`, `Reingreso: ${String(headerData.reingreso || '').toUpperCase()}`],
-        [`Mantenimiento: ${String(headerData.mantenimiento || '').toUpperCase()}`, `Desplazamiento: ${String(headerData.desplazamiento || '').toUpperCase()}`],
-        [`Comision Servicio: ${String(headerData.comisionServicio || '').toUpperCase()}`, `Capacitacion o Evento: ${String(headerData.capacitacionEvento || '').toUpperCase()}`]
+        [
+            { content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 3, styles: { fontStyle: 'bold' } },
+            `Numero Movimiento: ${String(headerData.numeroMovimiento || '').toUpperCase()}`
+        ],
+        [
+            `Tipo: ${String(headerData.tipo || '').toUpperCase()}`,
+            `Salida: ${String(headerData.salida || '').toUpperCase()}`,
+            `Reingreso: ${String(headerData.reingreso || '').toUpperCase()}`,
+            `Desplazamiento: ${String(headerData.desplazamiento || '').toUpperCase()}`
+        ],
+        [
+            `Motivo: ${String(headerData.motivo || '').toUpperCase()}`,
+            { content: `Mantenimiento: ${String(headerData.mantenimiento || '').toUpperCase()}`, colSpan: 2 },
+            `Comision Servicio: ${String(headerData.comisionServicio || '').toUpperCase()}`
+        ],
+        [
+            { content: `Capacitacion o Evento: ${String(headerData.capacitacionEvento || '').toUpperCase()}`, colSpan: 4 }
+        ]
     ];
     
     (doc as any).autoTable({
         body: topTableBody,
         startY: y,
-        theme: 'plain',
-        styles: { fontSize: 7, cellPadding: 1, textColor: [0, 0, 0] },
+        theme: 'grid',
+        styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, textColor: [0,0,0] },
     });
     y = (doc as any).lastAutoTable.finalY + 2;
 
@@ -283,12 +297,12 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     const signatureBlockHeight = 50; 
     
     // Check if there is enough space for the signatures, otherwise add a new page.
-    if (finalY > doc.internal.pageSize.getHeight() - signatureBlockHeight) {
+    if (finalY > doc.internal.pageSize.getHeight() - signatureBlockHeight - 15) { // add some margin
         doc.addPage();
         finalY = 20; 
     }
 
-    let signatureBlock1Y = finalY + 20;
+    let signatureBlock1Y = finalY + 15;
 
     const sigs1 = [
         ["FIRMA Y SELLO ADMINISTRADOR LOCAL", "(SALE EL BIEN)"],
@@ -318,3 +332,5 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
 
     doc.save(`Acta_${(headerData.tipo || 'Reporte').replace(/ /g, '_').toUpperCase()}_${new Date().toISOString().split('T')[0]}.pdf`);
 }
+
+    
