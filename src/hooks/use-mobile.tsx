@@ -18,7 +18,7 @@ export function useIsMobile() {
 
     // Remove event listener on cleanup
     return () => {
-        window.removeEventListener("resize", checkIsCsmr);
+        window.removeEventListener("resize", checkIsMobile);
     }
   }, [])
 
