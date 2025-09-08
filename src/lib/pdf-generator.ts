@@ -117,16 +117,15 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         body: tableBody,
         startY: y + 2,
         theme: 'grid',
-        headStyles: { fillColor: [211, 211, 211], textColor: [0,0,0], fontSize: 8, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1 },
+        headStyles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 8, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1 },
         styles: { fontSize: 7, cellPadding: 1.5, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1 },
-        alternateRowStyles: { fillColor: [240, 240, 240] },
         columnStyles: {
             'DENOMINACION': { halign: 'left', cellWidth: 50 },
             'OBSERVACIONES': { halign: 'left', cellWidth: 50 },
         }
     });
 
-    let finalY = (doc as any).lastAutoTable.finalY + 5;
+    let finalY = (doc as any).lastAutoTable.finalY + 30; // Increased separation
     if (finalY > doc.internal.pageSize.getHeight() - 60) {
         doc.addPage();
         finalY = 20;
@@ -268,18 +267,24 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         const lineLength = Math.min(width * 0.8, 60); 
         const lineXStart = x + (width - lineLength) / 2;
         const lineXEnd = lineXStart + lineLength;
-        doc.line(lineXStart, y, lineXEnd, y);
+        const textYStart = y + 4;
         
-        let textY = y + 4;
+        let hasContent = false;
         textLines.forEach(line => {
             if (line) {
-                doc.text(line.toUpperCase(), x + width / 2, textY, { align: 'center' });
-                textY += 4;
+                doc.text(line.toUpperCase(), x + width / 2, textYStart, { align: 'center' });
+                hasContent = true;
             }
         });
+        
+        // Solo dibujar la línea si hay texto asociado o si es una firma principal
+        if(hasContent || textLines.length <= 2) { // Asume que las líneas de firma principales tienen 2 o menos líneas de texto
+           doc.line(lineXStart, y, lineXEnd, y);
+        }
     };
     
-    const signatureBlockY1 = finalY + 15;
+    // Ajuste de espaciado
+    const signatureBlockY1 = finalY + 40;
     const signatureBlockY2 = signatureBlockY1 + 40;
 
     const pageContentWidth = pageWidth - margin * 2;
