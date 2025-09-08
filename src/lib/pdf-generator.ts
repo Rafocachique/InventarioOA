@@ -66,6 +66,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         startY: y,
         theme: 'plain',
         styles: {cellPadding: 0},
+        margin: { top: 15 }
     });
     y = (doc as any).lastAutoTable.finalY - 5;
     
@@ -263,48 +264,52 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         doc.addPage();
         finalY = 20;
     } else {
-        finalY += 5;
-    }
-    
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
-
-    const signatureBox = (text: string, x: number, yPos: number, width: number, height: number) => {
-        doc.rect(x, yPos, width, height);
-        const splitText = doc.splitTextToSize(text.toUpperCase(), width - 4);
-        doc.text(splitText, x + width/2, yPos + height/2, { align: 'center', baseline: 'middle' });
+        finalY += 15;
     }
 
-    const boxHeight = 15;
-    const boxGap = 5;
-    const availableWidth = pageWidth - (margin * 2);
+    const drawSignature = (textLines: string[], x: number, y: number, width: number) => {
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
     
-    // Fila 1 de firmas (4 cajas)
-    const sigBoxWidth1 = (availableWidth - (boxGap * 3)) / 4;
-    let currentX = margin;
-    signatureBox("Firma y Sello Administrador Local", currentX, finalY, sigBoxWidth1, boxHeight);
-    currentX += sigBoxWidth1 + boxGap;
-    signatureBox("Firma y Sello Remite la Salida", currentX, finalY, sigBoxWidth1, boxHeight);
-    currentX += sigBoxWidth1 + boxGap;
-    signatureBox("Firma y Sello Administrador Local", currentX, finalY, sigBoxWidth1, boxHeight);
-    currentX += sigBoxWidth1 + boxGap;
-    signatureBox("Firma y Sello Recibe el Bien", currentX, finalY, sigBoxWidth1, boxHeight);
-    finalY += boxHeight + boxGap;
+        const lineLength = width * 0.9;
+        const lineXStart = x + (width - lineLength) / 2;
+        const lineXEnd = lineXStart + lineLength;
+        doc.line(lineXStart, y, lineXEnd, y);
+        
+        let textY = y + 3;
+        textLines.forEach(line => {
+            if (line) {
+                doc.text(line.toUpperCase(), x + width / 2, textY, { align: 'center' });
+                textY += 3.5;
+            }
+        });
+    };
 
-    // Fila 2 de firmas (2 cajas)
-    const sigBoxWidth2 = (availableWidth - boxGap) / 2;
-    currentX = margin;
-    signatureBox(`Datos Vehiculo\n${String(headerData.datosVehiculo || '').toUpperCase()}`, currentX, finalY, sigBoxWidth2, boxHeight);
-    currentX += sigBoxWidth2 + boxGap;
-    signatureBox(`Nombre y firma Responsable del traslado\n${String(headerData.nombreResponsableTraslado || '').toUpperCase()}`, currentX, finalY, sigBoxWidth2, boxHeight);
-    finalY += boxHeight + boxGap;
-    
-    // Fila 3 de firmas (1 caja) - solo para transferencia
-    if (headerData.tipo === 'Transferencia') {
-      const sigBoxWidth3 = availableWidth;
-      currentX = margin;
-      signatureBox(`Nombre y firma Unidad Patrimonio\n${String(headerData.nombreUnidadPatrimonio || '').toUpperCase()}`, currentX, finalY, sigBoxWidth3, boxHeight);
-    }
+    const signatureAreaY1 = finalY;
+    const signatureAreaY2 = finalY + 15;
+    const pageContentWidth = pageWidth - margin * 2;
+
+    // Fila 1 de firmas
+    const numSignatures1 = 4;
+    const sigWidth1 = pageContentWidth / numSignatures1;
+    let currentX1 = margin;
+    drawSignature(["Firma y sello Administrador Local", "Sale el bien"], currentX1, signatureAreaY1, sigWidth1);
+    currentX1 += sigWidth1;
+    drawSignature(["Firma y sello remite la Salida"], currentX1, signatureAreaY1, sigWidth1);
+    currentX1 += sigWidth1;
+    drawSignature(["Firma y Sello Administrador local", "Ingresa el bien"], currentX1, signatureAreaY1, sigWidth1);
+    currentX1 += sigWidth1;
+    drawSignature(["Firma y sello recibe el Bien"], currentX1, signatureAreaY1, sigWidth1);
+
+    // Fila 2 de firmas
+    const numSignatures2 = 3;
+    const sigWidth2 = pageContentWidth / numSignatures2;
+    let currentX2 = margin;
+    drawSignature(["Datos Vehiculo", String(headerData.datosVehiculo || '')], currentX2, signatureAreaY2, sigWidth2);
+    currentX2 += sigWidth2;
+    drawSignature(["Nombre y firma Responsable del traslado", String(headerData.nombreResponsableTraslado || '')], currentX2, signatureAreaY2, sigWidth2);
+    currentX2 += sigWidth2;
+    drawSignature(["Nombre y firma Unidad Patrimonio", String(headerData.nombreUnidadPatrimonio || '')], currentX2, signatureAreaY2, sigWidth2);
 
 
     doc.save(`Acta_${(headerData.tipo || 'Reporte').replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
