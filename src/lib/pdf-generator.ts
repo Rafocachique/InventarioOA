@@ -281,12 +281,14 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     };
     
     const signatureBlockHeight = 50; 
+    
+    // Check if there is enough space for the signatures, otherwise add a new page.
     if (finalY > doc.internal.pageSize.getHeight() - signatureBlockHeight) {
         doc.addPage();
         finalY = 20; 
     }
 
-    let signatureBlock1Y = finalY + 15;
+    let signatureBlock1Y = finalY + 20;
 
     const sigs1 = [
         ["FIRMA Y SELLO ADMINISTRADOR LOCAL", "(SALE EL BIEN)"],
@@ -300,7 +302,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         drawSignatureLine(lines, margin + (index * sigWidth1), signatureBlock1Y, sigWidth1);
     });
     
-    let signatureBlock2Y = signatureBlock1Y + 20;
+    let signatureBlock2Y = signatureBlock1Y + 25;
 
     const sigs2 = [
         {key: 'datosVehiculo', default: "DATOS VEHICULO"},
