@@ -194,35 +194,33 @@ export default function AssetSearchPage() {
     }, [searchTerm, allProducts]);
 
     const handleSelectProduct = (product: Product, isSelected: boolean) => {
-       const uniqueId = (product as ScanRecord).scanId || product.firebaseId;
+        const uniqueId = (product as ScanRecord).scanId || product.firebaseId;
         if (isSelected) {
-            const productToAdd = { 
-                ...product, 
+            const productToAdd = {
+                ...product,
                 Observacion_Reporte: product.Observacion || "",
-                // Ensure a unique ID for selection purposes if coming from search
-                scanId: (product as ScanRecord).scanId || `${product.firebaseId}-${Date.now()}` 
+                // Ensure a unique ID for selection purposes
+                scanId: (product as ScanRecord).scanId || product.firebaseId
             } as ScanRecord;
             setSelectedProducts(prev => [...prev, productToAdd]);
         } else {
-            setSelectedProducts(prev => prev.filter(p => p.scanId !== (product as ScanRecord).scanId));
+            setSelectedProducts(prev => prev.filter(p => (p.scanId || p.firebaseId) !== uniqueId));
         }
     };
     
     const isProductSelected = (product: Product) => {
-        const uniqueId = (product as ScanRecord).scanId;
-        if (!uniqueId) return false;
-        return selectedProducts.some(p => p.scanId === uniqueId);
+        const uniqueId = (product as ScanRecord).scanId || product.firebaseId;
+        return selectedProducts.some(p => (p.scanId || p.firebaseId) === uniqueId);
     };
 
     const handleSelectAllHistory = (isChecked: boolean) => {
         const visibleHistoryScans = filteredHistory;
-
         if (isChecked) {
-            const newProductsToAdd = visibleHistoryScans
-                .map(scan => ({ ...scan, Observacion_Reporte: scan.Observacion || "" }));
+            const newProductsToAdd = visibleHistoryScans.map(scan => ({ ...scan, Observacion_Reporte: scan.Observacion || "" }));
             setSelectedProducts(newProductsToAdd);
         } else {
-            setSelectedProducts([]);
+            const visibleScanIds = new Set(visibleHistoryScans.map(s => s.scanId));
+            setSelectedProducts(prev => prev.filter(p => !visibleScanIds.has(p.scanId)));
         }
     };
 
@@ -463,8 +461,7 @@ export default function AssetSearchPage() {
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="asignacion">Acta de Asignación de Bienes</SelectItem>
-                                            <SelectItem value="baja">Acta de Baja de Bienes</SelectItem>
-                                            <SelectItem value="transferencia">Acta de Transferencia de Bienes</SelectItem>
+                                            <SelectItem value="baja">Acta de Baja / Transferencia de Bienes</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
