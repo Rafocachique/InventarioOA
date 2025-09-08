@@ -67,7 +67,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
 
     // --- Datos del Usuario con Recuadro ---
     (doc as any).autoTable({
-        head: [[{ content: 'DATOS DEL USUARIO', styles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 9, halign: 'center' } }]],
+        head: [[{ content: 'DATOS DEL USUARIO', styles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 9, halign: 'center', fontStyle: 'bold' } }]],
         startY: y,
         theme: 'grid', 
         styles: { lineColor: [0,0,0], lineWidth: 0.1, textColor: [0, 0, 0] },
@@ -109,7 +109,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         head: [[{ content: 'DESCRIPCION DE LOS BIENES', styles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 9, halign: 'center', fontStyle: 'bold' } }]],
         startY: y,
         theme: 'grid',
-        styles: { lineColor: [0,0,0], lineWidth: 0.1 },
+        styles: { lineColor: [0,0,0], lineWidth: 0.1, textColor: [0,0,0] },
     });
     y = (doc as any).lastAutoTable.finalY;
 
@@ -194,48 +194,98 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     doc.text('ORDEN DE SALIDA, REINGRESO Y DESPLAZAMIENTO INTERNO DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
     y += 8;
 
-    const createTwoColumnTable = (data: any[], startY: number, options = {}) => {
-        (doc as any).autoTable({
-            body: data,
-            startY: startY,
-            theme: 'grid',
-            styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0], ...options },
-            columnStyles: { 0: { fontStyle: 'bold' } },
-        });
-        return (doc as any).lastAutoTable.finalY;
-    }
+    const drawStyledCellText = (label: string, value: string, data: any) => {
+        const { doc, cell, settings } = data;
+        const x = cell.x + settings.cellPadding;
+        const y = cell.y + cell.height / 2 + 1.5; // Adjust for vertical alignment
+
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${label}:`, x, y);
+        
+        const labelWidth = doc.getTextWidth(`${label}: `);
+
+        doc.setFont('helvetica', 'normal');
+        doc.text(String(value || '').toUpperCase(), x + labelWidth, y);
+    };
 
     // Header section
-    const headerDetails = [
-        [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 4, styles: { fontStyle: 'bold', textColor: [0,0,0] } }],
-        [
-            `Tipo: ${String(headerData.tipo || '').toUpperCase()}`, 
-            `Salida: ${String(headerData.salida || '').toUpperCase()}`,
-            `Reingreso: ${String(headerData.reingreso || '').toUpperCase()}`,
-            `Numero Movimiento: ${String(headerData.numeroMovimiento || '').toUpperCase()}`
+    (doc as any).autoTable({
+        body: [
+            [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 4, styles: { fontStyle: 'bold', textColor: [0,0,0], fontSize: 8 } }],
+            [
+                { content: '', name: 'tipo' },
+                { content: '', name: 'salida' },
+                { content: '', name: 'reingreso' },
+                { content: '', name: 'numeroMovimiento' }
+            ],
+            [
+                { content: '', name: 'motivo' },
+                { content: '', name: 'mantenimiento' },
+                { content: '', name: 'comisionServicio' },
+                { content: '', name: 'desplazamiento' }
+            ],
+            [{ content: '', name: 'capacitacionEvento', colSpan: 4 }]
         ],
-        [
-            `Motivo: ${String(headerData.motivo || '').toUpperCase()}`, 
-            `Mantenimiento: ${String(headerData.mantenimiento || '').toUpperCase()}`,
-            `Comision Servicio: ${String(headerData.comisionServicio || '').toUpperCase()}`,
-            `Desplazamiento: ${String(headerData.desplazamiento || '').toUpperCase()}`
-        ],
-        [{ content: `Capacitacion o Evento: ${String(headerData.capacitacionEvento || '').toUpperCase()}`, colSpan: 4 }]
-    ];
-    y = createTwoColumnTable(headerDetails, y);
+        startY: y,
+        theme: 'grid',
+        styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+        didDrawCell: (data: any) => {
+            doc.setTextColor(0,0,0);
+            const cellName = data.cell.raw.name;
+            if (data.row.section === 'body' && cellName) {
+                switch(cellName) {
+                    case 'tipo': drawStyledCellText('Tipo', headerData.tipo, data); break;
+                    case 'salida': drawStyledCellText('Salida', headerData.salida, data); break;
+                    case 'reingreso': drawStyledCellText('Reingreso', headerData.reingreso, data); break;
+                    case 'numeroMovimiento': drawStyledCellText('Numero Movimiento', headerData.numeroMovimiento, data); break;
+                    case 'motivo': drawStyledCellText('Motivo', headerData.motivo, data); break;
+                    case 'mantenimiento': drawStyledCellText('Mantenimiento', headerData.mantenimiento, data); break;
+                    case 'comisionServicio': drawStyledCellText('Comision Servicio', headerData.comisionServicio, data); break;
+                    case 'desplazamiento': drawStyledCellText('Desplazamiento', headerData.desplazamiento, data); break;
+                    case 'capacitacionEvento': drawStyledCellText('Capacitacion o Evento', headerData.capacitacionEvento, data); break;
+                }
+            }
+        }
+    });
+    y = (doc as any).lastAutoTable.finalY;
     y+= 2;
 
     // Remite y Recibe
-    const remiteRecibeDetails = [
-        [{ content: 'DATOS DEL RESPONSABLE DEL REMITE', styles: { fontStyle: 'bold', halign: 'center', fillColor: [255, 255, 255], textColor: [0,0,0] } }, { content: 'DATOS RESPONSABLE DEL RECIBE', styles: { fontStyle: 'bold', halign: 'center', fillColor: [255, 255, 255], textColor: [0,0,0] } }],
-        [`Nombre y Apellidos: ${String(headerData.remiteNombre || '').toUpperCase()}`, `Nombre y Apellidos: ${String(headerData.recibeNombre || '').toUpperCase()}`],
-        [`DNI: ${String(headerData.remiteDNI || '').toUpperCase()}`, `DNI: ${String(headerData.recibeDNI || '').toUpperCase()}`],
-        [`Correo Electronico: ${String(headerData.remiteCorreo || '').toUpperCase()}`, `Correo Electronico: ${String(headerData.recibeCorreo || '').toUpperCase()}`],
-        [`Unidad Organica: ${String(headerData.remiteUnidadOrganica || '').toUpperCase()}`, `Unidad Organica: ${String(headerData.recibeUnidadOrganica || '').toUpperCase()}`],
-        [`Local o Sede: ${String(headerData.remiteLocalSede || '').toUpperCase()}`, `Local o Sede: ${String(headerData.recibeLocalSede || '').toUpperCase()}`],
-        [`Oficio: ${String(headerData.remiteOficio || '').toUpperCase()}`, `Documento: ${String(headerData.recibeDocumento || '').toUpperCase()}`],
-    ];
-    y = createTwoColumnTable(remiteRecibeDetails, y);
+    (doc as any).autoTable({
+        head: [[{ content: 'DATOS DEL RESPONSABLE DEL REMITE', styles: { fontStyle: 'bold', halign: 'center', fillColor: [255, 255, 255], textColor: [0,0,0] } }, { content: 'DATOS RESPONSABLE DEL RECIBE', styles: { fontStyle: 'bold', halign: 'center', fillColor: [255, 255, 255], textColor: [0,0,0] } }]],
+        body: [
+            [{content: '', name: 'remiteNombre'}, {content: '', name: 'recibeNombre'}],
+            [{content: '', name: 'remiteDNI'}, {content: '', name: 'recibeDNI'}],
+            [{content: '', name: 'remiteCorreo'}, {content: '', name: 'recibeCorreo'}],
+            [{content: '', name: 'remiteUnidadOrganica'}, {content: '', name: 'recibeUnidadOrganica'}],
+            [{content: '', name: 'remiteLocalSede'}, {content: '', name: 'recibeLocalSede'}],
+            [{content: '', name: 'remiteOficio'}, {content: '', name: 'recibeDocumento'}],
+        ],
+        startY: y,
+        theme: 'grid',
+        styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+        didDrawCell: (data: any) => {
+             doc.setTextColor(0,0,0);
+             const cellName = data.cell.raw.name;
+             if (data.row.section === 'body' && cellName) {
+                switch(cellName) {
+                    case 'remiteNombre': drawStyledCellText('Nombre y Apellidos', headerData.remiteNombre, data); break;
+                    case 'recibeNombre': drawStyledCellText('Nombre y Apellidos', headerData.recibeNombre, data); break;
+                    case 'remiteDNI': drawStyledCellText('DNI', headerData.remiteDNI, data); break;
+                    case 'recibeDNI': drawStyledCellText('DNI', headerData.recibeDNI, data); break;
+                    case 'remiteCorreo': drawStyledCellText('Correo Electronico', headerData.remiteCorreo, data); break;
+                    case 'recibeCorreo': drawStyledCellText('Correo Electronico', headerData.recibeCorreo, data); break;
+                    case 'remiteUnidadOrganica': drawStyledCellText('Unidad Organica', headerData.remiteUnidadOrganica, data); break;
+                    case 'recibeUnidadOrganica': drawStyledCellText('Unidad Organica', headerData.recibeUnidadOrganica, data); break;
+                    case 'remiteLocalSede': drawStyledCellText('Local o Sede', headerData.remiteLocalSede, data); break;
+                    case 'recibeLocalSede': drawStyledCellText('Local o Sede', headerData.recibeLocalSede, data); break;
+                    case 'remiteOficio': drawStyledCellText('Oficio', headerData.remiteOficio, data); break;
+                    case 'recibeDocumento': drawStyledCellText('Documento', headerData.recibeDocumento, data); break;
+                }
+             }
+        }
+    });
+    y = (doc as any).lastAutoTable.finalY;
     y+= 2;
 
     // Tabla de productos
@@ -243,7 +293,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         head: [[{ content: 'DESCRIPCION DE LOS BIENES', styles: { halign: 'center', fontStyle: 'bold', fillColor: [255, 255, 255], textColor: [0,0,0] } }]],
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 8, lineColor: [0,0,0], lineWidth: 0.1 },
+        styles: { fontSize: 8, lineColor: [0,0,0], lineWidth: 0.1, textColor: [0, 0, 0] },
     });
     y = (doc as any).lastAutoTable.finalY;
 
@@ -302,7 +352,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         }
     };
     
-    const signatureBlockY1 = finalY + 40;
+    const signatureBlockY1 = finalY + 15;
     const signatureBlockY2 = signatureBlockY1 + 40;
 
     const pageContentWidth = pageWidth - margin * 2;
