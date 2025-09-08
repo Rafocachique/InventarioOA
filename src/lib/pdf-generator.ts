@@ -287,7 +287,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         });
     };
     
-    const signatureBlockY1 = finalY + 15;
+    const signatureBlockY1 = finalY + 40;
     const signatureBlockY2 = signatureBlockY1 + 40;
 
     const pageContentWidth = pageWidth - margin * 2;
