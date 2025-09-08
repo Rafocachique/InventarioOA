@@ -32,7 +32,7 @@ interface ScanRecord extends Product {
     scanId: string;
 }
 
-type ReportFormat = "asignacion" | "baja" | "transferencia" | "";
+type ReportFormat = "asignacion" | "baja" | "";
 
 const reportColumnMapping: Record<string, string> = {
     'Item': 'item',
@@ -77,7 +77,7 @@ export default function AssetSearchPage() {
         oficinaArea: "",
         numeroMovimiento: "",
         motivo: "",
-        tipo: "",
+        tipo: "Baja",
         salida: "",
         mantenimiento: "",
         reingreso: "",
@@ -107,6 +107,10 @@ export default function AssetSearchPage() {
         setReportHeaderData(prev => ({...prev, [id]: value}));
     };
     
+    const handleSelectChange = (id: string, value: string) => {
+        setReportHeaderData(prev => ({...prev, [id]: value}));
+    }
+
     const handleObservationChange = (uniqueId: string, value: string) => {
         const updateProductState = (products: ScanRecord[]) => 
             products.map(p => 
@@ -199,8 +203,7 @@ export default function AssetSearchPage() {
             const productToAdd = {
                 ...product,
                 Observacion_Reporte: product.Observacion || "",
-                // Ensure a unique ID for selection purposes
-                scanId: (product as ScanRecord).scanId || product.firebaseId
+                scanId: uniqueId
             } as ScanRecord;
             setSelectedProducts(prev => [...prev, productToAdd]);
         } else {
@@ -235,8 +238,8 @@ export default function AssetSearchPage() {
     const handleGeneratePDF = () => {
       if (selectedFormat === 'asignacion') {
         generateAsignacionPDF(reportHeaderData, selectedProducts);
-      } else if (selectedFormat === 'baja' || selectedFormat === 'transferencia') {
-        generateBajaTransferenciaPDF(reportHeaderData, selectedProducts, selectedFormat);
+      } else if (selectedFormat === 'baja') {
+        generateBajaTransferenciaPDF(reportHeaderData, selectedProducts);
       } else {
         toast({
             variant: "destructive",
@@ -509,14 +512,25 @@ export default function AssetSearchPage() {
                                          </div>
                                      </div>
                                 )}
-                                {(selectedFormat === 'baja' || selectedFormat === 'transferencia') && (
+                                {selectedFormat === 'baja' && (
                                     <div className="space-y-6 border-t pt-4">
-                                        <h4 className="font-medium">2. Complete los datos para el Acta de {selectedFormat.charAt(0).toUpperCase() + selectedFormat.slice(1)}</h4>
+                                        <h4 className="font-medium">2. Complete los datos para el Acta de Baja / Transferencia</h4>
                                         
                                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-4">
                                             <div className="space-y-2 sm:col-span-full"><Label htmlFor="entidad">Entidad</Label><Input id="entidad" value={reportHeaderData.entidad} onChange={handleReportDataChange} /></div>
                                             
-                                            <div className="space-y-2"><Label htmlFor="tipo">Tipo ({selectedFormat})</Label><Input id="tipo" value={reportHeaderData.tipo} onChange={handleReportDataChange} /></div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="tipo">Tipo</Label>
+                                                <Select value={reportHeaderData.tipo} onValueChange={(value) => handleSelectChange('tipo', value)}>
+                                                    <SelectTrigger id="tipo">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Baja">Baja</SelectItem>
+                                                        <SelectItem value="Transferencia">Transferencia</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
                                             <div className="space-y-2"><Label htmlFor="motivo">Motivo</Label><Input id="motivo" value={reportHeaderData.motivo} onChange={handleReportDataChange} /></div>
                                             <div className="space-y-2"><Label htmlFor="salida">Salida</Label><Input id="salida" value={reportHeaderData.salida} onChange={handleReportDataChange} /></div>
                                             <div className="space-y-2"><Label htmlFor="mantenimiento">Mantenimiento</Label><Input id="mantenimiento" value={reportHeaderData.mantenimiento} onChange={handleReportDataChange} /></div>
@@ -551,7 +565,7 @@ export default function AssetSearchPage() {
                                                 </div>
                                             </div>
                                         </div>
-                                         {selectedFormat === 'transferencia' && (
+                                         {(reportHeaderData.tipo === 'Transferencia') && (
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 pt-4 border-t">
                                                 <div className="space-y-2"><Label htmlFor="datosVehiculo">Datos Vehículo</Label><Input id="datosVehiculo" value={reportHeaderData.datosVehiculo} onChange={handleReportDataChange} /></div>
                                                 <div className="space-y-2"><Label htmlFor="nombreResponsableTraslado">Nombre y firma Responsable del traslado</Label><Input id="nombreResponsableTraslado" value={reportHeaderData.nombreResponsableTraslado} onChange={handleReportDataChange} /></div>
@@ -583,3 +597,4 @@ export default function AssetSearchPage() {
     </div>
   );
 }
+

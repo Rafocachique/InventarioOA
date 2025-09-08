@@ -44,8 +44,8 @@ const createHeaderTable = (doc: jsPDF, body: any[], startY: number, options = {}
         theme: 'plain',
         styles: { fontSize: 8, cellPadding: 1.5, ...options },
         didDrawCell: (data: any) => {
-            if (data.row.index === data.table.body.length - 1) {
-                 doc.line(margin, data.cell.y + data.cell.height, pageWidth - margin, data.cell.y + data.cell.height);
+            if (data.row.index === data.table.body.length - 1 && data.table.body.length > 0) {
+                 doc.line(data.table.settings.margin.left, data.cell.y + data.cell.height, pageWidth - data.table.settings.margin.right, data.cell.y + data.cell.height);
             }
         },
         margin: { left: margin, right: margin }
@@ -55,13 +55,13 @@ const createHeaderTable = (doc: jsPDF, body: any[], startY: number, options = {}
 
 export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Product[]) => {
     const doc = new jsPDF({ orientation: 'landscape' });
-    let y = 15;
+    let y = 10;
 
     // Títulos
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    y = createHeaderTable(doc, [[{ content: 'ANEXO N° 03', styles: { halign: 'center', fontSize: 10 } }]], y - 5);
-    y = createHeaderTable(doc, [[{ content: 'FICHA ASIGNACION EN USO Y DEVOLUCION DE BIENES MUEBLES PATRIMONIALES', styles: { halign: 'center' } }]], y - 2);
+    y = createHeaderTable(doc, [[{ content: 'ANEXO N° 03', styles: { halign: 'center', fontSize: 10 } }]], y);
+    y = createHeaderTable(doc, [[{ content: 'FICHA ASIGNACION EN USO Y DEVOLUCION DE BIENES MUEBLES PATRIMONIALES', styles: { halign: 'center' } }]], y - 5);
     
     // Cabecera Entidad y Fecha
     y = createHeaderTable(doc, [[`ENTIDAD U ORGANIZACIÓN DE LA ENTIDAD: ${headerData.entidad.toUpperCase()}`,{ content: `FECHA: ${headerData.fecha.toUpperCase()}`, styles: { halign: 'right' } }]], y + 2);
@@ -154,7 +154,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
 };
 
 
-export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, products: Product[], formatType: 'baja' | 'transferencia') => {
+export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, products: Product[]) => {
     const doc = new jsPDF({ orientation: 'landscape' });
     const margin = 14;
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -180,18 +180,18 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     const headerDetails = [
         [{ content: `ENTIDAD: ${headerData.entidad.toUpperCase()}`, colSpan: 4, styles: { fontStyle: 'bold' } }],
         [
-            `Tipo: ${formatType === 'baja' ? 'BAJA' : 'TRANSFERENCIA'}`, 
-            `Salida: ${headerData.salida.toUpperCase()}`,
-            `Reingreso: ${headerData.reingreso.toUpperCase()}`,
-            `Numero Movimiento: ${headerData.numeroMovimiento.toUpperCase()}`
+            `Tipo: ${(headerData.tipo || '').toUpperCase()}`, 
+            `Salida: ${(headerData.salida || '').toUpperCase()}`,
+            `Reingreso: ${(headerData.reingreso || '').toUpperCase()}`,
+            `Numero Movimiento: ${(headerData.numeroMovimiento || '').toUpperCase()}`
         ],
         [
-            `Motivo: ${headerData.motivo.toUpperCase()}`, 
-            `Mantenimiento: ${headerData.mantenimiento.toUpperCase()}`,
-            `Comision Servicio: ${headerData.comisionServicio.toUpperCase()}`,
-            `Desplazamiento: ${headerData.desplazamiento.toUpperCase()}`
+            `Motivo: ${(headerData.motivo || '').toUpperCase()}`, 
+            `Mantenimiento: ${(headerData.mantenimiento || '').toUpperCase()}`,
+            `Comision Servicio: ${(headerData.comisionServicio || '').toUpperCase()}`,
+            `Desplazamiento: ${(headerData.desplazamiento || '').toUpperCase()}`
         ],
-        [{ content: `Capacitacion o Evento: ${headerData.capacitacionEvento.toUpperCase()}`, colSpan: 4 }]
+        [{ content: `Capacitacion o Evento: ${(headerData.capacitacionEvento || '').toUpperCase()}`, colSpan: 4 }]
     ];
     y = createTwoColumnTable(headerDetails, y);
     y+= 2;
@@ -199,12 +199,12 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     // Remite y Recibe
     const remiteRecibeDetails = [
         [{ content: 'DATOS DEL RESPONSABLE DEL REMITE', styles: { fontStyle: 'bold', halign: 'center' } }, { content: 'DATOS RESPONSABLE DEL RECIBE', styles: { fontStyle: 'bold', halign: 'center' } }],
-        [`Nombre y Apellidos: ${headerData.remiteNombre.toUpperCase()}`, `Nombre y Apellidos: ${headerData.recibeNombre.toUpperCase()}`],
-        [`DNI: ${headerData.remiteDNI.toUpperCase()}`, `DNI: ${headerData.recibeDNI.toUpperCase()}`],
-        [`Correo Electronico: ${headerData.remiteCorreo.toUpperCase()}`, `Correo Electronico: ${headerData.recibeCorreo.toUpperCase()}`],
-        [`Unidad Organica: ${headerData.remiteUnidadOrganica.toUpperCase()}`, `Unidad Organica: ${headerData.recibeUnidadOrganica.toUpperCase()}`],
-        [`Local o Sede: ${headerData.remiteLocalSede.toUpperCase()}`, `Local o Sede: ${headerData.recibeLocalSede.toUpperCase()}`],
-        [`Oficio: ${headerData.remiteOficio.toUpperCase()}`, `Documento: ${headerData.recibeDocumento.toUpperCase()}`],
+        [`Nombre y Apellidos: ${(headerData.remiteNombre || '').toUpperCase()}`, `Nombre y Apellidos: ${(headerData.recibeNombre || '').toUpperCase()}`],
+        [`DNI: ${(headerData.remiteDNI || '').toUpperCase()}`, `DNI: ${(headerData.recibeDNI || '').toUpperCase()}`],
+        [`Correo Electronico: ${(headerData.remiteCorreo || '').toUpperCase()}`, `Correo Electronico: ${(headerData.recibeCorreo || '').toUpperCase()}`],
+        [`Unidad Organica: ${(headerData.remiteUnidadOrganica || '').toUpperCase()}`, `Unidad Organica: ${(headerData.recibeUnidadOrganica || '').toUpperCase()}`],
+        [`Local o Sede: ${(headerData.remiteLocalSede || '').toUpperCase()}`, `Local o Sede: ${(headerData.recibeLocalSede || '').toUpperCase()}`],
+        [`Oficio: ${(headerData.remiteOficio || '').toUpperCase()}`, `Documento: ${(headerData.recibeDocumento || '').toUpperCase()}`],
     ];
     y = createTwoColumnTable(remiteRecibeDetails, y);
     y+= 2;
@@ -265,7 +265,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
 
     finalY += 20;
 
-    if (formatType === 'transferencia') {
+    if (headerData.tipo === 'Transferencia') {
         const bottomSignatureWidth = (pageWidth - (margin*2) - 10) / 3;
         signatureBlock("Datos Vehiculo", "", startX, finalY, bottomSignatureWidth);
         signatureBlock("Nombre y firma Responsable del traslado", "", startX + bottomSignatureWidth + 5, finalY, bottomSignatureWidth);
@@ -276,5 +276,5 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         signatureBlock("Nombre y firma Responsable del traslado", "", startX + bottomSignatureWidth + 5, finalY, bottomSignatureWidth);
     }
 
-    doc.save(`Acta_${formatType === 'baja' ? 'Baja' : 'Transferencia'}_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`Acta_${(headerData.tipo || 'Reporte').replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
 }
