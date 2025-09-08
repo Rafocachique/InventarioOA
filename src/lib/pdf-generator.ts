@@ -194,52 +194,55 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     doc.text('ORDEN DE SALIDA, REINGRESO Y DESPLAZAMIENTO INTERNO DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
     y += 8;
 
-    // --- Función para dibujar texto con etiqueta en negrita y valor normal ---
     const drawStyledCellText = (docInstance: any, data: any) => {
         const { cell, settings } = data;
-        const label = cell.raw?.label;
-        const value = cell.raw?.value;
+        
+        // --- Rigorous validation ---
+        if (!cell || !cell.raw || !docInstance) {
+            return;
+        }
 
-        // --- Defensive checks to prevent crashes ---
-        if (!label || typeof label !== 'string' || !cell || typeof cell.x !== 'number' || typeof cell.y !== 'number' || typeof cell.height !== 'number') {
+        const label = cell.raw.label;
+        const value = cell.raw.value;
+        
+        if (typeof label !== 'string' || !isFinite(cell.x) || !isFinite(cell.y)) {
             return;
         }
 
         const x = cell.x + settings.cellPadding;
         const yPos = cell.y + cell.height / 2 + docInstance.getLineHeight() / 3.5;
 
-        if (!isFinite(x) || !isFinite(yPos)) {
-            return;
-        }
-        
         docInstance.setFont('helvetica', 'bold');
-        docInstance.text(`${label}:`, x, yPos);
+        docInstance.text(`${label}: `, x, yPos);
         
         const labelWidth = docInstance.getTextWidth(`${label}: `);
         
         docInstance.setFont('helvetica', 'normal');
         docInstance.text(String(value || '').toUpperCase(), x + labelWidth, yPos);
-    }
-    
-    // --- Bloque de Datos Superior ---
-    (doc as any).autoTable({
-        body: [
-            [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 4, styles: { fontStyle: 'bold', fontSize: 8 } }],
-            [
-                { content: '', label: 'Tipo', value: headerData.tipo },
-                { content: '', label: 'Salida', value: headerData.salida },
-                { content: '', label: 'Reingreso', value: headerData.reingreso },
-                { content: '', label: 'Numero Movimiento', value: headerData.numeroMovimiento }
-            ],
-            [
-                { content: '', label: 'Motivo', value: headerData.motivo, colSpan: 2 },
-                { content: '', label: 'Mantenimiento', value: headerData.mantenimiento },
-                { content: '', label: 'Comision Servicio', value: headerData.comisionServicio },
-            ],
-            [
-                { content: '', label: 'Capacitacion o Evento', value: headerData.capacitacionEvento, colSpan: 4 },
-            ]
+    };
+
+    // --- Bloque de Datos Superior (Reconstruido) ---
+    const topTableBody = [
+        [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 4, styles: { fontStyle: 'bold', fontSize: 8, textColor: [0,0,0], fillColor: [255, 255, 255] } }],
+        [
+            { content: '', label: 'TIPO', value: headerData.tipo },
+            { content: '', label: 'SALIDA', value: headerData.salida },
+            { content: '', label: 'REINGRESO', value: headerData.reingreso },
+            { content: '', label: 'NUMERO MOVIMIENTO', value: headerData.numeroMovimiento }
         ],
+        [
+            { content: '', label: 'MOTIVO', value: headerData.motivo, colSpan: 2 },
+            { content: '', label: 'MANTENIMIENTO', value: headerData.mantenimiento },
+            { content: '', label: 'COMISION SERVICIO', value: headerData.comisionServicio },
+        ],
+        [
+           { content: '', label: 'DESPLAZAMIENTO', value: headerData.desplazamiento, colSpan: 2 },
+           { content: '', label: 'CAPACITACION O EVENTO', value: headerData.capacitacionEvento, colSpan: 2 },
+        ]
+    ];
+
+    (doc as any).autoTable({
+        body: topTableBody,
         startY: y,
         theme: 'grid',
         styles: { fontSize: 7, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
@@ -250,35 +253,35 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         },
     });
     y = (doc as any).lastAutoTable.finalY + 2;
-    
+
 
     // --- Bloque de Remite y Recibe ---
     const remiteRecibeBody = [
-        [`Nombre y Apellidos: ${String(headerData.remiteNombre || '').toUpperCase()}`, `Nombre y Apellidos: ${String(headerData.recibeNombre || '').toUpperCase()}`],
-        [`DNI: ${String(headerData.remiteDNI || '').toUpperCase()}`, `DNI: ${String(headerData.recibeDNI || '').toUpperCase()}`],
-        [`Correo Electronico: ${String(headerData.remiteCorreo || '').toUpperCase()}`, `Correo Electronico: ${String(headerData.recibeCorreo || '').toUpperCase()}`],
-        [`Unidad Organica: ${String(headerData.remiteUnidadOrganica || '').toUpperCase()}`, `Unidad Organica: ${String(headerData.recibeUnidadOrganica || '').toUpperCase()}`],
-        [`Local o Sede: ${String(headerData.remiteLocalSede || '').toUpperCase()}`, `Local o Sede: ${String(headerData.recibeLocalSede || '').toUpperCase()}`],
-        [`Oficio: ${String(headerData.remiteOficio || '').toUpperCase()}`, `Documento: ${String(headerData.recibeDocumento || '').toUpperCase()}`],
+        [{ content: `Nombre y Apellidos: ${String(headerData.remiteNombre || '').toUpperCase()}`}, {content: `Nombre y Apellidos: ${String(headerData.recibeNombre || '').toUpperCase()}`}],
+        [{ content: `DNI: ${String(headerData.remiteDNI || '').toUpperCase()}`}, {content: `DNI: ${String(headerData.recibeDNI || '').toUpperCase()}`}],
+        [{ content: `Correo Electronico: ${String(headerData.remiteCorreo || '').toUpperCase()}`}, {content: `Correo Electronico: ${String(headerData.recibeCorreo || '').toUpperCase()}`}],
+        [{ content: `Unidad Organica: ${String(headerData.remiteUnidadOrganica || '').toUpperCase()}`}, {content: `Unidad Organica: ${String(headerData.recibeUnidadOrganica || '').toUpperCase()}`}],
+        [{ content: `Local o Sede: ${String(headerData.remiteLocalSede || '').toUpperCase()}`}, {content: `Local o Sede: ${String(headerData.recibeLocalSede || '').toUpperCase()}`}],
+        [{ content: `Oficio: ${String(headerData.remiteOficio || '').toUpperCase()}`}, {content: `Documento: ${String(headerData.recibeDocumento || '').toUpperCase()}`}],
     ];
 
     (doc as any).autoTable({
         head: [
-            [{ content: 'DATOS DEL RESPONSABLE DEL REMITE', styles: { fontStyle: 'bold', halign: 'center' } }, 
+            [{ content: 'DATOS DEL RESPONSABLE DEL REMITE', styles: { fontStyle: 'bold', halign: 'center' } },
              { content: 'DATOS RESPONSABLE DEL RECIBE', styles: { fontStyle: 'bold', halign: 'center' } }]
         ],
         body: remiteRecibeBody,
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'normal' },
-        headStyles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontStyle: 'bold', halign: 'center'},
+        styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+        headStyles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontStyle: 'bold', halign: 'center', fontSize: 8},
         bodyStyles: { fontStyle: 'normal' },
     });
     y = (doc as any).lastAutoTable.finalY + 2;
 
     // --- Título de la Tabla de Productos ---
     (doc as any).autoTable({
-        head: [[{ content: 'DESCRIPCION DE LOS BIENES', styles: { halign: 'center', fontStyle: 'bold', fillColor: [255, 255, 255], textColor: [0,0,0] } }]],
+        head: [[{ content: 'DESCRIPCION DE LOS BIENES', styles: { halign: 'center', fontStyle: 'bold', fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 8 } }]],
         startY: y,
         theme: 'grid',
         styles: { fontSize: 8, lineColor: [0,0,0], lineWidth: 0.1 },
@@ -328,7 +331,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     };
     
     let signatureBlock1Y = finalY + 15;
-    if (signatureBlock1Y > doc.internal.pageSize.getHeight() - 50) {
+    if (signatureBlock1Y > doc.internal.pageSize.getHeight() - 60) {
         doc.addPage();
         signatureBlock1Y = 20;
     }
@@ -345,7 +348,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         drawSignatureLine(lines, margin + (index * sigWidth1), signatureBlock1Y, sigWidth1);
     });
     
-    let signatureBlock2Y = signatureBlock1Y + 20;
+    let signatureBlock2Y = signatureBlock1Y + 25;
 
     const sigs2 = [
         {key: 'datosVehiculo', default: "DATOS VEHICULO"},
