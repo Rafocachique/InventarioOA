@@ -51,7 +51,7 @@ const reportColumnMapping: Record<string, string> = {
 const reportHeaders = Object.keys(reportColumnMapping);
 
 
-export default function AssetSearchPage() {
+export default function SearchAndReportsPage() {
     const [searchTerm, setSearchTerm] = React.useState("");
     const [allProducts, setAllProducts] = React.useState<Product[]>([]);
     const [filteredResults, setFilteredResults] = React.useState<Product[]>([]);

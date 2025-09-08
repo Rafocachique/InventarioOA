@@ -14,7 +14,7 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/dashboard/data', label: 'Gestión de Datos', icon: Database },
   { href: '/dashboard/scan', label: 'Escanear y Verificar', icon: ScanLine },
-  { href: '/dashboard/reports', label: 'Búsqueda de Activos', icon: Search },
+  { href: '/dashboard/reports', label: 'Búsqueda y Reportes', icon: Search },
   { href: '/dashboard/roles', label: 'Gestión de Roles', icon: Users },
 ];
 
