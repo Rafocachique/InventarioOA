@@ -194,62 +194,87 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     doc.text('ORDEN DE SALIDA, REINGRESO Y DESPLAZAMIENTO INTERNO DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
     y += 8;
 
+    const drawStyledCellText = (doc: jsPDF, label: string, value: any, cell: any, settings: any) => {
+        if (!label) return;
+
+        const x = cell.x + settings.padding;
+        let yPos = cell.y + cell.height / 2 + doc.getLineHeight() / 2 - 1.5;
+
+        if (typeof cell.x !== 'number' || typeof cell.y !== 'number') return;
+        
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${label}:`, x, yPos);
+        
+        const labelWidth = doc.getTextWidth(`${label}: `);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.text(String(value || '').toUpperCase(), x + labelWidth, yPos);
+    }
     
     // Header section
     (doc as any).autoTable({
         body: [
-            [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 4, styles: { fontStyle: 'normal' } }],
+            [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 4, styles: { fontStyle: 'bold' } }],
             [
-                `Tipo: ${String(headerData.tipo || '').toUpperCase()}`,
-                `Salida: ${String(headerData.salida || '').toUpperCase()}`,
-                `Reingreso: ${String(headerData.reingreso || '').toUpperCase()}`,
-                `Numero Movimiento: ${String(headerData.numeroMovimiento || '').toUpperCase()}`
+                { content: 'Tipo', 'data-value': headerData.tipo },
+                { content: 'Salida', 'data-value': headerData.salida },
+                { content: 'Reingreso', 'data-value': headerData.reingreso },
+                { content: 'Numero Movimiento', 'data-value': headerData.numeroMovimiento }
             ],
             [
-                { content: `Motivo: ${String(headerData.motivo || '').toUpperCase()}`, colSpan: 2},
-                `Mantenimiento: ${String(headerData.mantenimiento || '').toUpperCase()}`,
-                `Comision Servicio: ${String(headerData.comisionServicio || '').toUpperCase()}`,
+                { content: 'Motivo', 'data-value': headerData.motivo, colSpan: 2 },
+                { content: 'Mantenimiento', 'data-value': headerData.mantenimiento },
+                { content: 'Comision Servicio', 'data-value': headerData.comisionServicio },
             ],
-             [
-                { content: `Capacitacion o Evento: ${String(headerData.capacitacionEvento || '').toUpperCase()}`, colSpan: 4 },
-             ]
+            [
+                { content: 'Capacitacion o Evento', 'data-value': headerData.capacitacionEvento, colSpan: 4 },
+            ]
         ],
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'normal' },
+        styles: { fontSize: 7, cellPadding: 1.5, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+        didDrawCell: (data: any) => {
+            if (data.row.index > 0 && data.section === 'body') {
+                drawStyledCellText(doc, data.cell.raw.content, data.cell.raw['data-value'], data.cell, { padding: 2 });
+            }
+        },
     });
     y = (doc as any).lastAutoTable.finalY + 2;
 
     // Remite y Recibe
+    const remiteRecibeBody = [
+        [`Nombre y Apellidos: ${String(headerData.remiteNombre || '').toUpperCase()}`, `Nombre y Apellidos: ${String(headerData.recibeNombre || '').toUpperCase()}`],
+        [`DNI: ${String(headerData.remiteDNI || '').toUpperCase()}`, `DNI: ${String(headerData.recibeDNI || '').toUpperCase()}`],
+        [`Correo Electronico: ${String(headerData.remiteCorreo || '').toUpperCase()}`, `Correo Electronico: ${String(headerData.recibeCorreo || '').toUpperCase()}`],
+        [`Unidad Organica: ${String(headerData.remiteUnidadOrganica || '').toUpperCase()}`, `Unidad Organica: ${String(headerData.recibeUnidadOrganica || '').toUpperCase()}`],
+        [`Local o Sede: ${String(headerData.remiteLocalSede || '').toUpperCase()}`, `Local o Sede: ${String(headerData.recibeLocalSede || '').toUpperCase()}`],
+        [`Oficio: ${String(headerData.remiteOficio || '').toUpperCase()}`, `Documento: ${String(headerData.recibeDocumento || '').toUpperCase()}`],
+    ];
+
     (doc as any).autoTable({
         head: [
             [{ content: 'DATOS DEL RESPONSABLE DEL REMITE', styles: { fontStyle: 'bold', halign: 'center' } }, 
              { content: 'DATOS RESPONSABLE DEL RECIBE', styles: { fontStyle: 'bold', halign: 'center' } }]
         ],
-        body: [
-            [`Nombre y Apellidos: ${String(headerData.remiteNombre || '').toUpperCase()}`, `Nombre y Apellidos: ${String(headerData.recibeNombre || '').toUpperCase()}`],
-            [`DNI: ${String(headerData.remiteDNI || '').toUpperCase()}`, `DNI: ${String(headerData.recibeDNI || '').toUpperCase()}`],
-            [`Correo Electronico: ${String(headerData.remiteCorreo || '').toUpperCase()}`, `Correo Electronico: ${String(headerData.recibeCorreo || '').toUpperCase()}`],
-            [`Unidad Organica: ${String(headerData.remiteUnidadOrganica || '').toUpperCase()}`, `Unidad Organica: ${String(headerData.recibeUnidadOrganica || '').toUpperCase()}`],
-            [`Local o Sede: ${String(headerData.remiteLocalSede || '').toUpperCase()}`, `Local o Sede: ${String(headerData.recibeLocalSede || '').toUpperCase()}`],
-            [`Oficio: ${String(headerData.remiteOficio || '').toUpperCase()}`, `Documento: ${String(headerData.recibeDocumento || '').toUpperCase()}`],
-        ],
+        body: remiteRecibeBody,
         startY: y,
         theme: 'grid',
         styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'normal' },
-        headStyles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontStyle: 'bold'},
+        headStyles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontStyle: 'bold', halign: 'center'},
+        bodyStyles: { fontStyle: 'normal' },
     });
     y = (doc as any).lastAutoTable.finalY + 2;
 
-    // Tabla de productos
+    // Tabla de productos Title
     (doc as any).autoTable({
-        head: [[{ content: 'DESCRIPCION DE LOS BIENES', styles: { halign: 'center', fontStyle: 'bold' } }]],
+        head: [[{ content: 'DESCRIPCION DE LOS BIENES', styles: { halign: 'center', fontStyle: 'bold', fillColor: [255, 255, 255] } }]],
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 8, lineColor: [0,0,0], lineWidth: 0.1, textColor: [0, 0, 0], fontStyle: 'normal' },
+        styles: { fontSize: 8, lineColor: [0,0,0], lineWidth: 0.1, textColor: [0, 0, 0] },
     });
     y = (doc as any).lastAutoTable.finalY;
-
+    
+    // Products table
     const tableBody = products.map((product, index) => {
         return tableHeaders.map(header => {
             if (header === 'Item') return index + 1;
@@ -295,7 +320,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         });
     };
     
-    const signatureBlock1Y = finalY + 20;
+    const signatureBlock1Y = finalY + 15;
     const signatureBlock2Y = signatureBlock1Y + 20;
 
     const sigs1 = [
@@ -309,25 +334,18 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     sigs1.forEach((lines, index) => {
         drawSignatureLine(lines, margin + (index * sigWidth1), signatureBlock1Y, sigWidth1);
     });
-
+    
     const sigs2 = [
-        ["DATOS VEHICULO"],
-        ["NOMBRE Y FIRMA RESPONSABLE DEL TRASLADO"],
-        ["NOMBRE Y FIRMA UNIDAD PATRIMONIO"]
+        {key: 'datosVehiculo', default: "DATOS VEHICULO"},
+        {key: 'nombreResponsableTraslado', default: "NOMBRE Y FIRMA RESPONSABLE DEL TRASLADO"},
+        {key: 'nombreUnidadPatrimonio', default: "NOMBRE Y FIRMA UNIDAD PATRIMONIO"}
     ];
     const numSignatures2 = sigs2.length;
     const sigWidth2 = (pageWidth - margin * 2) / numSignatures2;
-    sigs2.forEach((lines, index) => {
-        const textToDraw = [ String(headerData[ (lines[0].toLowerCase().replace(/ /g,'')) ] || lines[0] ).toUpperCase() ];
-        if (lines[0] === "DATOS VEHICULO") {
-            drawSignatureLine([String(headerData.datosVehiculo || "DATOS VEHICULO").toUpperCase()], margin + (index * sigWidth2), signatureBlock2Y, sigWidth2);
-        } else if (lines[0] === "NOMBRE Y FIRMA RESPONSABLE DEL TRASLADO") {
-             drawSignatureLine([String(headerData.nombreResponsableTraslado || "NOMBRE Y FIRMA RESPONSABLE DEL TRASLADO").toUpperCase()], margin + (index * sigWidth2), signatureBlock2Y, sigWidth2);
-        } else {
-            drawSignatureLine([String(headerData.nombreUnidadPatrimonio || "NOMBRE Y FIRMA UNIDAD PATRIMONIO").toUpperCase()], margin + (index * sigWidth2), signatureBlock2Y, sigWidth2);
-        }
+    sigs2.forEach((sig, index) => {
+        const text = String(headerData[sig.key] || sig.default).toUpperCase();
+        drawSignatureLine([text], margin + (index * sigWidth2), signatureBlock2Y, sigWidth2);
     });
-
 
     doc.save(`Acta_${(headerData.tipo || 'Reporte').replace(/ /g, '_').toUpperCase()}_${new Date().toISOString().split('T')[0]}.pdf`);
 }
