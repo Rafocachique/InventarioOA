@@ -263,8 +263,8 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     
     // Firmas
     const pageHeight = doc.internal.pageSize.getHeight();
-    // Check if there is enough space, otherwise add a new page. 80 is the approximate height of the signature block.
-    if (finalY > pageHeight - 80) { 
+    // Check if there is enough space, otherwise add a new page.
+    if (finalY > pageHeight - 120) { 
         doc.addPage();
         finalY = 20;
     }
@@ -287,13 +287,11 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         });
     };
     
-    // Increased vertical separation
-    const signatureBlockY1 = finalY + 30; // More space after the table
-    const signatureBlockY2 = signatureBlockY1 + 30; // More space between signature rows
+    const signatureBlockY1 = finalY + 40;
+    const signatureBlockY2 = signatureBlockY1 + 40;
 
     const pageContentWidth = pageWidth - margin * 2;
 
-    // Fila 1 de firmas
     const sigs1 = [
         ["FIRMA Y SELLO ADMINISTRADOR LOCAL", "SALE EL BIEN"],
         ["FIRMA Y SELLO REMITE LA SALIDA"],
@@ -306,7 +304,6 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         drawSignatureLine(lines, margin + (index * sigWidth1), signatureBlockY1, sigWidth1);
     });
 
-    // Fila 2 de firmas
     const sigs2 = [
         ["DATOS VEHICULO", headerData.datosVehiculo || null],
         ["NOMBRE Y FIRMA RESPONSABLE DEL TRASLADO", headerData.nombreResponsableTraslado || null],
