@@ -36,26 +36,24 @@ const tableHeaders = Object.keys(reportColumnMapping);
 
 
 const createHeaderTable = (doc: jsPDF, body: any[], startY: number, options = {}) => {
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 14;
     (doc as any).autoTable({
         body: body,
         startY: startY,
         theme: 'plain',
-        styles: { fontSize: 8, cellPadding: 1.5, ...options },
-        didDrawCell: (data: any) => {
-            if (data.row.index === data.table.body.length - 1 && data.table.body.length > 0) {
-                 doc.line(data.table.settings.margin.left, data.cell.y + data.cell.height, pageWidth - data.table.settings.margin.right, data.cell.y + data.cell.height);
-            }
+        styles: { fontSize: 8, cellPadding: 1, ...options },
+        columnStyles: {
+            0: { cellWidth: 90 },
+            1: { cellWidth: 90 },
+            2: { cellWidth: 'auto' },
         },
-        margin: { left: margin, right: margin }
+        margin: { left: 14, right: 14 }
     });
     return (doc as any).lastAutoTable.finalY;
 };
 
 export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Product[]) => {
     const doc = new jsPDF({ orientation: 'landscape' });
-    let y = 10; 
+    let y = 15; 
 
     // Títulos
     doc.setFontSize(11);
@@ -81,10 +79,12 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     y = createHeaderTable(doc, [[
         `ENTIDAD U ORGANIZACIÓN DE LA ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`,
         { content: `FECHA: ${String(headerData.fecha || '').toUpperCase()}`, styles: { halign: 'right' } }
-    ]], y + 2);
+    ]], y + 2, { styles: { cellPadding: 0, fontSize: 9 } });
+     y = (doc as any).lastAutoTable.finalY + 1;
+    doc.line(14, y, doc.internal.pageSize.width - 14, y);
     
     // Datos del Usuario Header
-    y = createHeaderTable(doc, [[{ content: 'DATOS DEL USUARIO', styles: { fontStyle: 'bold' } }]], y);
+    y = createHeaderTable(doc, [[{ content: 'DATOS DEL USUARIO', styles: { fontStyle: 'bold', fontSize: 9 } }]], y + 1, { styles: { cellPadding: 0 } });
 
     const userDataBody = [
         [
@@ -94,14 +94,17 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         ],
         [
             `Organo o Unidad Organica: ${String(headerData.organo || '').toUpperCase()}`,
-            `Local o sede: ${String(headerData.localSede || '').toUpperCase()}`
+            `Local o sede: ${String(headerData.localSede || '').toUpperCase()}`,
+            ''
         ],
         [
             `Direccion: ${String(headerData.direccion || '').toUpperCase()}`,
-            `Oficina o area: ${String(headerData.oficinaArea || '').toUpperCase()}`
+            `Oficina o area: ${String(headerData.oficinaArea || '').toUpperCase()}`,
+            ''
         ]
     ];
     y = createHeaderTable(doc, userDataBody, y);
+    doc.line(14, y, doc.internal.pageSize.width - 14, y);
 
 
     // Tabla de productos
@@ -260,18 +263,17 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     
     // Firmas
     const pageHeight = doc.internal.pageSize.getHeight();
-    if (finalY > pageHeight - 60) {
+    // Check if there is enough space, otherwise add a new page. 80 is the approximate height of the signature block.
+    if (finalY > pageHeight - 80) { 
         doc.addPage();
         finalY = 20;
-    } else {
-        finalY += 15;
     }
 
-    const drawSignatureLine = (textLines: string[], x: number, y: number, width: number) => {
+    const drawSignatureLine = (textLines: (string | null)[], x: number, y: number, width: number) => {
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
     
-        const lineLength = Math.min(width * 0.8, 60); // Max line length of 60
+        const lineLength = Math.min(width * 0.8, 60); 
         const lineXStart = x + (width - lineLength) / 2;
         const lineXEnd = lineXStart + lineLength;
         doc.line(lineXStart, y, lineXEnd, y);
@@ -284,9 +286,11 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
             }
         });
     };
+    
+    // Increased vertical separation
+    const signatureBlockY1 = finalY + 30; // More space after the table
+    const signatureBlockY2 = signatureBlockY1 + 30; // More space between signature rows
 
-    const signatureAreaY1 = finalY;
-    const signatureAreaY2 = finalY + 20; // Increased spacing
     const pageContentWidth = pageWidth - margin * 2;
 
     // Fila 1 de firmas
@@ -299,21 +303,20 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     const numSignatures1 = sigs1.length;
     const sigWidth1 = pageContentWidth / numSignatures1;
     sigs1.forEach((lines, index) => {
-        drawSignatureLine(lines, margin + (index * sigWidth1), signatureAreaY1, sigWidth1);
+        drawSignatureLine(lines, margin + (index * sigWidth1), signatureBlockY1, sigWidth1);
     });
 
     // Fila 2 de firmas
     const sigs2 = [
-        ["DATOS VEHICULO", String(headerData.datosVehiculo || '')],
-        ["NOMBRE Y FIRMA RESPONSABLE DEL TRASLADO", String(headerData.nombreResponsableTraslado || '')],
-        ["NOMBRE Y FIRMA UNIDAD PATRIMONIO", String(headerData.nombreUnidadPatrimonio || '')]
+        ["DATOS VEHICULO", headerData.datosVehiculo || null],
+        ["NOMBRE Y FIRMA RESPONSABLE DEL TRASLADO", headerData.nombreResponsableTraslado || null],
+        ["NOMBRE Y FIRMA UNIDAD PATRIMONIO", headerData.nombreUnidadPatrimonio || null]
     ];
     const numSignatures2 = sigs2.length;
     const sigWidth2 = pageContentWidth / numSignatures2;
     sigs2.forEach((lines, index) => {
-        drawSignatureLine(lines, margin + (index * sigWidth2), signatureAreaY2, sigWidth2);
+        drawSignatureLine(lines, margin + (index * sigWidth2), signatureBlockY2, sigWidth2);
     });
-
 
     doc.save(`Acta_${(headerData.tipo || 'Reporte').replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
 }
