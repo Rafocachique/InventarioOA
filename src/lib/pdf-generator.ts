@@ -66,7 +66,6 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         startY: y,
         theme: 'plain',
         styles: {cellPadding: 0},
-        margin: { top: 15 }
     });
     y = (doc as any).lastAutoTable.finalY - 5;
     
@@ -158,14 +157,14 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     const signatureY = pageHeight - 45;
     
     doc.line(50, signatureY, 110, signatureY); 
-    doc.text("Responsable", 80, signatureY + 5, { align: 'center' });
+    doc.text("Responsable".toUpperCase(), 80, signatureY + 5, { align: 'center' });
 
     doc.line(180, signatureY, 240, signatureY); 
-    doc.text("Jefe del area", 210, signatureY + 5, { align: 'center' });
+    doc.text("Jefe del area".toUpperCase(), 210, signatureY + 5, { align: 'center' });
 
     const signatureY2 = signatureY + 20;
     doc.line(115, signatureY2, 175, signatureY2); 
-    doc.text("Oficina Administracion", 145, signatureY2 + 5, { align: 'center' });
+    doc.text("Oficina Administracion".toUpperCase(), 145, signatureY2 + 5, { align: 'center' });
 
 
     doc.save(`Acta_Asignacion_${headerData.dni || 'usuario'}.pdf`);
@@ -180,7 +179,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
 
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('ORDEN SE SALIDA, REINGRESO Y DESPLAZAMIENTO INTERNO DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
+    doc.text('ORDEN DE SALIDA, REINGRESO Y DESPLAZAMIENTO INTERNO DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
     y += 8;
 
     const createTwoColumnTable = (data: any[], startY: number, options = {}) => {
@@ -258,58 +257,62 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         }
     });
     let finalY = (doc as any).lastAutoTable.finalY;
-
+    
     // Firmas
-    if (finalY > doc.internal.pageSize.getHeight() - 60) {
+    const pageHeight = doc.internal.pageSize.getHeight();
+    if (finalY > pageHeight - 60) {
         doc.addPage();
         finalY = 20;
     } else {
         finalY += 15;
     }
 
-    const drawSignature = (textLines: string[], x: number, y: number, width: number) => {
+    const drawSignatureLine = (textLines: string[], x: number, y: number, width: number) => {
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
     
-        const lineLength = width * 0.9;
+        const lineLength = Math.min(width * 0.8, 60); // Max line length of 60
         const lineXStart = x + (width - lineLength) / 2;
         const lineXEnd = lineXStart + lineLength;
         doc.line(lineXStart, y, lineXEnd, y);
         
-        let textY = y + 3;
+        let textY = y + 4;
         textLines.forEach(line => {
             if (line) {
                 doc.text(line.toUpperCase(), x + width / 2, textY, { align: 'center' });
-                textY += 3.5;
+                textY += 4;
             }
         });
     };
 
     const signatureAreaY1 = finalY;
-    const signatureAreaY2 = finalY + 15;
+    const signatureAreaY2 = finalY + 20; // Increased spacing
     const pageContentWidth = pageWidth - margin * 2;
 
     // Fila 1 de firmas
-    const numSignatures1 = 4;
+    const sigs1 = [
+        ["FIRMA Y SELLO ADMINISTRADOR LOCAL", "SALE EL BIEN"],
+        ["FIRMA Y SELLO REMITE LA SALIDA"],
+        ["FIRMA Y SELLO ADMINISTRADOR LOCAL", "INGRESA EL BIEN"],
+        ["FIRMA Y SELLO RECIBE EL BIEN"]
+    ];
+    const numSignatures1 = sigs1.length;
     const sigWidth1 = pageContentWidth / numSignatures1;
-    let currentX1 = margin;
-    drawSignature(["Firma y sello Administrador Local", "Sale el bien"], currentX1, signatureAreaY1, sigWidth1);
-    currentX1 += sigWidth1;
-    drawSignature(["Firma y sello remite la Salida"], currentX1, signatureAreaY1, sigWidth1);
-    currentX1 += sigWidth1;
-    drawSignature(["Firma y Sello Administrador local", "Ingresa el bien"], currentX1, signatureAreaY1, sigWidth1);
-    currentX1 += sigWidth1;
-    drawSignature(["Firma y sello recibe el Bien"], currentX1, signatureAreaY1, sigWidth1);
+    sigs1.forEach((lines, index) => {
+        drawSignatureLine(lines, margin + (index * sigWidth1), signatureAreaY1, sigWidth1);
+    });
 
     // Fila 2 de firmas
-    const numSignatures2 = 3;
+    const sigs2 = [
+        ["DATOS VEHICULO", String(headerData.datosVehiculo || '')],
+        ["NOMBRE Y FIRMA RESPONSABLE DEL TRASLADO", String(headerData.nombreResponsableTraslado || '')],
+        ["NOMBRE Y FIRMA UNIDAD PATRIMONIO", String(headerData.nombreUnidadPatrimonio || '')]
+    ];
+    const numSignatures2 = sigs2.length;
     const sigWidth2 = pageContentWidth / numSignatures2;
-    let currentX2 = margin;
-    drawSignature(["Datos Vehiculo", String(headerData.datosVehiculo || '')], currentX2, signatureAreaY2, sigWidth2);
-    currentX2 += sigWidth2;
-    drawSignature(["Nombre y firma Responsable del traslado", String(headerData.nombreResponsableTraslado || '')], currentX2, signatureAreaY2, sigWidth2);
-    currentX2 += sigWidth2;
-    drawSignature(["Nombre y firma Unidad Patrimonio", String(headerData.nombreUnidadPatrimonio || '')], currentX2, signatureAreaY2, sigWidth2);
+    sigs2.forEach((lines, index) => {
+        drawSignatureLine(lines, margin + (index * sigWidth2), signatureAreaY2, sigWidth2);
+    });
 
 
     doc.save(`Acta_${(headerData.tipo || 'Reporte').replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
