@@ -198,7 +198,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         const { cell, settings } = data;
         
         // --- Rigorous validation ---
-        if (!cell || !cell.raw || !docInstance) {
+        if (!cell || !cell.raw || !docInstance || !settings) {
             return;
         }
 
@@ -221,23 +221,23 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         docInstance.text(String(value || '').toUpperCase(), x + labelWidth, yPos);
     };
 
-    // --- Bloque de Datos Superior (Reconstruido) ---
+    // --- Bloque de Datos Superior ---
     const topTableBody = [
         [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 4, styles: { fontStyle: 'bold', fontSize: 8, textColor: [0,0,0], fillColor: [255, 255, 255] } }],
         [
-            { content: '', label: 'TIPO', value: headerData.tipo },
-            { content: '', label: 'SALIDA', value: headerData.salida },
-            { content: '', label: 'REINGRESO', value: headerData.reingreso },
-            { content: '', label: 'NUMERO MOVIMIENTO', value: headerData.numeroMovimiento }
+            { label: 'TIPO', value: headerData.tipo },
+            { label: 'SALIDA', value: headerData.salida },
+            { label: 'REINGRESO', value: headerData.reingreso },
+            { label: 'NUMERO MOVIMIENTO', value: headerData.numeroMovimiento }
         ],
         [
-            { content: '', label: 'MOTIVO', value: headerData.motivo, colSpan: 2 },
-            { content: '', label: 'MANTENIMIENTO', value: headerData.mantenimiento },
-            { content: '', label: 'COMISION SERVICIO', value: headerData.comisionServicio },
+            { label: 'MOTIVO', value: headerData.motivo, colSpan: 2 },
+            { label: 'MANTENIMIENTO', value: headerData.mantenimiento },
+            { label: 'COMISION SERVICIO', value: headerData.comisionServicio },
         ],
         [
-           { content: '', label: 'DESPLAZAMIENTO', value: headerData.desplazamiento, colSpan: 2 },
-           { content: '', label: 'CAPACITACION O EVENTO', value: headerData.capacitacionEvento, colSpan: 2 },
+           { label: 'DESPLAZAMIENTO', value: headerData.desplazamiento, colSpan: 2 },
+           { label: 'CAPACITACION O EVENTO', value: headerData.capacitacionEvento, colSpan: 2 },
         ]
     ];
 
@@ -247,7 +247,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         theme: 'grid',
         styles: { fontSize: 7, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
         didDrawCell: (data: any) => {
-            if (data.row.index > 0 && data.section === 'body') {
+            if (data.row.index > 0 && data.section === 'body' && data.cell.raw.label) {
                 drawStyledCellText(doc, data);
             }
         },
