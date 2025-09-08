@@ -194,49 +194,43 @@ export default function AssetSearchPage() {
     }, [searchTerm, allProducts]);
 
     const handleSelectProduct = (product: Product, isSelected: boolean) => {
+       const uniqueId = (product as ScanRecord).scanId || product.firebaseId;
         if (isSelected) {
-            // Prevent adding duplicates based on firebaseId
-            if (!selectedProducts.some(p => p.firebaseId === product.firebaseId)) {
-                setSelectedProducts(prev => [...prev, { ...product, Observacion_Reporte: product.Observacion || "" } as ScanRecord]);
-            }
+            setSelectedProducts(prev => [...prev, { ...product, Observacion_Reporte: product.Observacion || "" } as ScanRecord]);
         } else {
-            // Remove product by firebaseId
-            setSelectedProducts(prev => prev.filter(p => p.firebaseId !== product.firebaseId));
+            setSelectedProducts(prev => prev.filter(p => ((p as ScanRecord).scanId || p.firebaseId) !== uniqueId));
         }
     };
     
     const isProductSelected = (product: Product) => {
-        return selectedProducts.some(p => p.firebaseId === product.firebaseId);
+        const uniqueId = (product as ScanRecord).scanId || product.firebaseId;
+        return selectedProducts.some(p => ((p as ScanRecord).scanId || p.firebaseId) === uniqueId);
     };
 
     const handleSelectAllHistory = (isChecked: boolean) => {
         const visibleHistoryScans = filteredHistory;
 
         if (isChecked) {
-            // Add all unique scans from visible history that are not already selected
-            const currentFirebaseIdsInSelected = new Set(selectedProducts.map(p => p.firebaseId));
-            const newProductsToAdd = visibleHistoryScans
-                .filter(scan => !currentFirebaseIdsInSelected.has(scan.firebaseId))
-                .reduce((acc, current) => { // Deduplicate within the history itself
-                    if (!acc.find(item => item.firebaseId === current.firebaseId)) {
-                        acc.push({ ...current, Observacion_Reporte: current.Observacion || "" });
-                    }
-                    return acc;
-                }, [] as ScanRecord[]);
-
-            setSelectedProducts(prev => [...prev, ...newProductsToAdd]);
+            // Add all visible scans from history
+            setSelectedProducts(prev => {
+                const existingScanIds = new Set(prev.map(p => p.scanId));
+                const newProductsToAdd = visibleHistoryScans
+                    .filter(scan => !existingScanIds.has(scan.scanId))
+                    .map(scan => ({ ...scan, Observacion_Reporte: scan.Observacion || "" }));
+                return [...prev, ...newProductsToAdd];
+            });
         } else {
             // Remove all scans that are present in the visible history
-            const visibleFirebaseIds = new Set(visibleHistoryScans.map(scan => scan.firebaseId));
-            setSelectedProducts(prev => prev.filter(p => !visibleFirebaseIds.has(p.firebaseId)));
+            const visibleScanIds = new Set(visibleHistoryScans.map(scan => scan.scanId));
+            setSelectedProducts(prev => prev.filter(p => !visibleScanIds.has(p.scanId)));
         }
     };
 
     
     const allVisibleHistorySelected = React.useMemo(() => {
-        const visibleIds = new Set(filteredHistory.map(s => s.firebaseId));
-        if (visibleIds.size === 0) return false;
-        return Array.from(visibleIds).every(id => selectedProducts.some(p => p.firebaseId === id));
+        const visibleScanIds = new Set(filteredHistory.map(s => s.scanId));
+        if (visibleScanIds.size === 0) return false;
+        return filteredHistory.every(scan => selectedProducts.some(p => p.scanId === scan.scanId));
     }, [filteredHistory, selectedProducts]);
 
     const handleGeneratePDF = () => {
@@ -423,7 +417,7 @@ export default function AssetSearchPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {selectedProducts.map((p, index) => (
-                                            <TableRow key={`${p.firebaseId}-${index}`}>
+                                            <TableRow key={`${(p as ScanRecord).scanId || p.firebaseId}-${index}`}>
                                                 {reportHeaders.map(header => {
                                                     const dbField = reportColumnMapping[header as keyof typeof reportColumnMapping];
                                                     if (header === 'Item') {
@@ -589,3 +583,5 @@ export default function AssetSearchPage() {
   );
 }
 
+
+    
