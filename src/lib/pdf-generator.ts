@@ -198,7 +198,10 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     };
 
     const topTableBody = [
-        [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 3, styles: { fontStyle: 'bold', fontSize: 8, textColor: [0,0,0], fillColor: [255, 255, 255] } }, { content: getStyledContent('Numero Movimiento', headerData.numeroMovimiento) } ],
+        [
+            { content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 3, styles: { fontStyle: 'bold', fontSize: 8, textColor: [0,0,0], fillColor: [255, 255, 255] } }, 
+            { content: getStyledContent('Numero Movimiento', headerData.numeroMovimiento) }
+        ],
         [
             { content: getStyledContent('Tipo', headerData.tipo) },
             { content: getStyledContent('Salida', headerData.salida) },
@@ -206,30 +209,28 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
             { content: getStyledContent('Desplazamiento', headerData.desplazamiento) }
         ],
         [
-            { content: getStyledContent('Motivo', headerData.motivo) },
+            { content: getStyledContent('Motivo', headerData.motivo), colSpan: 2 },
             { content: getStyledContent('Mantenimiento', headerData.mantenimiento) },
-            { content: getStyledContent('Comision Servicio', headerData.comisionServicio) },
-            { content: getStyledContent('Capacitacion o Evento', headerData.capacitacionEvento) }
+            { content: getStyledContent('Comision Servicio', headerData.comisionServicio) }
+        ],
+        [
+             { content: getStyledContent('Capacitacion o Evento', headerData.capacitacionEvento), colSpan: 4 }
         ]
     ];
     
     const drawStyledCellText = (data: any) => {
-        const { doc: docInstance, cell, row, column, settings } = data;
+        const { doc: docInstance, cell } = data;
 
         // --- Robust validation to prevent errors ---
-        if (!cell || !cell.raw || typeof cell.raw !== 'object' || !cell.raw.hasOwnProperty('label') || !cell.raw.hasOwnProperty('value')) {
+        if (!cell || typeof cell.raw !== 'object' || cell.raw === null || !cell.raw.hasOwnProperty('label') || !cell.raw.hasOwnProperty('value')) {
             return;
         }
 
         const { label, value } = cell.raw;
-        if (typeof label === 'undefined' || typeof value === 'undefined') {
+        if (typeof label === 'undefined' || typeof value === 'undefined' || typeof cell.x !== 'number' || typeof cell.y !== 'number' || !docInstance.getFontSize()) {
             return;
         }
         
-        if (typeof cell.x !== 'number' || typeof cell.y !== 'number' || typeof cell.height !== 'number' || !docInstance.getFontSize()) {
-            return;
-        }
-
         const cellPadding = cell.padding('left');
         const x = cell.x + cellPadding;
         const yPos = cell.y + cell.height / 2 + (docInstance.getFontSize() / 2.7);
@@ -252,14 +253,11 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         body: topTableBody,
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0], valign: 'middle', minCellHeight: 6 },
+        styles: { fontSize: 8, cellPadding: 1.5, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0], valign: 'middle', minCellHeight: 6 },
         didDrawCell: (data: any) => {
-             // Only apply custom drawing to cells that are objects with label/value
-            if (data.cell.raw && typeof data.cell.raw === 'object' && data.cell.raw.label) {
-                if (data.row.index === 0 && data.column.index === 3) { // Numero Movimiento
-                     drawStyledCellText(data);
-                } else if (data.row.index > 0) { // All other styled cells
-                     drawStyledCellText(data);
+            if (data.row.index > 0 || (data.row.index === 0 && data.column.index === 3)) {
+                 if (data.cell.raw && typeof data.cell.raw === 'object' && data.cell.raw.label) {
+                    drawStyledCellText(data);
                 }
             }
         },
@@ -361,7 +359,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         drawSignatureLine(lines, margin + (index * sigWidth1), signatureBlock1Y, sigWidth1);
     });
     
-    let signatureBlock2Y = signatureBlock1Y + 25;
+    let signatureBlock2Y = signatureBlock1Y + 20;
 
     const sigs2 = [
         {key: 'datosVehiculo', default: "DATOS VEHICULO"},
