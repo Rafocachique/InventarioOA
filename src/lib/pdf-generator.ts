@@ -195,21 +195,24 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     doc.setFont('helvetica', 'normal');
 
     const drawStyledCellText = (doc: jsPDF, data: any, cell: any) => {
+        if (!data) return;
+        
         const {x, y, width, height} = cell;
         const text = data.split(': ');
+        
         if (text.length > 1) {
             const label = text[0];
             const value = text.slice(1).join(': ');
-            
             const yPos = y + height / 2 + doc.getLineHeight() / 2 - 1;
 
-            doc.setFont('helvetica', 'bold');
-            doc.text(`${label}:`, x + 2, yPos);
-            
-            const labelWidth = doc.getTextWidth(`${label}: `);
-            
-            doc.setFont('helvetica', 'normal');
-            doc.text(value, x + 2 + labelWidth, yPos);
+            if (label) {
+                doc.setFont('helvetica', 'bold');
+                doc.text(`${label}:`, x + 2, yPos);
+                const labelWidth = doc.getTextWidth(`${label}: `);
+                
+                doc.setFont('helvetica', 'normal');
+                doc.text(String(value || ''), x + 2 + labelWidth, yPos);
+            }
         } else {
              doc.setFont('helvetica', 'normal');
              doc.text(data, x + 2, y + height / 2 + doc.getLineHeight() / 2 - 1);
