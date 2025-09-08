@@ -33,6 +33,8 @@ interface ScanRecord extends Product {
 }
 
 type ReportFormat = "asignacion" | "baja" | "";
+type ReportType = "Baja" | "Transferencia" | "Mantenimiento";
+
 
 const reportColumnMapping: Record<string, string> = {
     'Item': 'item',
@@ -50,6 +52,30 @@ const reportColumnMapping: Record<string, string> = {
 
 const reportHeaders = Object.keys(reportColumnMapping);
 
+const reportReasons: Record<ReportType, string[]> = {
+    'Baja': [
+        'Daño',
+        'Ejecución de Garantía',
+        'Estado de Excedencia',
+        'Estado de Chatarra',
+        'Raee (Residuo aparatos electrico o electronico)',
+        'Falta de idoneidad del bien',
+        'Mantenimiento o Reparación Onerosa',
+        'Obsolescencia Técnica',
+        'Saneamiento de Bienes Muebles Faltantes',
+        'Sustracción : Perdido, Hurto, Robo, Abigeato',
+        'Invalidez de Semovientes',
+        'Causal para baja no se encuentra prevista'
+    ],
+    'Transferencia': [
+        'Transferencia',
+        'Desplazamiento Interno'
+    ],
+    'Mantenimiento': [
+        'Mantenimiento equipo'
+    ]
+};
+
 
 export default function SearchAndReportsPage() {
     const [searchTerm, setSearchTerm] = React.useState("");
@@ -60,6 +86,7 @@ export default function SearchAndReportsPage() {
     const [headers, setHeaders] = React.useState<string[]>([]);
     const { toast } = useToast();
     const [selectedFormat, setSelectedFormat] = React.useState<ReportFormat>("");
+    const [availableReasons, setAvailableReasons] = React.useState<string[]>([]);
     
     const [scanHistory, setScanHistory] = React.useState<ScanRecord[]>([]);
     const [isHistoryLoading, setIsHistoryLoading] = React.useState(true);
@@ -77,7 +104,7 @@ export default function SearchAndReportsPage() {
         oficinaArea: "",
         numeroMovimiento: "",
         motivo: "",
-        tipo: "Baja",
+        tipo: "Baja" as ReportType,
         salida: "",
         mantenimiento: "",
         reingreso: "",
@@ -108,8 +135,27 @@ export default function SearchAndReportsPage() {
     };
     
     const handleSelectChange = (id: string, value: string) => {
-        setReportHeaderData(prev => ({...prev, [id]: value}));
+        const prev = {...reportHeaderData, [id]: value};
+        
+        if (id === 'tipo') {
+            const newType = value as ReportType;
+            const reasons = reportReasons[newType] || [];
+            setAvailableReasons(reasons);
+            // Reset motivo when tipo changes
+            prev.motivo = reasons[0] || ""; 
+        }
+
+        setReportHeaderData(prev);
     }
+    
+    React.useEffect(() => {
+        // Set initial reasons based on default type
+        setAvailableReasons(reportReasons[reportHeaderData.tipo]);
+        if(reportHeaderData.motivo === "") {
+             setReportHeaderData(prev => ({...prev, motivo: reportReasons[prev.tipo][0]}));
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleObservationChange = (uniqueId: string, value: string) => {
         const updateProductState = (products: ScanRecord[]) => 
@@ -524,17 +570,30 @@ export default function SearchAndReportsPage() {
                                             
                                             <div className="space-y-2">
                                                 <Label htmlFor="tipo">Tipo</Label>
-                                                <Select value={reportHeaderData.tipo} onValueChange={(value) => handleSelectChange('tipo', value)}>
+                                                <Select value={reportHeaderData.tipo} onValueChange={(value) => handleSelectChange('tipo', value as ReportType)}>
                                                     <SelectTrigger id="tipo">
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         <SelectItem value="Baja">Baja</SelectItem>
                                                         <SelectItem value="Transferencia">Transferencia</SelectItem>
+                                                        <SelectItem value="Mantenimiento">Mantenimiento</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
-                                            <div className="space-y-2"><Label htmlFor="motivo">Motivo</Label><Input id="motivo" value={reportHeaderData.motivo} onChange={handleReportDataChange} /></div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="motivo">Motivo</Label>
+                                                <Select value={reportHeaderData.motivo} onValueChange={(value) => handleSelectChange('motivo', value)} disabled={availableReasons.length === 0}>
+                                                    <SelectTrigger id="motivo">
+                                                        <SelectValue placeholder="Seleccione un motivo..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {availableReasons.map(reason => (
+                                                            <SelectItem key={reason} value={reason}>{reason}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
                                             <div className="space-y-2"><Label htmlFor="salida">Salida</Label><Input id="salida" value={reportHeaderData.salida} onChange={handleReportDataChange} /></div>
                                             <div className="space-y-2"><Label htmlFor="mantenimiento">Mantenimiento</Label><Input id="mantenimiento" value={reportHeaderData.mantenimiento} onChange={handleReportDataChange} /></div>
                                             <div className="space-y-2"><Label htmlFor="reingreso">Reingreso</Label><Input id="reingreso" value={reportHeaderData.reingreso} onChange={handleReportDataChange} /></div>
@@ -601,3 +660,5 @@ export default function SearchAndReportsPage() {
   );
 }
 
+
+    
