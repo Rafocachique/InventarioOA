@@ -17,7 +17,7 @@ import { format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { generateAsignacionPDF } from "@/lib/pdf-generator";
+import { generateAsignacionPDF, generateBajaTransferenciaPDF } from "@/lib/pdf-generator";
 
 
 interface Product {
@@ -107,10 +107,10 @@ export default function AssetSearchPage() {
         setReportHeaderData(prev => ({...prev, [id]: value}));
     };
     
-    const handleObservationChange = (firebaseId: string, value: string) => {
+    const handleObservationChange = (uniqueId: string, value: string) => {
         const updateProductState = (products: ScanRecord[]) => 
             products.map(p => 
-                p.firebaseId === firebaseId ? { ...p, Observacion_Reporte: value } : p
+                ((p.scanId || p.firebaseId) === uniqueId) ? { ...p, Observacion_Reporte: value } : p
             );
 
         setSelectedProducts(updateProductState);
@@ -153,7 +153,7 @@ export default function AssetSearchPage() {
             const unsubscribe = onSnapshot(q, (querySnapshot) => {
                 const history: ScanRecord[] = [];
                 querySnapshot.forEach((doc) => {
-                    history.push({ scanId: doc.id, ...doc.data() } as ScanRecord);
+                    history.push({ scanId: doc.id, firebaseId: doc.data().firebaseId, ...doc.data() } as ScanRecord);
                 });
                 setScanHistory(history);
                 setIsHistoryLoading(false);
@@ -196,33 +196,33 @@ export default function AssetSearchPage() {
     const handleSelectProduct = (product: Product, isSelected: boolean) => {
        const uniqueId = (product as ScanRecord).scanId || product.firebaseId;
         if (isSelected) {
-            setSelectedProducts(prev => [...prev, { ...product, Observacion_Reporte: product.Observacion || "" } as ScanRecord]);
+            const productToAdd = { 
+                ...product, 
+                Observacion_Reporte: product.Observacion || "",
+                // Ensure a unique ID for selection purposes if coming from search
+                scanId: (product as ScanRecord).scanId || `${product.firebaseId}-${Date.now()}` 
+            } as ScanRecord;
+            setSelectedProducts(prev => [...prev, productToAdd]);
         } else {
-            setSelectedProducts(prev => prev.filter(p => ((p as ScanRecord).scanId || p.firebaseId) !== uniqueId));
+            setSelectedProducts(prev => prev.filter(p => p.scanId !== (product as ScanRecord).scanId));
         }
     };
     
     const isProductSelected = (product: Product) => {
-        const uniqueId = (product as ScanRecord).scanId || product.firebaseId;
-        return selectedProducts.some(p => ((p as ScanRecord).scanId || p.firebaseId) === uniqueId);
+        const uniqueId = (product as ScanRecord).scanId;
+        if (!uniqueId) return false;
+        return selectedProducts.some(p => p.scanId === uniqueId);
     };
 
     const handleSelectAllHistory = (isChecked: boolean) => {
         const visibleHistoryScans = filteredHistory;
 
         if (isChecked) {
-            // Add all visible scans from history
-            setSelectedProducts(prev => {
-                const existingScanIds = new Set(prev.map(p => p.scanId));
-                const newProductsToAdd = visibleHistoryScans
-                    .filter(scan => !existingScanIds.has(scan.scanId))
-                    .map(scan => ({ ...scan, Observacion_Reporte: scan.Observacion || "" }));
-                return [...prev, ...newProductsToAdd];
-            });
+            const newProductsToAdd = visibleHistoryScans
+                .map(scan => ({ ...scan, Observacion_Reporte: scan.Observacion || "" }));
+            setSelectedProducts(newProductsToAdd);
         } else {
-            // Remove all scans that are present in the visible history
-            const visibleScanIds = new Set(visibleHistoryScans.map(scan => scan.scanId));
-            setSelectedProducts(prev => prev.filter(p => !visibleScanIds.has(p.scanId)));
+            setSelectedProducts([]);
         }
     };
 
@@ -230,12 +230,15 @@ export default function AssetSearchPage() {
     const allVisibleHistorySelected = React.useMemo(() => {
         const visibleScanIds = new Set(filteredHistory.map(s => s.scanId));
         if (visibleScanIds.size === 0) return false;
-        return filteredHistory.every(scan => selectedProducts.some(p => p.scanId === scan.scanId));
+        const selectedScanIds = new Set(selectedProducts.map(p => p.scanId));
+        return filteredHistory.every(scan => selectedScanIds.has(scan.scanId));
     }, [filteredHistory, selectedProducts]);
 
     const handleGeneratePDF = () => {
       if (selectedFormat === 'asignacion') {
         generateAsignacionPDF(reportHeaderData, selectedProducts);
+      } else if (selectedFormat === 'baja' || selectedFormat === 'transferencia') {
+        generateBajaTransferenciaPDF(reportHeaderData, selectedProducts, selectedFormat);
       } else {
         toast({
             variant: "destructive",
@@ -281,8 +284,8 @@ export default function AssetSearchPage() {
                                 {isLoading && searchTerm ? (
                                     <TableRow><TableCell colSpan={headers.length + 1} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
                                 ) : filteredResults.length > 0 ? (
-                                    filteredResults.map(product => (
-                                        <TableRow key={product.firebaseId} data-state={isProductSelected(product) ? "selected" : ""}>
+                                    filteredResults.map((product, index) => (
+                                        <TableRow key={`${product.firebaseId}-${index}`} data-state={isProductSelected(product) ? "selected" : ""}>
                                             <TableCell>
                                                 <Checkbox
                                                     checked={isProductSelected(product)}
@@ -420,6 +423,7 @@ export default function AssetSearchPage() {
                                             <TableRow key={`${(p as ScanRecord).scanId || p.firebaseId}-${index}`}>
                                                 {reportHeaders.map(header => {
                                                     const dbField = reportColumnMapping[header as keyof typeof reportColumnMapping];
+                                                    const uniqueId = (p as ScanRecord).scanId || p.firebaseId;
                                                     if (header === 'Item') {
                                                         return <TableCell key={header} className="whitespace-nowrap">{index + 1}</TableCell>;
                                                     }
@@ -429,7 +433,7 @@ export default function AssetSearchPage() {
                                                                 <Input 
                                                                     type="text"
                                                                     value={p.Observacion_Reporte || ''}
-                                                                    onChange={(e) => handleObservationChange(p.firebaseId, e.target.value)}
+                                                                    onChange={(e) => handleObservationChange(uniqueId, e.target.value)}
                                                                     className="h-8 min-w-[150px]"
                                                                     placeholder="Añadir observación..."
                                                                 />
@@ -468,8 +472,8 @@ export default function AssetSearchPage() {
                                 {selectedFormat === 'asignacion' && (
                                      <div className="space-y-4 border-t pt-4">
                                         <h4 className="font-medium">2. Complete los datos para el Acta de Asignación</h4>
-                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div className="space-y-2 sm:col-span-2">
+                                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                            <div className="space-y-2 sm:col-span-3">
                                                 <Label htmlFor="entidad">Entidad u Organización</Label>
                                                 <Input id="entidad" value={reportHeaderData.entidad} onChange={handleReportDataChange} />
                                             </div>
@@ -512,10 +516,10 @@ export default function AssetSearchPage() {
                                     <div className="space-y-6 border-t pt-4">
                                         <h4 className="font-medium">2. Complete los datos para el Acta de {selectedFormat.charAt(0).toUpperCase() + selectedFormat.slice(1)}</h4>
                                         
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                                            <div className="space-y-2 sm:col-span-2"><Label htmlFor="entidad">Entidad</Label><Input id="entidad" value={reportHeaderData.entidad} onChange={handleReportDataChange} /></div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-4">
+                                            <div className="space-y-2 sm:col-span-full"><Label htmlFor="entidad">Entidad</Label><Input id="entidad" value={reportHeaderData.entidad} onChange={handleReportDataChange} /></div>
                                             
-                                            <div className="space-y-2"><Label htmlFor="tipo">Tipo</Label><Input id="tipo" value={reportHeaderData.tipo} onChange={handleReportDataChange} /></div>
+                                            <div className="space-y-2"><Label htmlFor="tipo">Tipo ({selectedFormat})</Label><Input id="tipo" value={reportHeaderData.tipo} onChange={handleReportDataChange} /></div>
                                             <div className="space-y-2"><Label htmlFor="motivo">Motivo</Label><Input id="motivo" value={reportHeaderData.motivo} onChange={handleReportDataChange} /></div>
                                             <div className="space-y-2"><Label htmlFor="salida">Salida</Label><Input id="salida" value={reportHeaderData.salida} onChange={handleReportDataChange} /></div>
                                             <div className="space-y-2"><Label htmlFor="mantenimiento">Mantenimiento</Label><Input id="mantenimiento" value={reportHeaderData.mantenimiento} onChange={handleReportDataChange} /></div>
@@ -523,7 +527,7 @@ export default function AssetSearchPage() {
                                             <div className="space-y-2"><Label htmlFor="comisionServicio">Comisión Servicio</Label><Input id="comisionServicio" value={reportHeaderData.comisionServicio} onChange={handleReportDataChange} /></div>
                                             <div className="space-y-2"><Label htmlFor="numeroMovimiento">Número Movimiento</Label><Input id="numeroMovimiento" value={reportHeaderData.numeroMovimiento} onChange={handleReportDataChange} /></div>
                                             <div className="space-y-2"><Label htmlFor="desplazamiento">Desplazamiento</Label><Input id="desplazamiento" value={reportHeaderData.desplazamiento} onChange={handleReportDataChange} /></div>
-                                            <div className="space-y-2 sm:col-span-2"><Label htmlFor="capacitacionEvento">Capacitación o Evento</Label><Input id="capacitacionEvento" value={reportHeaderData.capacitacionEvento} onChange={handleReportDataChange} /></div>
+                                            <div className="space-y-2 sm:col-span-2 md:col-span-3 lg:col-span-4"><Label htmlFor="capacitacionEvento">Capacitación o Evento</Label><Input id="capacitacionEvento" value={reportHeaderData.capacitacionEvento} onChange={handleReportDataChange} /></div>
                                         </div>
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 pt-4 border-t">
@@ -582,6 +586,3 @@ export default function AssetSearchPage() {
     </div>
   );
 }
-
-
-    

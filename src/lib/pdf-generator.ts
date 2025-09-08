@@ -20,84 +20,55 @@ interface Product {
 }
 
 const reportColumnMapping: Record<string, string> = {
-    'Nro de Orden': 'item',
-    'Patrimonial': 'codbien',
-    'Interno': 'codanterio',
+    'Item': 'item',
+    'Codigo Patrimonial': 'codbien',
+    'Codigo Interno': 'codanterio',
     'Denominacion': 'descrip',
     'Marca': 'marca',
     'Modelo': 'modelo',
     'Color': 'color',
     'Serie': 'serie',
     'Otros': 'otros',
-    'Estado Conserv.': 'estado',
+    'Estado de Conservacion': 'estado',
     'Observaciones': 'Observacion_Reporte',
 };
-const tableHeaders = [
-    'Nro de Orden', 
-    'Patrimonial', 
-    'Interno', 
-    'Denominacion', 
-    'Marca', 
-    'Modelo', 
-    'Color', 
-    'Serie', 
-    'Otros', 
-    'Estado Conserv.', 
-    'Observaciones'
-];
+const tableHeaders = Object.keys(reportColumnMapping);
 
+
+const createHeaderTable = (doc: jsPDF, body: any[], startY: number, options = {}) => {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 14;
+    (doc as any).autoTable({
+        body: body,
+        startY: startY,
+        theme: 'plain',
+        styles: { fontSize: 8, cellPadding: 1.5, ...options },
+        didDrawCell: (data: any) => {
+            if (data.row.index === data.table.body.length - 1) {
+                 doc.line(margin, data.cell.y + data.cell.height, pageWidth - margin, data.cell.y + data.cell.height);
+            }
+        },
+        margin: { left: margin, right: margin }
+    });
+    return (doc as any).lastAutoTable.finalY;
+};
 
 export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Product[]) => {
     const doc = new jsPDF({ orientation: 'landscape' });
     let y = 15;
 
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 14;
-
-    const createHeaderTable = (body: any[], startY: number, options = {}) => {
-        (doc as any).autoTable({
-            body: body,
-            startY: startY,
-            theme: 'plain',
-            styles: { fontSize: 9, cellPadding: 1.5, ...options },
-            didDrawCell: (data: any) => {
-                if (data.row.index === data.table.body.length - 1) {
-                     doc.line(data.table.settings.margin.left, data.cell.y + data.cell.height, pageWidth - data.table.settings.margin.right, data.cell.y + data.cell.height);
-                }
-            },
-            margin: { left: margin, right: margin }
-        });
-        return (doc as any).lastAutoTable.finalY;
-    };
-    
     // Títulos
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    y = createHeaderTable(
-        [[{ content: 'ANEXO N° 03', styles: { halign: 'center' } }]],
-        y
-    );
-     y = createHeaderTable(
-        [[{ content: 'FICHA ASIGNACION EN USO Y DEVOLUCION DE BIENES MUEBLES PATRIMONIALES', styles: { halign: 'center' } }]],
-        y + 2
-    );
+    y = createHeaderTable(doc, [[{ content: 'ANEXO N° 03', styles: { halign: 'center', fontSize: 10 } }]], y - 5);
+    y = createHeaderTable(doc, [[{ content: 'FICHA ASIGNACION EN USO Y DEVOLUCION DE BIENES MUEBLES PATRIMONIALES', styles: { halign: 'center' } }]], y - 2);
     
     // Cabecera Entidad y Fecha
-    y = createHeaderTable(
-        [[
-            `ENTIDAD U ORGANIZACIÓN DE LA ENTIDAD: ${headerData.entidad.toUpperCase()}`,
-            { content: `FECHA: ${headerData.fecha.toUpperCase()}`, styles: { halign: 'right' } }
-        ]],
-        y + 2
-    );
+    y = createHeaderTable(doc, [[`ENTIDAD U ORGANIZACIÓN DE LA ENTIDAD: ${headerData.entidad.toUpperCase()}`,{ content: `FECHA: ${headerData.fecha.toUpperCase()}`, styles: { halign: 'right' } }]], y + 2);
     
     // Datos del Usuario Header
-    y = createHeaderTable(
-        [[{ content: 'DATOS DEL USUARIO', styles: { fontStyle: 'bold' } }]],
-        y
-    );
+    y = createHeaderTable(doc, [[{ content: 'DATOS DEL USUARIO', styles: { fontStyle: 'bold' } }]], y);
 
-    // Datos del Usuario Content en dos columnas
     const userDataBody = [
         [
             `Nombre y apellidos: ${headerData.nombreApellidos.toUpperCase()}`,
@@ -106,21 +77,20 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         ],
         [
             `Organo o Unidad Organica: ${headerData.organo.toUpperCase()}`,
-            { content: `Local o sede: ${headerData.localSede.toUpperCase()}`, colSpan: 2 }
+            `Local o sede: ${headerData.localSede.toUpperCase()}`
         ],
         [
             `Direccion: ${headerData.direccion.toUpperCase()}`,
-            { content: `Oficina o area: ${headerData.oficinaArea.toUpperCase()}`, colSpan: 2 }
+            `Oficina o area: ${headerData.oficinaArea.toUpperCase()}`
         ]
     ];
-
-    y = createHeaderTable(userDataBody, y);
+    y = createHeaderTable(doc, userDataBody, y);
 
 
     // Tabla de productos
     const tableBody = products.map((product, index) => {
         return tableHeaders.map(header => {
-            if (header === 'Nro de Orden') return index + 1;
+            if (header === 'Item') return index + 1;
             const dbField = reportColumnMapping[header as keyof typeof reportColumnMapping];
             const value = product[dbField] ?? '';
             return String(value).toUpperCase();
@@ -133,7 +103,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         startY: y + 2,
         theme: 'grid',
         headStyles: { fillColor: [22, 160, 133], textColor: [255,255,255], fontSize: 8, halign: 'center', lineColor: [44, 62, 80], lineWidth: 0.1 },
-        styles: { fontSize: 8, cellPadding: 1.5, halign: 'center', lineColor: [44, 62, 80], lineWidth: 0.1 },
+        styles: { fontSize: 7, cellPadding: 1.5, halign: 'center', lineColor: [44, 62, 80], lineWidth: 0.1 },
         alternateRowStyles: { fillColor: [240, 240, 240] },
         columnStyles: {
             'Denominacion': { halign: 'left', cellWidth: 50 },
@@ -182,3 +152,129 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
 
     doc.save(`Acta_Asignacion_${headerData.dni || 'usuario'}.pdf`);
 };
+
+
+export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, products: Product[], formatType: 'baja' | 'transferencia') => {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const margin = 14;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let y = 15;
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('ORDEN SE SALIDA, REINGRESO Y DESPLAZAMIENTO INTERNO DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
+    y += 8;
+
+    const createTwoColumnTable = (data: any[], startY: number) => {
+        (doc as any).autoTable({
+            body: data,
+            startY: startY,
+            theme: 'grid',
+            styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1 },
+            columnStyles: { 0: { fontStyle: 'bold' } },
+        });
+        return (doc as any).lastAutoTable.finalY;
+    }
+
+    // Header section
+    const headerDetails = [
+        [{ content: `ENTIDAD: ${headerData.entidad.toUpperCase()}`, colSpan: 4, styles: { fontStyle: 'bold' } }],
+        [
+            `Tipo: ${formatType === 'baja' ? 'BAJA' : 'TRANSFERENCIA'}`, 
+            `Salida: ${headerData.salida.toUpperCase()}`,
+            `Reingreso: ${headerData.reingreso.toUpperCase()}`,
+            `Numero Movimiento: ${headerData.numeroMovimiento.toUpperCase()}`
+        ],
+        [
+            `Motivo: ${headerData.motivo.toUpperCase()}`, 
+            `Mantenimiento: ${headerData.mantenimiento.toUpperCase()}`,
+            `Comision Servicio: ${headerData.comisionServicio.toUpperCase()}`,
+            `Desplazamiento: ${headerData.desplazamiento.toUpperCase()}`
+        ],
+        [{ content: `Capacitacion o Evento: ${headerData.capacitacionEvento.toUpperCase()}`, colSpan: 4 }]
+    ];
+    y = createTwoColumnTable(headerDetails, y);
+    y+= 2;
+
+    // Remite y Recibe
+    const remiteRecibeDetails = [
+        [{ content: 'DATOS DEL RESPONSABLE DEL REMITE', styles: { fontStyle: 'bold', halign: 'center' } }, { content: 'DATOS RESPONSABLE DEL RECIBE', styles: { fontStyle: 'bold', halign: 'center' } }],
+        [`Nombre y Apellidos: ${headerData.remiteNombre.toUpperCase()}`, `Nombre y Apellidos: ${headerData.recibeNombre.toUpperCase()}`],
+        [`DNI: ${headerData.remiteDNI.toUpperCase()}`, `DNI: ${headerData.recibeDNI.toUpperCase()}`],
+        [`Correo Electronico: ${headerData.remiteCorreo.toUpperCase()}`, `Correo Electronico: ${headerData.recibeCorreo.toUpperCase()}`],
+        [`Unidad Organica: ${headerData.remiteUnidadOrganica.toUpperCase()}`, `Unidad Organica: ${headerData.recibeUnidadOrganica.toUpperCase()}`],
+        [`Local o Sede: ${headerData.remiteLocalSede.toUpperCase()}`, `Local o Sede: ${headerData.recibeLocalSede.toUpperCase()}`],
+        [`Oficio: ${headerData.remiteOficio.toUpperCase()}`, `Documento: ${headerData.recibeDocumento.toUpperCase()}`],
+    ];
+    y = createTwoColumnTable(remiteRecibeDetails, y);
+    y+= 2;
+
+    // Tabla de productos
+    const tableBody = products.map((product, index) => {
+        return tableHeaders.map(header => {
+            if (header === 'Item') return index + 1;
+            const dbField = reportColumnMapping[header as keyof typeof reportColumnMapping];
+            const value = product[dbField] ?? '';
+            return String(value).toUpperCase();
+        });
+    });
+
+    (doc as any).autoTable({
+        head: [['DESCRIPCION']],
+        body: [],
+        startY: y,
+        theme: 'grid',
+        styles: { fontSize: 8, halign: 'center', fontStyle: 'bold', fillColor: [211,211,211], lineColor: [0,0,0], lineWidth: 0.1 },
+    });
+    y = (doc as any).lastAutoTable.finalY;
+
+    (doc as any).autoTable({
+        head: [tableHeaders],
+        body: tableBody,
+        startY: y,
+        theme: 'grid',
+        headStyles: { fillColor: [211, 211, 211], textColor: [0,0,0], fontSize: 7, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1 },
+        styles: { fontSize: 7, cellPadding: 1, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1 },
+        columnStyles: {
+            'Denominacion': { halign: 'left', cellWidth: 60 },
+            'Observaciones': { halign: 'left', cellWidth: 40 },
+        }
+    });
+    y = (doc as any).lastAutoTable.finalY;
+    
+    // Firmas
+    let finalY = y + 5;
+    if (finalY > doc.internal.pageSize.getHeight() - 60) {
+        doc.addPage();
+        finalY = 20;
+    }
+
+    const signatureBlock = (text1: string, text2: string, x: number, yPos: number, width: number) => {
+        doc.rect(x, yPos, width, 15);
+        doc.text(text1, x + width/2, yPos + 5, { align: 'center', maxWidth: width - 2});
+        doc.text(text2, x + width/2, yPos + 10, { align: 'center', maxWidth: width - 2});
+    }
+
+    const signatureWidth = (pageWidth - (margin*2) - 15) / 4;
+    const startX = margin;
+    
+    signatureBlock("Firma y sello Administrador Local", "Sale el bien", startX, finalY, signatureWidth);
+    signatureBlock("Firma y sello remite la Salida", "", startX + signatureWidth + 5, finalY, signatureWidth);
+    signatureBlock("Firma y Sello Administrador local", "Ingresa el bien", startX + 2 * (signatureWidth + 5), finalY, signatureWidth);
+    signatureBlock("Firma y sello recibe el Biem", "", startX + 3 * (signatureWidth + 5), finalY, signatureWidth);
+
+    finalY += 20;
+
+    if (formatType === 'transferencia') {
+        const bottomSignatureWidth = (pageWidth - (margin*2) - 10) / 3;
+        signatureBlock("Datos Vehiculo", "", startX, finalY, bottomSignatureWidth);
+        signatureBlock("Nombre y firma Responsable del traslado", "", startX + bottomSignatureWidth + 5, finalY, bottomSignatureWidth);
+        signatureBlock("Nombre y firma Unidada Patrimonio", "", startX + 2 * (bottomSignatureWidth + 5), finalY, bottomSignatureWidth);
+    } else {
+        const bottomSignatureWidth = (pageWidth - (margin*2) - 5) / 2;
+        signatureBlock("Datos Vehiculo", "", startX, finalY, bottomSignatureWidth);
+        signatureBlock("Nombre y firma Responsable del traslado", "", startX + bottomSignatureWidth + 5, finalY, bottomSignatureWidth);
+    }
+
+    doc.save(`Acta_${formatType === 'baja' ? 'Baja' : 'Transferencia'}_${new Date().toISOString().split('T')[0]}.pdf`);
+}
