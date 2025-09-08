@@ -57,11 +57,11 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     // --- Cabecera con Recuadro ---
     (doc as any).autoTable({
         body: [
-            [{ content: `ENTIDAD U ORGANIZACIÓN DE LA ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, styles: { fontStyle: 'bold', fontSize: 9 } }, { content: `FECHA: ${String(headerData.fecha || '').toUpperCase()}`, styles: { fontStyle: 'bold', halign: 'right', fontSize: 9 } }]
+            [{ content: `ENTIDAD U ORGANIZACIÓN DE LA ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, styles: { fontStyle: 'bold', fontSize: 9, textColor: [0,0,0] } }, { content: `FECHA: ${String(headerData.fecha || '').toUpperCase()}`, styles: { fontStyle: 'bold', halign: 'right', fontSize: 9, textColor: [0,0,0] } }]
         ],
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+        styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255] },
     });
     y = (doc as any).lastAutoTable.finalY + 2;
 
@@ -159,12 +159,14 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         '> El usuario es responsable de la permanencia y conservación de cada uno de los bienes descritos, recomendándose tomar las precauciones del caso para evitar sustracciones, deterioros, etc.',
         '> Cualquier necesidad de traslado del bien mueble patrimonial dentro o fuera del local de la Entidad u Organización de la Entidad, es previamente comunicado al encargado de la OCP.',
     ];
+    doc.setTextColor(0, 0, 0);
     const splitText = doc.splitTextToSize(considerationsText.join('\n'), pageWidth - (margin * 2));
     doc.text(splitText, margin, finalY);
     finalY = doc.internal.pageSize.getHeight() - 45;
 
     // --- Firmas ---
     const drawSignatureLine = (text: string, x: number, y: number, width: number) => {
+        doc.setTextColor(0, 0, 0);
         const lineLength = Math.min(width * 0.8, 80);
         const lineXStart = x + (width - lineLength) / 2;
         doc.line(lineXStart, y, lineXStart + lineLength, y);
@@ -205,7 +207,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
 
     // Header section
     const headerDetails = [
-        [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 4, styles: { fontStyle: 'bold' } }],
+        [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 4, styles: { fontStyle: 'bold', textColor: [0,0,0] } }],
         [
             `Tipo: ${String(headerData.tipo || '').toUpperCase()}`, 
             `Salida: ${String(headerData.salida || '').toUpperCase()}`,
@@ -225,7 +227,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
 
     // Remite y Recibe
     const remiteRecibeDetails = [
-        [{ content: 'DATOS DEL RESPONSABLE DEL REMITE', styles: { fontStyle: 'bold', halign: 'center', fillColor: [255, 255, 255] } }, { content: 'DATOS RESPONSABLE DEL RECIBE', styles: { fontStyle: 'bold', halign: 'center', fillColor: [255, 255, 255] } }],
+        [{ content: 'DATOS DEL RESPONSABLE DEL REMITE', styles: { fontStyle: 'bold', halign: 'center', fillColor: [255, 255, 255], textColor: [0,0,0] } }, { content: 'DATOS RESPONSABLE DEL RECIBE', styles: { fontStyle: 'bold', halign: 'center', fillColor: [255, 255, 255], textColor: [0,0,0] } }],
         [`Nombre y Apellidos: ${String(headerData.remiteNombre || '').toUpperCase()}`, `Nombre y Apellidos: ${String(headerData.recibeNombre || '').toUpperCase()}`],
         [`DNI: ${String(headerData.remiteDNI || '').toUpperCase()}`, `DNI: ${String(headerData.recibeDNI || '').toUpperCase()}`],
         [`Correo Electronico: ${String(headerData.remiteCorreo || '').toUpperCase()}`, `Correo Electronico: ${String(headerData.recibeCorreo || '').toUpperCase()}`],
@@ -238,7 +240,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
 
     // Tabla de productos
     (doc as any).autoTable({
-        head: [[{ content: 'DESCRIPCION DE LOS BIENES', styles: { halign: 'center', fontStyle: 'bold', fillColor: [255, 255, 255] } }]],
+        head: [[{ content: 'DESCRIPCION DE LOS BIENES', styles: { halign: 'center', fontStyle: 'bold', fillColor: [255, 255, 255], textColor: [0,0,0] } }]],
         startY: y,
         theme: 'grid',
         styles: { fontSize: 8, lineColor: [0,0,0], lineWidth: 0.1 },
