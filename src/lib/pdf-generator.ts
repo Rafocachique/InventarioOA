@@ -46,7 +46,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
 
     // --- Títulos ---
     doc.setTextColor(0, 0, 0);
-    applyStyles(doc, true);
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.text('FICHA ASIGNACION EN USO Y DEVOLUCION DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
     y += 5;
@@ -146,12 +146,12 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     
     // --- Consideraciones ---
     doc.setTextColor(0, 0, 0);
-    applyStyles(doc, true);
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     doc.text('CONSIDERACIONES:', margin, finalY);
     finalY += 5;
 
-    applyStyles(doc, false);
+    doc.setFont('helvetica', 'normal');
     const considerationsText = [
         '(1) Se consigna para el caso de entrega o devolución de bienes muebles patrimoniales para teletrabajo',
         '(2) En caso de vehículos, se utiliza adicionalmente el Formato de Ficha Técnica de Vehículo, contemplado en el Anexo N°08',
@@ -195,17 +195,18 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     y += 8;
 
     const drawStyledCellText = (label: string, value: string, data: any) => {
+        if (!label) return;
         const { doc, cell, settings } = data;
         const x = cell.x + settings.cellPadding;
-        const y = cell.y + cell.height / 2 + 1.5; // Adjust for vertical alignment
+        const yPos = cell.y + cell.height / 2 + 1.5; 
 
         doc.setFont('helvetica', 'bold');
-        doc.text(`${label}:`, x, y);
+        doc.text(`${label}:`, x, yPos);
         
         const labelWidth = doc.getTextWidth(`${label}: `);
 
         doc.setFont('helvetica', 'normal');
-        doc.text(String(value || '').toUpperCase(), x + labelWidth, y);
+        doc.text(String(value || '').toUpperCase(), x + labelWidth, yPos);
     };
 
     // Header section
@@ -352,7 +353,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         }
     };
     
-    const signatureBlockY1 = finalY + 15;
+    const signatureBlockY1 = finalY + 40;
     const signatureBlockY2 = signatureBlockY1 + 40;
 
     const pageContentWidth = pageWidth - margin * 2;
