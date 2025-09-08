@@ -1,4 +1,5 @@
 
+
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -152,6 +153,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     finalY += 5;
 
     doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
     const considerationsText = [
         '(1) Se consigna para el caso de entrega o devolución de bienes muebles patrimoniales para teletrabajo',
         '(2) En caso de vehículos, se utiliza adicionalmente el Formato de Ficha Técnica de Vehículo, contemplado en el Anexo N°08',
@@ -159,14 +161,13 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         '> El usuario es responsable de la permanencia y conservación de cada uno de los bienes descritos, recomendándose tomar las precauciones del caso para evitar sustracciones, deterioros, etc.',
         '> Cualquier necesidad de traslado del bien mueble patrimonial dentro o fuera del local de la Entidad u Organización de la Entidad, es previamente comunicado al encargado de la OCP.',
     ];
-    doc.setTextColor(0, 0, 0);
     const splitText = doc.splitTextToSize(considerationsText.join('\n'), pageWidth - (margin * 2));
     doc.text(splitText, margin, finalY);
     finalY = doc.internal.pageSize.getHeight() - 45;
 
     // --- Firmas ---
+    doc.setTextColor(0, 0, 0);
     const drawSignatureLine = (text: string, x: number, y: number, width: number) => {
-        doc.setTextColor(0, 0, 0);
         const lineLength = Math.min(width * 0.8, 80);
         const lineXStart = x + (width - lineLength) / 2;
         doc.line(lineXStart, y, lineXStart + lineLength, y);
@@ -183,18 +184,30 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
 
 
 const drawStyledCellText = (label: string, value: string, data: any) => {
-    if (!label || value === undefined || value === null) return;
     const { doc, cell, settings } = data;
+    
+    // Defensive checks for all required properties
+    if (!doc || !cell || !settings || typeof cell.x !== 'number' || typeof cell.y !== 'number' || typeof settings.cellPadding !== 'number' ) {
+      return;
+    }
+    if (!label || value === undefined || value === null) {
+      return;
+    }
+
     const x = cell.x + settings.cellPadding;
-    // A more robust way to calculate vertical center
     const yPos = cell.y + cell.height / 2 + doc.getLineHeight() / 2 - 1;
+    
+    // Final check for calculated position
+    if(isNaN(x) || isNaN(yPos)) return;
 
     doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
     doc.text(`${label}:`, x, yPos);
     
     const labelWidth = doc.getTextWidth(`${label}: `);
 
     doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
     doc.text(String(value).toUpperCase(), x + labelWidth, yPos);
 };
 
@@ -234,7 +247,6 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         theme: 'grid',
         styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
         didDrawCell: (data: any) => {
-            doc.setTextColor(0,0,0);
             const cellName = data.cell.raw.name;
             if (data.row.section === 'body' && cellName) {
                 switch(cellName) {
@@ -269,7 +281,6 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         theme: 'grid',
         styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
         didDrawCell: (data: any) => {
-             doc.setTextColor(0,0,0);
              const cellName = data.cell.raw.name;
              if (data.row.section === 'body' && cellName) {
                 switch(cellName) {
