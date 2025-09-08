@@ -75,7 +75,7 @@ export default function ScanPage() {
   const [editingScanRecord, setEditingScanRecord] = useState<EditableProduct | null>(null);
   const [scanHistoryHeaders, setScanHistoryHeaders] = useState<string[]>([]);
   const [visibleScanHistoryHeaders, setVisibleScanHistoryHeaders] = useState<Set<string>>(new Set());
-  const [selectedDates, setSelectedDates] = useState<Date[] | undefined>([new Date()]);
+  const [selectedDates, setSelectedDates] = useState<Date[] | undefined>([]);
 
   const [scanToDelete, setScanToDelete] = useState<ScanRecord | null>(null);
   const [isDeleteRangeAlertOpen, setIsDeleteRangeAlertOpen] = useState(false);
@@ -145,6 +145,9 @@ export default function ScanPage() {
 
     getCameraPermission();
     fetchColumnOrder();
+    
+    // Set initial date on client to avoid hydration mismatch
+    setSelectedDates([new Date()]);
 
     const q = query(collection(db, "scan_history"), orderBy("scannedAt", "desc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -606,7 +609,7 @@ const handleSaveChanges = async (productToSave: EditableProduct | null) => {
                         <AlertDialogTrigger asChild>
                            <Button size="sm" variant="destructive" className="h-10 gap-1" disabled={filteredHistory.length === 0}>
                               <Trash2 className="h-3.5 w-3.5" />
-                              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                              <span className="sr-only sm:not-sr-only sm:whitespace-rap">
                                   Eliminar Seleccionados
                               </span>
                           </Button>
@@ -763,5 +766,3 @@ const handleSaveChanges = async (productToSave: EditableProduct | null) => {
     </div>
   );
 }
-
-    

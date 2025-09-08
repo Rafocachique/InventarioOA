@@ -78,7 +78,7 @@ const reportReasons: Record<ReportType, string[]> = {
 
 const initialReportHeaderData = {
     entidad: "UNIVERSIDAD NACIONAL FEDERICO VILLARREAL",
-    fecha: format(new Date(), "dd.MM.yyyy"),
+    fecha: "",
     nombreApellidos: "",
     dni: "",
     correo: "",
@@ -91,7 +91,7 @@ const initialReportHeaderData = {
     tipo: "Baja" as ReportType,
     salida: "",
     mantenimiento: "",
-    reingreso: "",
+reingreso: "",
     comisionServicio: "",
     desplazamiento: "",
     capacitacionEvento: "",
@@ -125,7 +125,7 @@ export default function SearchAndReportsPage() {
     
     const [scanHistory, setScanHistory] = React.useState<ScanRecord[]>([]);
     const [isHistoryLoading, setIsHistoryLoading] = React.useState(true);
-    const [selectedDates, setSelectedDates] = React.useState<Date[] | undefined>([new Date()]);
+    const [selectedDates, setSelectedDates] = React.useState<Date[] | undefined>([]);
     
     const [reportHeaderData, setReportHeaderData] = React.useState(initialReportHeaderData);
 
@@ -142,7 +142,7 @@ export default function SearchAndReportsPage() {
                 const newType = value as ReportType;
                 const reasons = reportReasons[newType] || [];
                 setAvailableReasons(reasons);
-                newState.motivo = reasons[0] || ""; 
+newState.motivo = reasons[0] || ""; 
             }
             return newState;
         });
@@ -151,6 +151,9 @@ export default function SearchAndReportsPage() {
     React.useEffect(() => {
         // Set initial reasons based on default type
         setAvailableReasons(reportReasons[reportHeaderData.tipo]);
+        // Set initial dates only on client
+        setSelectedDates([new Date()]);
+        setReportHeaderData(prev => ({ ...prev, fecha: format(new Date(), "dd.MM.yyyy") }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -207,7 +210,7 @@ export default function SearchAndReportsPage() {
             }, (error) => {
                 console.error("Error fetching scan history: ", error);
                 toast({ variant: "destructive", title: "Error", description: "No se pudo cargar el historial." });
-                setIsHistoryLoading(false);
+setIsHistoryLoading(false);
             });
             return unsubscribe;
         };
@@ -293,7 +296,7 @@ export default function SearchAndReportsPage() {
             numeroMovimiento: currentData.numeroMovimiento,
             salida: currentData.salida,
             mantenimiento: currentData.mantenimiento,
-            reingreso: currentData.reingreso,
+reingreso: currentData.reingreso,
             comisionServicio: currentData.comisionServicio,
             desplazamiento: currentData.desplazamiento,
             capacitacionEvento: currentData.capacitacionEvento,
@@ -692,5 +695,3 @@ export default function SearchAndReportsPage() {
     </div>
   );
 }
-
-    
