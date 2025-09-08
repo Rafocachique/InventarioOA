@@ -1,8 +1,10 @@
+
 "use client";
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Database, Home, ScanLine, Search, Users } from 'lucide-react';
+import * as React from 'react';
 
 import {
   SidebarMenu,
@@ -10,16 +12,25 @@ import {
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
 
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: Home },
-  { href: '/dashboard/data', label: 'Gestión de Datos', icon: Database },
-  { href: '/dashboard/scan', label: 'Escanear y Verificar', icon: ScanLine },
-  { href: '/dashboard/reports', label: 'Búsqueda y Reportes', icon: Search },
-  { href: '/dashboard/roles', label: 'Gestión de Roles', icon: Users },
+const allNavItems = [
+  { href: '/dashboard', label: 'Dashboard', icon: Home, roles: ['Administrador', 'Supervisor'] },
+  { href: '/dashboard/data', label: 'Gestión de Datos', icon: Database, roles: ['Administrador'] },
+  { href: '/dashboard/scan', label: 'Escanear y Verificar', icon: ScanLine, roles: ['Administrador', 'Supervisor'] },
+  { href: '/dashboard/reports', label: 'Búsqueda y Reportes', icon: Search, roles: ['Administrador', 'Supervisor'] },
+  { href: '/dashboard/roles', label: 'Gestión de Roles', icon: Users, roles: ['Administrador'] },
 ];
 
-export function DashboardNav() {
+interface DashboardNavProps {
+    role?: string;
+}
+
+export function DashboardNav({ role }: DashboardNavProps) {
   const pathname = usePathname();
+
+  const navItems = React.useMemo(() => {
+    if (!role) return [];
+    return allNavItems.filter(item => item.roles.includes(role));
+  }, [role]);
 
   return (
     <SidebarMenu>

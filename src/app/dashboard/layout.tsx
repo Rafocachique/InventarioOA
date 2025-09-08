@@ -81,7 +81,7 @@ export default function DashboardLayout({
       if (userDoc.exists()) {
           userData = { id: user.uid, ...userDoc.data() } as UserData;
       } else {
-          userData = { id: user.uid, email: user.email || 'N/A' };
+          userData = { id: user.uid, email: user.email || 'N/A', role: 'Supervisor' }; // Default role
       }
       
       setCurrentUser(userData);
@@ -184,7 +184,7 @@ export default function DashboardLayout({
         </SidebarHeader>
 
         <SidebarContent className="p-2">
-          <DashboardNav />
+          <DashboardNav role={currentUser?.role} />
         </SidebarContent>
       </Sidebar>
 
