@@ -194,25 +194,24 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     doc.text('ORDEN DE SALIDA, REINGRESO Y DESPLAZAMIENTO INTERNO DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
     y += 8;
 
-    // Helper to draw styled text inside a cell after autotable renders it
     const drawStyledCellText = (docInstance: jsPDF, data: any) => {
         const { cell, settings } = data;
-        
-        // Safety checks for all required properties
-        if (!cell || !cell.raw || typeof cell.raw !== 'object' || !('label' in cell.raw)) {
+        const rawContent = cell.raw;
+
+        if (typeof rawContent !== 'object' || rawContent === null || !('label' in rawContent)) {
             return;
         }
+
         if (typeof cell.x !== 'number' || typeof cell.y !== 'number' || !isFinite(cell.x) || !isFinite(cell.y)) {
             return;
         }
         
-        const { label, value } = cell.raw as {label: string, value: any};
+        const { label, value } = rawContent as {label: string, value: any};
         if (!label) return;
-
+        
         const x = cell.x + settings.cellPadding;
         const yPos = cell.y + cell.height / 2 + (settings.fontSize / 2.2) - 1;
 
-        // Erase the default '[object Object]' text
         docInstance.setFillColor(255, 255, 255);
         docInstance.rect(cell.x, cell.y, cell.width, cell.height, 'F');
         
@@ -251,8 +250,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         theme: 'grid',
         styles: { fontSize: 7, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
         didDrawCell: (data: any) => {
-            // We only want to apply custom drawing to the top table (section 0)
-            if (data.table.id === undefined && data.section.index === 0) {
+            if (data.table.body[data.row.index] && data.table.body[data.row.index][data.column.index]) {
                  drawStyledCellText(doc, data);
             }
         }
@@ -352,7 +350,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         drawSignatureLine(lines, margin + (index * sigWidth1), signatureBlock1Y, sigWidth1);
     });
     
-    let signatureBlock2Y = signatureBlock1Y + 20;
+    let signatureBlock2Y = signatureBlock1Y + 25;
 
     const sigs2 = [
         {key: 'datosVehiculo', default: "DATOS VEHICULO"},
