@@ -122,6 +122,9 @@ export default function DataManagementPage() {
 
         if (visibleHeaders.size === 0 && headersToUse.length > 0) {
             setVisibleHeaders(new Set(headersToUse));
+        } else if (visibleHeaders.size === 0 && headersToUse.length === 0) {
+            // Handle case where there are no products and no stored headers
+            setVisibleHeaders(new Set());
         }
 
     } catch (error) {
@@ -134,7 +137,8 @@ export default function DataManagementPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast, visibleHeaders.size]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast]);
 
   React.useEffect(() => {
     fetchProducts();
@@ -795,5 +799,3 @@ export default function DataManagementPage() {
     </div>
   );
 }
-
-    
