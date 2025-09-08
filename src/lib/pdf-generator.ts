@@ -195,19 +195,23 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     y += 8;
 
     // --- Función para dibujar texto con etiqueta en negrita y valor normal ---
-    const drawStyledCellText = (doc: jsPDF, label: string, value: any, cell: any, settings: any) => {
-        if (!label || typeof cell.x !== 'number' || typeof cell.y !== 'number') return;
-        
-        const x = cell.x + settings.padding;
-        const yPos = cell.y + cell.height / 2 + doc.getLineHeight() / 2 - 2;
+    const drawStyledCellText = (docInstance: any, data: any) => {
+        const { cell, settings } = data;
+        const label = cell.raw.label;
+        const value = cell.raw.value;
+    
+        if (!label) return;
 
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${label}:`, x, yPos);
+        const x = cell.x + settings.cellPadding;
+        let yPos = cell.y + cell.height / 2 + docInstance.getLineHeight() / 3.5;
+
+        docInstance.setFont('helvetica', 'bold');
+        docInstance.text(`${label}: `, x, yPos);
         
-        const labelWidth = doc.getTextWidth(`${label}: `);
+        const labelWidth = docInstance.getTextWidth(`${label}: `);
         
-        doc.setFont('helvetica', 'normal');
-        doc.text(String(value || '').toUpperCase(), x + labelWidth, yPos);
+        docInstance.setFont('helvetica', 'normal');
+        docInstance.text(String(value || '').toUpperCase(), x + labelWidth, yPos);
     }
     
     // --- Bloque de Datos Superior ---
@@ -215,30 +219,31 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         body: [
             [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 4, styles: { fontStyle: 'bold', fontSize: 8 } }],
             [
-                { content: 'Tipo', 'data-value': headerData.tipo },
-                { content: 'Salida', 'data-value': headerData.salida },
-                { content: 'Reingreso', 'data-value': headerData.reingreso },
-                { content: 'Numero Movimiento', 'data-value': headerData.numeroMovimiento }
+                { content: '', label: 'Tipo', value: headerData.tipo },
+                { content: '', label: 'Salida', value: headerData.salida },
+                { content: '', label: 'Reingreso', value: headerData.reingreso },
+                { content: '', label: 'Numero Movimiento', value: headerData.numeroMovimiento }
             ],
             [
-                { content: 'Motivo', 'data-value': headerData.motivo, colSpan: 2 },
-                { content: 'Mantenimiento', 'data-value': headerData.mantenimiento },
-                { content: 'Comision Servicio', 'data-value': headerData.comisionServicio },
+                { content: '', label: 'Motivo', value: headerData.motivo, colSpan: 2 },
+                { content: '', label: 'Mantenimiento', value: headerData.mantenimiento },
+                { content: '', label: 'Comision Servicio', value: headerData.comisionServicio },
             ],
             [
-                { content: 'Capacitacion o Evento', 'data-value': headerData.capacitacionEvento, colSpan: 4 },
+                { content: '', label: 'Capacitacion o Evento', value: headerData.capacitacionEvento, colSpan: 4 },
             ]
         ],
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+        styles: { fontSize: 7, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
         didDrawCell: (data: any) => {
             if (data.row.index > 0 && data.section === 'body') {
-                drawStyledCellText(doc, data.cell.raw.content, data.cell.raw['data-value'], data.cell, { padding: 1 });
+                drawStyledCellText(doc, data);
             }
         },
     });
     y = (doc as any).lastAutoTable.finalY + 2;
+    
 
     // --- Bloque de Remite y Recibe ---
     const remiteRecibeBody = [
