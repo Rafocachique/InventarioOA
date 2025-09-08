@@ -60,16 +60,17 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         ],
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1 },
+        styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255] },
     });
     y = (doc as any).lastAutoTable.finalY + 2;
 
     // --- Datos del Usuario con Recuadro ---
     applyStyles(doc, true);
     (doc as any).autoTable({
-        head: [[{ content: 'DATOS DEL USUARIO', styles: { fillColor: [211,211,211], textColor: [0,0,0], fontSize: 9, halign: 'center' } }]],
+        head: [[{ content: 'DATOS DEL USUARIO', styles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 9, halign: 'center' } }]],
         startY: y,
-        theme: 'grid', styles: { lineColor: [0,0,0], lineWidth: 0.1 },
+        theme: 'grid', 
+        styles: { lineColor: [0,0,0], lineWidth: 0.1 },
     });
     y = (doc as any).lastAutoTable.finalY;
 
@@ -93,7 +94,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         body: userDataBody,
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1 },
+        styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255] },
         columnStyles: {
             0: { cellWidth: 90 },
             1: { cellWidth: 90 },
@@ -101,6 +102,17 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         },
     });
     y = (doc as any).lastAutoTable.finalY;
+    
+    // --- Título de la tabla de productos ---
+    y += 2;
+    (doc as any).autoTable({
+        head: [[{ content: 'DESCRIPCION DE LOS BIENES', styles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 9, halign: 'center', fontStyle: 'bold' } }]],
+        startY: y,
+        theme: 'grid',
+        styles: { lineColor: [0,0,0], lineWidth: 0.1 },
+    });
+    y = (doc as any).lastAutoTable.finalY;
+
 
     // --- Tabla de productos ---
     const tableBody = products.map((product, index) => {
@@ -115,7 +127,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     (doc as any).autoTable({
         head: [tableHeaders.map(h => h.toUpperCase())],
         body: tableBody,
-        startY: y + 2,
+        startY: y,
         theme: 'grid',
         headStyles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 8, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1 },
         styles: { fontSize: 7, cellPadding: 1.5, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1 },
@@ -125,7 +137,8 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         }
     });
 
-    let finalY = (doc as any).lastAutoTable.finalY + 30; // Increased separation
+    let finalY = (doc as any).lastAutoTable.finalY + 15; // Adjusted separation
+    
     if (finalY > doc.internal.pageSize.getHeight() - 60) {
         doc.addPage();
         finalY = 20;
@@ -162,7 +175,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     drawSignatureLine("Jefe del Area", signatureWidth, finalY, signatureWidth);
     drawSignatureLine("Oficina Administracion", signatureWidth * 2, finalY, signatureWidth);
 
-    doc.save(`Acta_Asignacion_${headerData.dni || 'usuario'}.pdf`);
+    doc.save(`Acta_Asignacion_${(headerData.dni || 'usuario').toUpperCase()}.pdf`);
 };
 
 
@@ -223,7 +236,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
 
     // Tabla de productos
     (doc as any).autoTable({
-        head: [[{ content: 'DESCRIPCION', styles: { halign: 'center', fontStyle: 'bold', fillColor: [211,211,211] } }]],
+        head: [[{ content: 'DESCRIPCION DE LOS BIENES', styles: { halign: 'center', fontStyle: 'bold', fillColor: [211,211,211] } }]],
         startY: y,
         theme: 'grid',
         styles: { fontSize: 8, lineColor: [0,0,0], lineWidth: 0.1 },
@@ -270,20 +283,20 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         const textYStart = y + 4;
         
         let hasContent = false;
+        let currentY = textYStart;
         textLines.forEach(line => {
             if (line) {
-                doc.text(line.toUpperCase(), x + width / 2, textYStart, { align: 'center' });
+                doc.text(line.toUpperCase(), x + width / 2, currentY, { align: 'center' });
                 hasContent = true;
+                currentY += 4; 
             }
         });
         
-        // Solo dibujar la línea si hay texto asociado o si es una firma principal
-        if(hasContent || textLines.length <= 2) { // Asume que las líneas de firma principales tienen 2 o menos líneas de texto
+        if(hasContent || textLines.length <= 2) {
            doc.line(lineXStart, y, lineXEnd, y);
         }
     };
     
-    // Ajuste de espaciado
     const signatureBlockY1 = finalY + 40;
     const signatureBlockY2 = signatureBlockY1 + 40;
 
@@ -312,5 +325,5 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         drawSignatureLine(lines, margin + (index * sigWidth2), signatureBlockY2, sigWidth2);
     });
 
-    doc.save(`Acta_${(headerData.tipo || 'Reporte').replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`Acta_${(headerData.tipo || 'Reporte').replace(/ /g, '_').toUpperCase()}_${new Date().toISOString().split('T')[0]}.pdf`);
 }
