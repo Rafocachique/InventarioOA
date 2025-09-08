@@ -197,23 +197,21 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     // --- Función para dibujar texto con etiqueta en negrita y valor normal ---
     const drawStyledCellText = (docInstance: any, data: any) => {
         const { cell, settings } = data;
-        // Robust check for raw object and its properties
         const label = cell.raw?.label;
         const value = cell.raw?.value;
-    
-        // Exit if there's no label to draw
-        if (!label) {
+
+        // --- Defensive checks to prevent crashes ---
+        if (!label || typeof label !== 'string' || !cell || typeof cell.x !== 'number' || typeof cell.y !== 'number' || typeof cell.height !== 'number') {
             return;
         }
 
         const x = cell.x + settings.cellPadding;
         const yPos = cell.y + cell.height / 2 + docInstance.getLineHeight() / 3.5;
 
-        // Ensure coordinates are valid numbers before drawing
-        if (typeof x !== 'number' || typeof yPos !== 'number') {
+        if (!isFinite(x) || !isFinite(yPos)) {
             return;
         }
-
+        
         docInstance.setFont('helvetica', 'bold');
         docInstance.text(`${label}:`, x, yPos);
         
@@ -363,5 +361,3 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
 
     doc.save(`Acta_${(headerData.tipo || 'Reporte').replace(/ /g, '_').toUpperCase()}_${new Date().toISOString().split('T')[0]}.pdf`);
 }
-
-    
