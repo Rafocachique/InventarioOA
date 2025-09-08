@@ -193,37 +193,74 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     doc.text('ORDEN DE SALIDA, REINGRESO Y DESPLAZAMIENTO INTERNO DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
     y += 8;
 
-    const getStyledText = (label: string, value: any) => {
-        const strValue = String(value || '').toUpperCase();
-        return [{ content: `${label}: `, styles: { fontStyle: 'bold' } }, { content: strValue, styles: { fontStyle: 'normal' } }];
+    const getStyledContent = (label: string, value: any) => {
+        return { label: label.toUpperCase(), value: String(value || '').toUpperCase() };
     };
 
     const topTableBody = [
         [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 4, styles: { fontStyle: 'bold', fontSize: 8, textColor: [0,0,0], fillColor: [255, 255, 255] } }],
         [
-            { content: getStyledText('TIPO', headerData.tipo) },
-            { content: getStyledText('MOTIVO', headerData.motivo) },
-            { content: getStyledText('SALIDA', headerData.salida) },
-            { content: getStyledText('MANTENIMIENTO', headerData.mantenimiento) }
+            { content: getStyledContent('TIPO', headerData.tipo) },
+            { content: getStyledContent('MOTIVO', headerData.motivo) },
+            { content: getStyledContent('SALIDA', headerData.salida) },
+            { content: getStyledContent('MANTENIMIENTO', headerData.mantenimiento) }
         ],
         [
-            { content: getStyledText('REINGRESO', headerData.reingreso) },
-            { content: getStyledText('COMISION SERVICIO', headerData.comisionServicio) },
-            { content: getStyledText('NUMERO MOVIMIENTO', headerData.numeroMovimiento) },
-            { content: getStyledText('DESPLAZAMIENTO', headerData.desplazamiento) }
+            { content: getStyledContent('REINGRESO', headerData.reingreso) },
+            { content: getStyledContent('COMISION SERVICIO', headerData.comisionServicio) },
+            { content: getStyledContent('NUMERO MOVIMIENTO', headerData.numeroMovimiento) },
+            { content: getStyledContent('DESPLAZAMIENTO', headerData.desplazamiento) }
         ],
         [
-           { content: getStyledText('CAPACITACION O EVENTO', headerData.capacitacionEvento), colSpan: 4 },
+           { content: getStyledContent('CAPACITACION O EVENTO', headerData.capacitacionEvento), colSpan: 4 },
         ]
     ];
+    
+    const drawStyledCellText = (data: any) => {
+        const { doc: docInstance, cell, row, column, settings } = data;
+        const { label, value } = cell.raw;
+    
+        // Safety checks to prevent errors
+        if (typeof label === 'undefined' || !cell.raw.hasOwnProperty('value')) {
+            return; 
+        }
+        if (typeof cell.x !== 'number' || typeof cell.y !== 'number') {
+            return;
+        }
+    
+        const cellPadding = cell.padding('left');
+        const x = cell.x + cellPadding;
+        const y = cell.y + row.height / 2 + (docInstance.getFontSize() / 2.7); 
+    
+        // Clear the cell content drawn by default
+        docInstance.setFillColor(255, 255, 255);
+        docInstance.rect(cell.x, cell.y, cell.width, cell.height, 'F');
+    
+        // Draw styled text
+        docInstance.setFont('helvetica', 'bold');
+        docInstance.text(`${label}: `, x, y);
+        
+        const labelWidth = docInstance.getTextWidth(`${label}: `);
+        
+        docInstance.setFont('helvetica', 'normal');
+        docInstance.text(value, x + labelWidth, y);
+    };
 
     (doc as any).autoTable({
         body: topTableBody,
         startY: y,
         theme: 'grid',
         styles: { fontSize: 7, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0], valign: 'middle' },
+        didDrawCell: (data: any) => {
+            if (data.row.index > 0 && data.row.index < 4) { // Only apply to specific rows in this table
+                 if (data.cell.raw && typeof data.cell.raw === 'object' && data.cell.raw.label) {
+                    drawStyledCellText(data);
+                }
+            }
+        }
     });
     y = (doc as any).lastAutoTable.finalY + 2;
+
 
     const remiteRecibeBody = [
         [{ content: `Nombre y Apellidos: ${String(headerData.remiteNombre || '').toUpperCase()}`}, {content: `Nombre y Apellidos: ${String(headerData.recibeNombre || '').toUpperCase()}`}],
