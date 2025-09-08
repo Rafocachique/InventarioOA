@@ -51,6 +51,8 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     doc.setFontSize(10);
     doc.text('ANEXO N° 03', pageWidth / 2, y, { align: 'center' });
     y += 8;
+    doc.setFont('helvetica', 'normal');
+
 
     // --- Cabecera con Recuadro ---
     (doc as any).autoTable({
@@ -179,34 +181,6 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     doc.save(`Acta_Asignacion_${(headerData.dni || 'usuario').toUpperCase()}.pdf`);
 };
 
-
-const drawStyledCellText = (label: string, value: string, data: any) => {
-    const { doc, cell, settings } = data;
-    
-    if (!doc || !cell || !settings || typeof cell.x !== 'number' || typeof cell.y !== 'number' || typeof settings.cellPadding !== 'number' ) {
-      return;
-    }
-    if (!label || value === undefined || value === null) {
-      return;
-    }
-
-    const x = cell.x + settings.cellPadding;
-    const yPos = cell.y + cell.height / 2 + doc.getLineHeight() / 2 - 1.5;
-    
-    if(isNaN(x) || isNaN(yPos)) return;
-
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-    doc.text(`${label}:`, x, yPos);
-    
-    const labelWidth = doc.getTextWidth(`${label}: `);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-    doc.text(String(value).toUpperCase(), x + labelWidth, yPos);
-};
-
-
 export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, products: Product[]) => {
     const doc = new jsPDF({ orientation: 'landscape' });
     const margin = 14;
@@ -218,92 +192,63 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     doc.setFont('helvetica', 'bold');
     doc.text('ORDEN DE SALIDA, REINGRESO Y DESPLAZAMIENTO INTERNO DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
     y += 8;
+    doc.setFont('helvetica', 'normal');
 
 
     // Header section
     (doc as any).autoTable({
         body: [
-            [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 4, styles: { fontStyle: 'bold', textColor: [0,0,0], fontSize: 8 } }],
+            [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 4, styles: { fontStyle: 'normal', textColor: [0,0,0], fontSize: 8 } }],
             [
-                { content: '', name: 'tipo' },
-                { content: '', name: 'salida' },
-                { content: '', name: 'reingreso' },
-                { content: '', name: 'numeroMovimiento' }
+                `Tipo: ${headerData.tipo}`,
+                `Salida: ${headerData.salida}`,
+                `Reingreso: ${headerData.reingreso}`,
+                `Numero Movimiento: ${headerData.numeroMovimiento}`
             ],
             [
-                { content: '', name: 'motivo' },
-                { content: '', name: 'mantenimiento' },
-                { content: '', name: 'comisionServicio' },
-                { content: '', name: 'desplazamiento' }
+                { content: `Motivo: ${headerData.motivo}`, colSpan: 2},
+                `Mantenimiento: ${headerData.mantenimiento}`,
+                `Comision Servicio: ${headerData.comisionServicio}`,
+                
             ],
-            [{ content: '', name: 'capacitacionEvento', colSpan: 4 }]
+             [
+                `Desplazamiento: ${headerData.desplazamiento}`,
+                 { content: `Capacitacion o Evento: ${headerData.capacitacionEvento}`, colSpan: 3 },
+             ]
         ],
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 7, cellPadding: 1.5, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
-        didDrawCell: (data: any) => {
-            const cellName = data.cell.raw.name;
-            if (data.row.section === 'body' && cellName) {
-                switch(cellName) {
-                    case 'tipo': drawStyledCellText('Tipo', headerData.tipo, data); break;
-                    case 'salida': drawStyledCellText('Salida', headerData.salida, data); break;
-                    case 'reingreso': drawStyledCellText('Reingreso', headerData.reingreso, data); break;
-                    case 'numeroMovimiento': drawStyledCellText('Numero Movimiento', headerData.numeroMovimiento, data); break;
-                    case 'motivo': drawStyledCellText('Motivo', headerData.motivo, data); break;
-                    case 'mantenimiento': drawStyledCellText('Mantenimiento', headerData.mantenimiento, data); break;
-                    case 'comisionServicio': drawStyledCellText('Comision Servicio', headerData.comisionServicio, data); break;
-                    case 'desplazamiento': drawStyledCellText('Desplazamiento', headerData.desplazamiento, data); break;
-                    case 'capacitacionEvento': drawStyledCellText('Capacitacion o Evento', headerData.capacitacionEvento, data); break;
-                }
-            }
-        }
+        styles: { fontSize: 7, cellPadding: 1.5, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'normal' },
     });
     y = (doc as any).lastAutoTable.finalY;
     y+= 2;
 
     // Remite y Recibe
     (doc as any).autoTable({
-        head: [[{ content: 'DATOS DEL RESPONSABLE DEL REMITE', styles: { fontStyle: 'bold', halign: 'center', fillColor: [255, 255, 255], textColor: [0,0,0] } }, { content: 'DATOS RESPONSABLE DEL RECIBE', styles: { fontStyle: 'bold', halign: 'center', fillColor: [255, 255, 255], textColor: [0,0,0] } }]],
+        head: [[{ content: 'DATOS DEL RESPONSABLE DEL REMITE', styles: { fontStyle: 'normal', halign: 'center', fillColor: [255, 255, 255], textColor: [0,0,0] } }, { content: 'DATOS RESPONSABLE DEL RECIBE', styles: { fontStyle: 'normal', halign: 'center', fillColor: [255, 255, 255], textColor: [0,0,0] } }]],
         body: [
-            [{content: '', name: 'remiteNombre'}, {content: '', name: 'recibeNombre'}],
-            [{content: '', name: 'remiteDNI'}, {content: '', name: 'recibeDNI'}],
-            [{content: '', name: 'remiteCorreo'}, {content: '', name: 'recibeCorreo'}],
-            [{content: '', name: 'remiteUnidadOrganica'}, {content: '', name: 'recibeUnidadOrganica'}],
-            [{content: '', name: 'remiteLocalSede'}, {content: '', name: 'recibeLocalSede'}],
-            [{content: '', name: 'remiteOficio'}, {content: '', name: 'recibeDocumento'}],
+            [`Nombre y Apellidos: ${headerData.remiteNombre}`, `Nombre y Apellidos: ${headerData.recibeNombre}`],
+            [`DNI: ${headerData.remiteDNI}`, `DNI: ${headerData.recibeDNI}`],
+            [`Correo Electronico: ${headerData.remiteCorreo}`, `Correo Electronico: ${headerData.recibeCorreo}`],
+            [`Unidad Organica: ${headerData.remiteUnidadOrganica}`, `Unidad Organica: ${headerData.recibeUnidadOrganica}`],
+            [`Local o Sede: ${headerData.remiteLocalSede}`, `Local o Sede: ${headerData.recibeLocalSede}`],
+            [`Oficio: ${headerData.remiteOficio}`, `Documento: ${headerData.recibeDocumento}`],
         ],
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 7, cellPadding: 1.5, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
-        didDrawCell: (data: any) => {
-             const cellName = data.cell.raw.name;
-             if (data.row.section === 'body' && cellName) {
-                switch(cellName) {
-                    case 'remiteNombre': drawStyledCellText('Nombre y Apellidos', headerData.remiteNombre, data); break;
-                    case 'recibeNombre': drawStyledCellText('Nombre y Apellidos', headerData.recibeNombre, data); break;
-                    case 'remiteDNI': drawStyledCellText('DNI', headerData.remiteDNI, data); break;
-                    case 'recibeDNI': drawStyledCellText('DNI', headerData.recibeDNI, data); break;
-                    case 'remiteCorreo': drawStyledCellText('Correo Electronico', headerData.remiteCorreo, data); break;
-                    case 'recibeCorreo': drawStyledCellText('Correo Electronico', headerData.recibeCorreo, data); break;
-                    case 'remiteUnidadOrganica': drawStyledCellText('Unidad Organica', headerData.remiteUnidadOrganica, data); break;
-                    case 'recibeUnidadOrganica': drawStyledCellText('Unidad Organica', headerData.recibeUnidadOrganica, data); break;
-                    case 'remiteLocalSede': drawStyledCellText('Local o Sede', headerData.remiteLocalSede, data); break;
-                    case 'recibeLocalSede': drawStyledCellText('Local o Sede', headerData.recibeLocalSede, data); break;
-                    case 'remiteOficio': drawStyledCellText('Oficio', headerData.remiteOficio, data); break;
-                    case 'recibeDocumento': drawStyledCellText('Documento', headerData.recibeDocumento, data); break;
-                }
-             }
-        }
+        styles: { fontSize: 7, cellPadding: 1.5, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'normal' },
+        headStyles: {halign: 'center', fillColor: [255, 255, 255], textColor: [0,0,0], fontStyle: 'normal'},
+
     });
     y = (doc as any).lastAutoTable.finalY;
     y+= 2;
 
     // Tabla de productos
     (doc as any).autoTable({
-        head: [[{ content: 'DESCRIPCION DE LOS BIENES', styles: { halign: 'center', fontStyle: 'bold', fillColor: [255, 255, 255], textColor: [0,0,0] } }]],
+        head: [[{ content: 'DESCRIPCION DE LOS BIENES', styles: { halign: 'center', fontStyle: 'normal', fillColor: [255, 255, 255], textColor: [0,0,0] } }]],
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 8, lineColor: [0,0,0], lineWidth: 0.1, textColor: [0, 0, 0] },
+        styles: { fontSize: 8, lineColor: [0,0,0], lineWidth: 0.1, textColor: [0, 0, 0], fontStyle: 'normal' },
     });
     y = (doc as any).lastAutoTable.finalY;
 
@@ -321,8 +266,8 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         body: tableBody,
         startY: y,
         theme: 'grid',
-        headStyles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 7, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1, fontStyle: 'bold' },
-        styles: { fontSize: 7, cellPadding: 1, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1, textColor: [0, 0, 0] },
+        headStyles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 7, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1, fontStyle: 'normal' },
+        styles: { fontSize: 7, cellPadding: 1, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1, textColor: [0, 0, 0], fontStyle: 'normal' },
         columnStyles: {
             'DENOMINACION': { halign: 'left', cellWidth: 60 },
             'OBSERVACIONES': { halign: 'left', cellWidth: 40 },
