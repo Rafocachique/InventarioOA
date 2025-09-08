@@ -193,74 +193,32 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     doc.text('ORDEN DE SALIDA, REINGRESO Y DESPLAZAMIENTO INTERNO DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
     y += 8;
 
-    const getStyledContent = (label: string, value: any) => {
-        return { label: `${label}:`, value: String(value || '').toUpperCase() };
-    };
-
     const topTableBody = [
         [
-            { content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 3, styles: { fontStyle: 'bold', fontSize: 8, textColor: [0,0,0], fillColor: [255, 255, 255] } }, 
-            { content: getStyledContent('Numero Movimiento', headerData.numeroMovimiento) }
+            { content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 3, styles: { fontStyle: 'bold', fontSize: 8 } }, 
+            `Numero Movimiento: ${String(headerData.numeroMovimiento || '').toUpperCase()}`
         ],
         [
-            { content: getStyledContent('Tipo', headerData.tipo) },
-            { content: getStyledContent('Salida', headerData.salida) },
-            { content: getStyledContent('Reingreso', headerData.reingreso) },
-            { content: getStyledContent('Desplazamiento', headerData.desplazamiento) }
+            `Tipo: ${String(headerData.tipo || '').toUpperCase()}`,
+            `Salida: ${String(headerData.salida || '').toUpperCase()}`,
+            `Reingreso: ${String(headerData.reingreso || '').toUpperCase()}`,
+            `Desplazamiento: ${String(headerData.desplazamiento || '').toUpperCase()}`
         ],
         [
-            { content: getStyledContent('Motivo', headerData.motivo), colSpan: 2 },
-            { content: getStyledContent('Mantenimiento', headerData.mantenimiento) },
-            { content: getStyledContent('Comision Servicio', headerData.comisionServicio) }
+            { content: `Motivo: ${String(headerData.motivo || '').toUpperCase()}`, colSpan: 2 },
+            `Mantenimiento: ${String(headerData.mantenimiento || '').toUpperCase()}`,
+            `Comision Servicio: ${String(headerData.comisionServicio || '').toUpperCase()}`
         ],
         [
-             { content: getStyledContent('Capacitacion o Evento', headerData.capacitacionEvento), colSpan: 4 }
+             { content: `Capacitacion o Evento: ${String(headerData.capacitacionEvento || '').toUpperCase()}`, colSpan: 4 }
         ]
     ];
     
-    const drawStyledCellText = (data: any) => {
-        const { doc: docInstance, cell } = data;
-
-        // --- Robust validation to prevent errors ---
-        if (!cell || typeof cell.raw !== 'object' || cell.raw === null || !cell.raw.hasOwnProperty('label') || !cell.raw.hasOwnProperty('value')) {
-            return;
-        }
-
-        const { label, value } = cell.raw;
-        if (typeof label === 'undefined' || typeof value === 'undefined' || typeof cell.x !== 'number' || typeof cell.y !== 'number' || !docInstance.getFontSize()) {
-            return;
-        }
-        
-        const cellPadding = cell.padding('left');
-        const x = cell.x + cellPadding;
-        const yPos = cell.y + cell.height / 2 + (docInstance.getFontSize() / 2.7);
-
-        // --- Clear the cell to draw custom content ---
-        docInstance.setFillColor(255, 255, 255);
-        docInstance.rect(cell.x, cell.y, cell.width, cell.height, 'F');
-    
-        // --- Draw styled text ---
-        docInstance.setFont('helvetica', 'bold');
-        docInstance.text(`${label} `, x, yPos);
-        
-        const labelWidth = docInstance.getTextWidth(`${label} `);
-        
-        docInstance.setFont('helvetica', 'normal');
-        docInstance.text(value, x + labelWidth, yPos);
-    };
-
     (doc as any).autoTable({
         body: topTableBody,
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 1.5, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0], valign: 'middle', minCellHeight: 6 },
-        didDrawCell: (data: any) => {
-            if (data.row.index > 0 || (data.row.index === 0 && data.column.index === 3)) {
-                 if (data.cell.raw && typeof data.cell.raw === 'object' && data.cell.raw.label) {
-                    drawStyledCellText(data);
-                }
-            }
-        },
+        styles: { fontSize: 7, cellPadding: 1.5, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0], valign: 'middle', minCellHeight: 6 },
         columnStyles: {
             0: { cellWidth: 70 },
             1: { cellWidth: 70 },
