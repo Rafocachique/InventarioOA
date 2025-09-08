@@ -187,60 +187,33 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     const pageWidth = doc.internal.pageSize.getWidth();
     let y = 15;
 
-    // --- Título Principal ---
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.text('ORDEN DE SALIDA, REINGRESO Y DESPLAZAMIENTO INTERNO DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
     y += 8;
 
-    const drawStyledCellText = (docInstance: jsPDF, data: any) => {
-        const { cell, settings } = data;
-        const rawContent = cell.raw;
-
-        if (typeof rawContent !== 'object' || rawContent === null || !('label' in rawContent)) {
-            return;
-        }
-
-        if (typeof cell.x !== 'number' || typeof cell.y !== 'number' || !isFinite(cell.x) || !isFinite(cell.y)) {
-            return;
-        }
-        
-        const { label, value } = rawContent as {label: string, value: any};
-        if (!label) return;
-        
-        const x = cell.x + settings.cellPadding;
-        const yPos = cell.y + cell.height / 2 + (settings.fontSize / 2.2) - 1;
-
-        docInstance.setFillColor(255, 255, 255);
-        docInstance.rect(cell.x, cell.y, cell.width, cell.height, 'F');
-        
-        docInstance.setFont('helvetica', 'bold');
-        docInstance.text(`${label}: `, x, yPos);
-        
-        const labelWidth = docInstance.getTextWidth(`${label}: `);
-        
-        docInstance.setFont('helvetica', 'normal');
-        docInstance.text(String(value || '').toUpperCase(), x + labelWidth, yPos);
+    const getStyledText = (label: string, value: any) => {
+        const strValue = String(value || '').toUpperCase();
+        return [{ content: `${label}: `, styles: { fontStyle: 'bold' } }, { content: strValue, styles: { fontStyle: 'normal' } }];
     };
 
-    // --- Bloque de Datos Superior ---
     const topTableBody = [
         [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 4, styles: { fontStyle: 'bold', fontSize: 8, textColor: [0,0,0], fillColor: [255, 255, 255] } }],
         [
-            { content: { label: 'TIPO', value: headerData.tipo } },
-            { content: { label: 'SALIDA', value: headerData.salida } },
-            { content: { label: 'REINGRESO', value: headerData.reingreso } },
-            { content: { label: 'NUMERO MOVIMIENTO', value: headerData.numeroMovimiento } }
+            { content: getStyledText('TIPO', headerData.tipo) },
+            { content: getStyledText('MOTIVO', headerData.motivo) },
+            { content: getStyledText('SALIDA', headerData.salida) },
+            { content: getStyledText('MANTENIMIENTO', headerData.mantenimiento) }
         ],
         [
-            { content: { label: 'MOTIVO', value: headerData.motivo }, colSpan: 2 },
-            { content: { label: 'MANTENIMIENTO', value: headerData.mantenimiento } },
-            { content: { label: 'COMISION SERVICIO', value: headerData.comisionServicio } },
+            { content: getStyledText('REINGRESO', headerData.reingreso) },
+            { content: getStyledText('COMISION SERVICIO', headerData.comisionServicio) },
+            { content: getStyledText('NUMERO MOVIMIENTO', headerData.numeroMovimiento) },
+            { content: getStyledText('DESPLAZAMIENTO', headerData.desplazamiento) }
         ],
         [
-           { content: { label: 'DESPLAZAMIENTO', value: headerData.desplazamiento }, colSpan: 2 },
-           { content: { label: 'CAPACITACION O EVENTO', value: headerData.capacitacionEvento }, colSpan: 2 },
+           { content: getStyledText('CAPACITACION O EVENTO', headerData.capacitacionEvento), colSpan: 4 },
         ]
     ];
 
@@ -248,17 +221,10 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         body: topTableBody,
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 7, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
-        didDrawCell: (data: any) => {
-            if (data.table.body[data.row.index] && data.table.body[data.row.index][data.column.index]) {
-                 drawStyledCellText(doc, data);
-            }
-        }
+        styles: { fontSize: 7, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0], valign: 'middle' },
     });
     y = (doc as any).lastAutoTable.finalY + 2;
 
-
-    // --- Bloque de Remite y Recibe ---
     const remiteRecibeBody = [
         [{ content: `Nombre y Apellidos: ${String(headerData.remiteNombre || '').toUpperCase()}`}, {content: `Nombre y Apellidos: ${String(headerData.recibeNombre || '').toUpperCase()}`}],
         [{ content: `DNI: ${String(headerData.remiteDNI || '').toUpperCase()}`}, {content: `DNI: ${String(headerData.recibeDNI || '').toUpperCase()}`}],
@@ -281,7 +247,6 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     });
     y = (doc as any).lastAutoTable.finalY + 2;
 
-    // --- Título de la Tabla de Productos ---
     (doc as any).autoTable({
         head: [[{ content: 'DESCRIPCION DE LOS BIENES', styles: { halign: 'center', fontStyle: 'bold', fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 8 } }]],
         startY: y,
@@ -290,7 +255,6 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     });
     y = (doc as any).lastAutoTable.finalY;
     
-    // --- Tabla de Productos ---
     const tableBody = products.map((product, index) => {
         return tableHeaders.map(header => {
             if (header === 'Item') return index + 1;
@@ -314,7 +278,6 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     });
     let finalY = (doc as any).lastAutoTable.finalY;
     
-    // --- Sección de Firmas ---
     const drawSignatureLine = (textLines: string[], x: number, y: number, width: number) => {
         doc.setTextColor(0, 0, 0);
         doc.setFontSize(7);
