@@ -43,7 +43,7 @@ const createHeaderTable = (doc: jsPDF, body: any[], startY: number, options = {}
         styles: { fontSize: 8, cellPadding: 1, ...options },
         columnStyles: {
             0: { cellWidth: 90 },
-            1: { cellWidth: 90 },
+            1: { cellWidth: 'auto' },
             2: { cellWidth: 'auto' },
         },
         margin: { left: 14, right: 14 }
@@ -53,7 +53,7 @@ const createHeaderTable = (doc: jsPDF, body: any[], startY: number, options = {}
 
 export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Product[]) => {
     const doc = new jsPDF({ orientation: 'landscape' });
-    let y = 15; 
+    let y = 15;
 
     // Títulos
     doc.setFontSize(11);
@@ -87,7 +87,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     y = createHeaderTable(doc, [[{ content: 'DATOS DEL USUARIO', styles: { fontStyle: 'bold', fontSize: 9 } }]], y + 1, { styles: { cellPadding: 0 } });
 
     const userDataBody = [
-        [
+         [
             `Nombre y apellidos: ${String(headerData.nombreApellidos || '').toUpperCase()}`,
             `N° DNI: ${String(headerData.dni || '').toUpperCase()}`,
             `Correo Electronico: ${String(headerData.correo || '').toUpperCase()}`
@@ -95,11 +95,11 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         [
             `Organo o Unidad Organica: ${String(headerData.organo || '').toUpperCase()}`,
             `Local o sede: ${String(headerData.localSede || '').toUpperCase()}`,
-            ''
+             `Oficina o area: ${String(headerData.oficinaArea || '').toUpperCase()}`
         ],
         [
             `Direccion: ${String(headerData.direccion || '').toUpperCase()}`,
-            `Oficina o area: ${String(headerData.oficinaArea || '').toUpperCase()}`,
+            '',
             ''
         ]
     ];
@@ -264,7 +264,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     // Firmas
     const pageHeight = doc.internal.pageSize.getHeight();
     // Check if there is enough space, otherwise add a new page.
-    if (finalY > pageHeight - 120) { 
+    if (finalY > pageHeight - 80) { 
         doc.addPage();
         finalY = 20;
     }
@@ -287,7 +287,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         });
     };
     
-    const signatureBlockY1 = finalY + 40;
+    const signatureBlockY1 = finalY + 15;
     const signatureBlockY2 = signatureBlockY1 + 40;
 
     const pageContentWidth = pageWidth - margin * 2;
