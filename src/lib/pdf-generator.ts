@@ -35,9 +35,6 @@ const reportColumnMapping: Record<string, string> = {
 };
 const tableHeaders = Object.keys(reportColumnMapping);
 
-const applyStyles = (doc: jsPDF, isBold = false) => {
-    doc.setFont('helvetica', isBold ? 'bold' : 'normal');
-};
 
 export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Product[]) => {
     const doc = new jsPDF({ orientation: 'landscape' });
@@ -62,7 +59,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         ],
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255] },
+        styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0,0,0] },
     });
     y = (doc as any).lastAutoTable.finalY + 2;
 
@@ -71,7 +68,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         head: [[{ content: 'DATOS DEL USUARIO', styles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 9, halign: 'center', fontStyle: 'bold' } }]],
         startY: y,
         theme: 'grid', 
-        styles: { lineColor: [0,0,0], lineWidth: 0.1, textColor: [0, 0, 0] },
+        styles: { lineColor: [0,0,0], lineWidth: 0.1, textColor: [0,0,0] },
     });
     y = (doc as any).lastAutoTable.finalY;
 
@@ -95,7 +92,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         body: userDataBody,
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+        styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0,0,0] },
         columnStyles: {
             0: { cellWidth: 90 },
             1: { cellWidth: 90 },
@@ -130,7 +127,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         body: tableBody,
         startY: y,
         theme: 'grid',
-        headStyles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 8, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1 },
+        headStyles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 8, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1, fontStyle: 'bold' },
         styles: { fontSize: 7, cellPadding: 1.5, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1, textColor: [0, 0, 0] },
         columnStyles: {
             'DENOMINACION': { halign: 'left', cellWidth: 50 },
@@ -186,7 +183,6 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
 const drawStyledCellText = (label: string, value: string, data: any) => {
     const { doc, cell, settings } = data;
     
-    // Defensive checks for all required properties
     if (!doc || !cell || !settings || typeof cell.x !== 'number' || typeof cell.y !== 'number' || typeof settings.cellPadding !== 'number' ) {
       return;
     }
@@ -195,9 +191,8 @@ const drawStyledCellText = (label: string, value: string, data: any) => {
     }
 
     const x = cell.x + settings.cellPadding;
-    const yPos = cell.y + cell.height / 2 + doc.getLineHeight() / 2 - 1;
+    const yPos = cell.y + cell.height / 2 + doc.getLineHeight() / 2 - 1.5;
     
-    // Final check for calculated position
     if(isNaN(x) || isNaN(yPos)) return;
 
     doc.setFont('helvetica', 'bold');
@@ -245,7 +240,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         ],
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+        styles: { fontSize: 7, cellPadding: 1.5, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
         didDrawCell: (data: any) => {
             const cellName = data.cell.raw.name;
             if (data.row.section === 'body' && cellName) {
@@ -279,7 +274,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         ],
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+        styles: { fontSize: 7, cellPadding: 1.5, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
         didDrawCell: (data: any) => {
              const cellName = data.cell.raw.name;
              if (data.row.section === 'body' && cellName) {
@@ -326,7 +321,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         body: tableBody,
         startY: y,
         theme: 'grid',
-        headStyles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 7, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1 },
+        headStyles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 7, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1, fontStyle: 'bold' },
         styles: { fontSize: 7, cellPadding: 1, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1, textColor: [0, 0, 0] },
         columnStyles: {
             'DENOMINACION': { halign: 'left', cellWidth: 60 },
@@ -368,32 +363,36 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     };
     
     const signatureBlockY1 = finalY + 40;
-    const signatureBlockY2 = signatureBlockY1 + 40;
+    const signatureBlockY2 = signatureBlockY1 + 30;
 
     const pageContentWidth = pageWidth - margin * 2;
 
-    const sigs1 = [
-        ["Firma y sello Administrador Local", "(Sale el bien)"],
-        ["Firma y sello remite la Salida"],
-        ["Firma y Sello Administrador local", "(Ingresa el bien)"],
-        ["Firma y sello recibe el Bien"]
-    ];
-    const numSignatures1 = sigs1.length;
-    const sigWidth1 = pageContentWidth / numSignatures1;
-    sigs1.forEach((lines, index) => {
-        drawSignatureLine(lines, margin + (index * sigWidth1), signatureBlockY1, sigWidth1);
-    });
+    if (headerData.tipo !== 'Transferencia') {
+        const sigs1 = [
+            ["Firma y sello Administrador Local", "(Sale el bien)"],
+            ["Firma y sello remite la Salida"],
+            ["Firma y Sello Administrador local", "(Ingresa el bien)"],
+            ["Firma y sello recibe el Bien"]
+        ];
+        const numSignatures1 = sigs1.length;
+        const sigWidth1 = pageContentWidth / numSignatures1;
+        sigs1.forEach((lines, index) => {
+            drawSignatureLine(lines, margin + (index * sigWidth1), signatureBlockY1, sigWidth1);
+        });
+    }
 
-    const sigs2 = [
-        ["Datos Vehiculo", headerData.datosVehiculo || null],
-        ["Nombre y firma Responsable del traslado", headerData.nombreResponsableTraslado || null],
-        ["Nombre y firma Unidad Patrimonio", headerData.nombreUnidadPatrimonio || null]
-    ];
-    const numSignatures2 = sigs2.length;
-    const sigWidth2 = pageContentWidth / numSignatures2;
-    sigs2.forEach((lines, index) => {
-        drawSignatureLine(lines, margin + (index * sigWidth2), signatureBlockY2, sigWidth2);
-    });
+    if (headerData.tipo === 'Transferencia') {
+        const sigs2 = [
+            ["Datos Vehiculo", headerData.datosVehiculo || null],
+            ["Nombre y firma Responsable del traslado", headerData.nombreResponsableTraslado || null],
+            ["Nombre y firma Unidad Patrimonio", headerData.nombreUnidadPatrimonio || null]
+        ];
+        const numSignatures2 = sigs2.length;
+        const sigWidth2 = pageContentWidth / numSignatures2;
+        sigs2.forEach((lines, index) => {
+            drawSignatureLine(lines, margin + (index * sigWidth2), signatureBlockY2, sigWidth2);
+        });
+    }
 
     doc.save(`Acta_${(headerData.tipo || 'Reporte').replace(/ /g, '_').toUpperCase()}_${new Date().toISOString().split('T')[0]}.pdf`);
 }
