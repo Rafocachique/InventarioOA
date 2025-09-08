@@ -94,7 +94,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         body: userDataBody,
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0,0,0], fontStyle: 'normal' },
+        styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'normal' },
         columnStyles: {
             0: { cellWidth: 90 },
             1: { cellWidth: 90 },
@@ -197,16 +197,25 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     // --- Función para dibujar texto con etiqueta en negrita y valor normal ---
     const drawStyledCellText = (docInstance: any, data: any) => {
         const { cell, settings } = data;
-        const label = cell.raw.label;
-        const value = cell.raw.value;
+        // Robust check for raw object and its properties
+        const label = cell.raw?.label;
+        const value = cell.raw?.value;
     
-        if (!label) return;
+        // Exit if there's no label to draw
+        if (!label) {
+            return;
+        }
 
         const x = cell.x + settings.cellPadding;
-        let yPos = cell.y + cell.height / 2 + docInstance.getLineHeight() / 3.5;
+        const yPos = cell.y + cell.height / 2 + docInstance.getLineHeight() / 3.5;
+
+        // Ensure coordinates are valid numbers before drawing
+        if (typeof x !== 'number' || typeof yPos !== 'number') {
+            return;
+        }
 
         docInstance.setFont('helvetica', 'bold');
-        docInstance.text(`${label}: `, x, yPos);
+        docInstance.text(`${label}:`, x, yPos);
         
         const labelWidth = docInstance.getTextWidth(`${label}: `);
         
@@ -320,8 +329,11 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         });
     };
     
-    const signatureBlock1Y = finalY + 15;
-    const signatureBlock2Y = signatureBlock1Y + 20;
+    let signatureBlock1Y = finalY + 15;
+    if (signatureBlock1Y > doc.internal.pageSize.getHeight() - 50) {
+        doc.addPage();
+        signatureBlock1Y = 20;
+    }
 
     const sigs1 = [
         ["FIRMA Y SELLO ADMINISTRADOR LOCAL", "(SALE EL BIEN)"],
@@ -335,6 +347,8 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         drawSignatureLine(lines, margin + (index * sigWidth1), signatureBlock1Y, sigWidth1);
     });
     
+    let signatureBlock2Y = signatureBlock1Y + 20;
+
     const sigs2 = [
         {key: 'datosVehiculo', default: "DATOS VEHICULO"},
         {key: 'nombreResponsableTraslado', default: "NOMBRE Y FIRMA RESPONSABLE DEL TRASLADO"},
@@ -349,3 +363,5 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
 
     doc.save(`Acta_${(headerData.tipo || 'Reporte').replace(/ /g, '_').toUpperCase()}_${new Date().toISOString().split('T')[0]}.pdf`);
 }
+
+    
