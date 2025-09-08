@@ -185,23 +185,22 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     const doc = new jsPDF({ orientation: 'landscape' });
     const margin = 14;
     const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
     let y = 15;
 
+    // --- Título Principal ---
     doc.setTextColor(0, 0, 0);
-    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
     doc.text('ORDEN DE SALIDA, REINGRESO Y DESPLAZAMIENTO INTERNO DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
     y += 8;
 
+    // --- Función para dibujar texto con etiqueta en negrita y valor normal ---
     const drawStyledCellText = (doc: jsPDF, label: string, value: any, cell: any, settings: any) => {
-        if (!label) return;
-
-        const x = cell.x + settings.padding;
-        let yPos = cell.y + cell.height / 2 + doc.getLineHeight() / 2 - 1.5;
-
-        if (typeof cell.x !== 'number' || typeof cell.y !== 'number') return;
+        if (!label || typeof cell.x !== 'number' || typeof cell.y !== 'number') return;
         
+        const x = cell.x + settings.padding;
+        const yPos = cell.y + cell.height / 2 + doc.getLineHeight() / 2 - 2;
+
         doc.setFont('helvetica', 'bold');
         doc.text(`${label}:`, x, yPos);
         
@@ -211,10 +210,10 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         doc.text(String(value || '').toUpperCase(), x + labelWidth, yPos);
     }
     
-    // Header section
+    // --- Bloque de Datos Superior ---
     (doc as any).autoTable({
         body: [
-            [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 4, styles: { fontStyle: 'bold' } }],
+            [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 4, styles: { fontStyle: 'bold', fontSize: 8 } }],
             [
                 { content: 'Tipo', 'data-value': headerData.tipo },
                 { content: 'Salida', 'data-value': headerData.salida },
@@ -232,16 +231,16 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         ],
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 7, cellPadding: 1.5, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+        styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0] },
         didDrawCell: (data: any) => {
             if (data.row.index > 0 && data.section === 'body') {
-                drawStyledCellText(doc, data.cell.raw.content, data.cell.raw['data-value'], data.cell, { padding: 2 });
+                drawStyledCellText(doc, data.cell.raw.content, data.cell.raw['data-value'], data.cell, { padding: 1 });
             }
         },
     });
     y = (doc as any).lastAutoTable.finalY + 2;
 
-    // Remite y Recibe
+    // --- Bloque de Remite y Recibe ---
     const remiteRecibeBody = [
         [`Nombre y Apellidos: ${String(headerData.remiteNombre || '').toUpperCase()}`, `Nombre y Apellidos: ${String(headerData.recibeNombre || '').toUpperCase()}`],
         [`DNI: ${String(headerData.remiteDNI || '').toUpperCase()}`, `DNI: ${String(headerData.recibeDNI || '').toUpperCase()}`],
@@ -265,16 +264,16 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     });
     y = (doc as any).lastAutoTable.finalY + 2;
 
-    // Tabla de productos Title
+    // --- Título de la Tabla de Productos ---
     (doc as any).autoTable({
-        head: [[{ content: 'DESCRIPCION DE LOS BIENES', styles: { halign: 'center', fontStyle: 'bold', fillColor: [255, 255, 255] } }]],
+        head: [[{ content: 'DESCRIPCION DE LOS BIENES', styles: { halign: 'center', fontStyle: 'bold', fillColor: [255, 255, 255], textColor: [0,0,0] } }]],
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 8, lineColor: [0,0,0], lineWidth: 0.1, textColor: [0, 0, 0] },
+        styles: { fontSize: 8, lineColor: [0,0,0], lineWidth: 0.1 },
     });
     y = (doc as any).lastAutoTable.finalY;
     
-    // Products table
+    // --- Tabla de Productos ---
     const tableBody = products.map((product, index) => {
         return tableHeaders.map(header => {
             if (header === 'Item') return index + 1;
@@ -290,7 +289,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         startY: y,
         theme: 'grid',
         headStyles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 7, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1, fontStyle: 'bold' },
-        styles: { fontSize: 7, cellPadding: 1, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1, textColor: [0, 0, 0], fontStyle: 'normal' },
+        styles: { fontSize: 7, cellPadding: 1.5, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1, textColor: [0, 0, 0], fontStyle: 'normal' },
         columnStyles: {
             'DENOMINACION': { halign: 'left', cellWidth: 60 },
             'OBSERVACIONES': { halign: 'left', cellWidth: 40 },
@@ -298,11 +297,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     });
     let finalY = (doc as any).lastAutoTable.finalY;
     
-    if (finalY > pageHeight - 60) { 
-        doc.addPage();
-        finalY = 20;
-    }
-
+    // --- Sección de Firmas ---
     const drawSignatureLine = (textLines: string[], x: number, y: number, width: number) => {
         doc.setTextColor(0, 0, 0);
         doc.setFontSize(7);
