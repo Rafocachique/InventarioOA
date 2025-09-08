@@ -299,7 +299,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         });
     };
     
-    let signatureBlock1Y = finalY + 15;
+    let signatureBlock1Y = finalY + 25; // Aumentado de 15 a 25
     if (signatureBlock1Y > doc.internal.pageSize.getHeight() - 60) {
         doc.addPage();
         signatureBlock1Y = 20;
@@ -317,7 +317,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         drawSignatureLine(lines, margin + (index * sigWidth1), signatureBlock1Y, sigWidth1);
     });
     
-    let signatureBlock2Y = signatureBlock1Y + 20;
+    let signatureBlock2Y = signatureBlock1Y + 30; // Aumentado de 20 a 30
 
     const sigs2 = [
         {key: 'datosVehiculo', default: "DATOS VEHICULO"},
