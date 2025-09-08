@@ -194,69 +194,80 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     y += 8;
 
     const getStyledContent = (label: string, value: any) => {
-        return { label: label.toUpperCase(), value: String(value || '').toUpperCase() };
+        return { label: `${label}:`, value: String(value || '').toUpperCase() };
     };
 
     const topTableBody = [
-        [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 4, styles: { fontStyle: 'bold', fontSize: 8, textColor: [0,0,0], fillColor: [255, 255, 255] } }],
+        [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 3, styles: { fontStyle: 'bold', fontSize: 8, textColor: [0,0,0], fillColor: [255, 255, 255] } }, { content: getStyledContent('Numero Movimiento', headerData.numeroMovimiento) } ],
         [
-            { content: getStyledContent('TIPO', headerData.tipo) },
-            { content: getStyledContent('MOTIVO', headerData.motivo) },
-            { content: getStyledContent('SALIDA', headerData.salida) },
-            { content: getStyledContent('MANTENIMIENTO', headerData.mantenimiento) }
+            { content: getStyledContent('Tipo', headerData.tipo) },
+            { content: getStyledContent('Salida', headerData.salida) },
+            { content: getStyledContent('Reingreso', headerData.reingreso) },
+            { content: getStyledContent('Desplazamiento', headerData.desplazamiento) }
         ],
         [
-            { content: getStyledContent('REINGRESO', headerData.reingreso) },
-            { content: getStyledContent('COMISION SERVICIO', headerData.comisionServicio) },
-            { content: getStyledContent('NUMERO MOVIMIENTO', headerData.numeroMovimiento) },
-            { content: getStyledContent('DESPLAZAMIENTO', headerData.desplazamiento) }
-        ],
-        [
-           { content: getStyledContent('CAPACITACION O EVENTO', headerData.capacitacionEvento), colSpan: 4 },
+            { content: getStyledContent('Motivo', headerData.motivo) },
+            { content: getStyledContent('Mantenimiento', headerData.mantenimiento) },
+            { content: getStyledContent('Comision Servicio', headerData.comisionServicio) },
+            { content: getStyledContent('Capacitacion o Evento', headerData.capacitacionEvento) }
         ]
     ];
     
     const drawStyledCellText = (data: any) => {
         const { doc: docInstance, cell, row, column, settings } = data;
-        const { label, value } = cell.raw;
-    
-        // Safety checks to prevent errors
-        if (typeof label === 'undefined' || !cell.raw.hasOwnProperty('value')) {
-            return; 
-        }
-        if (typeof cell.x !== 'number' || typeof cell.y !== 'number') {
+
+        // --- Robust validation to prevent errors ---
+        if (!cell || !cell.raw || typeof cell.raw !== 'object' || !cell.raw.hasOwnProperty('label') || !cell.raw.hasOwnProperty('value')) {
             return;
         }
-    
+
+        const { label, value } = cell.raw;
+        if (typeof label === 'undefined' || typeof value === 'undefined') {
+            return;
+        }
+        
+        if (typeof cell.x !== 'number' || typeof cell.y !== 'number' || typeof cell.height !== 'number' || !docInstance.getFontSize()) {
+            return;
+        }
+
         const cellPadding = cell.padding('left');
         const x = cell.x + cellPadding;
-        const y = cell.y + row.height / 2 + (docInstance.getFontSize() / 2.7); 
-    
-        // Clear the cell content drawn by default
+        const yPos = cell.y + cell.height / 2 + (docInstance.getFontSize() / 2.7);
+
+        // --- Clear the cell to draw custom content ---
         docInstance.setFillColor(255, 255, 255);
         docInstance.rect(cell.x, cell.y, cell.width, cell.height, 'F');
     
-        // Draw styled text
+        // --- Draw styled text ---
         docInstance.setFont('helvetica', 'bold');
-        docInstance.text(`${label}: `, x, y);
+        docInstance.text(`${label} `, x, yPos);
         
-        const labelWidth = docInstance.getTextWidth(`${label}: `);
+        const labelWidth = docInstance.getTextWidth(`${label} `);
         
         docInstance.setFont('helvetica', 'normal');
-        docInstance.text(value, x + labelWidth, y);
+        docInstance.text(value, x + labelWidth, yPos);
     };
 
     (doc as any).autoTable({
         body: topTableBody,
         startY: y,
         theme: 'grid',
-        styles: { fontSize: 7, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0], valign: 'middle' },
+        styles: { fontSize: 8, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0], valign: 'middle', minCellHeight: 6 },
         didDrawCell: (data: any) => {
-            if (data.row.index > 0 && data.row.index < 4) { // Only apply to specific rows in this table
-                 if (data.cell.raw && typeof data.cell.raw === 'object' && data.cell.raw.label) {
-                    drawStyledCellText(data);
+             // Only apply custom drawing to cells that are objects with label/value
+            if (data.cell.raw && typeof data.cell.raw === 'object' && data.cell.raw.label) {
+                if (data.row.index === 0 && data.column.index === 3) { // Numero Movimiento
+                     drawStyledCellText(data);
+                } else if (data.row.index > 0) { // All other styled cells
+                     drawStyledCellText(data);
                 }
             }
+        },
+        columnStyles: {
+            0: { cellWidth: 70 },
+            1: { cellWidth: 70 },
+            2: { cellWidth: 70 },
+            3: { cellWidth: 'auto' }
         }
     });
     y = (doc as any).lastAutoTable.finalY + 2;
