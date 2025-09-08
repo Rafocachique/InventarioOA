@@ -34,60 +34,47 @@ const reportColumnMapping: Record<string, string> = {
 };
 const tableHeaders = Object.keys(reportColumnMapping);
 
-
-const createHeaderTable = (doc: jsPDF, body: any[], startY: number, options = {}) => {
-    (doc as any).autoTable({
-        body: body,
-        startY: startY,
-        theme: 'plain',
-        styles: { fontSize: 8, cellPadding: 1, ...options },
-        columnStyles: {
-            0: { cellWidth: 90 },
-            1: { cellWidth: 'auto' },
-            2: { cellWidth: 'auto' },
-        },
-        margin: { left: 14, right: 14 }
-    });
-    return (doc as any).lastAutoTable.finalY;
+const applyStyles = (doc: jsPDF, isBold = false) => {
+    doc.setFont('helvetica', isBold ? 'bold' : 'normal');
 };
 
 export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Product[]) => {
     const doc = new jsPDF({ orientation: 'landscape' });
+    const margin = 14;
+    const pageWidth = doc.internal.pageSize.getWidth();
     let y = 15;
 
-    // Títulos
+    // --- Títulos ---
+    applyStyles(doc, true);
     doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    
+    doc.text('FICHA ASIGNACION EN USO Y DEVOLUCION DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
+    y += 5;
+    doc.setFontSize(10);
+    doc.text('ANEXO N° 03', pageWidth / 2, y, { align: 'center' });
+    y += 8;
+
+    // --- Cabecera con Recuadro ---
     (doc as any).autoTable({
-        body: [[{ content: 'ANEXO N° 03', styles: { halign: 'center', fontSize: 10 } }]],
+        body: [
+            [{ content: `ENTIDAD U ORGANIZACIÓN DE LA ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, styles: { fontStyle: 'bold', fontSize: 9 } }, { content: `FECHA: ${String(headerData.fecha || '').toUpperCase()}`, styles: { fontStyle: 'bold', halign: 'right', fontSize: 9 } }]
+        ],
         startY: y,
-        theme: 'plain',
-        styles: {cellPadding: 0},
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1 },
     });
-    y = (doc as any).lastAutoTable.finalY - 5;
-    
+    y = (doc as any).lastAutoTable.finalY + 2;
+
+    // --- Datos del Usuario con Recuadro ---
+    applyStyles(doc, true);
     (doc as any).autoTable({
-        body: [[{ content: 'FICHA ASIGNACION EN USO Y DEVOLUCION DE BIENES MUEBLES PATRIMONIALES', styles: { halign: 'center' } }]],
+        head: [[{ content: 'DATOS DEL USUARIO', styles: { fillColor: [211,211,211], textColor: [0,0,0], fontSize: 9, halign: 'center' } }]],
         startY: y,
-        theme: 'plain',
-        styles: {cellPadding: 0},
+        theme: 'grid', styles: { lineColor: [0,0,0], lineWidth: 0.1 },
     });
     y = (doc as any).lastAutoTable.finalY;
 
-    // Cabecera Entidad y Fecha
-    y = createHeaderTable(doc, [[
-        `ENTIDAD U ORGANIZACIÓN DE LA ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`,
-        { content: `FECHA: ${String(headerData.fecha || '').toUpperCase()}`, styles: { halign: 'right' } }
-    ]], y + 2, { styles: { cellPadding: 0, fontSize: 9 } });
-     y = (doc as any).lastAutoTable.finalY + 1;
-    doc.line(14, y, doc.internal.pageSize.width - 14, y);
-    
-    // Datos del Usuario Header
-    y = createHeaderTable(doc, [[{ content: 'DATOS DEL USUARIO', styles: { fontStyle: 'bold', fontSize: 9 } }]], y + 1, { styles: { cellPadding: 0 } });
-
     const userDataBody = [
-         [
+        [
             `Nombre y apellidos: ${String(headerData.nombreApellidos || '').toUpperCase()}`,
             `N° DNI: ${String(headerData.dni || '').toUpperCase()}`,
             `Correo Electronico: ${String(headerData.correo || '').toUpperCase()}`
@@ -95,19 +82,27 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         [
             `Organo o Unidad Organica: ${String(headerData.organo || '').toUpperCase()}`,
             `Local o sede: ${String(headerData.localSede || '').toUpperCase()}`,
-             `Oficina o area: ${String(headerData.oficinaArea || '').toUpperCase()}`
+            `Oficina o area: ${String(headerData.oficinaArea || '').toUpperCase()}`
         ],
         [
-            `Direccion: ${String(headerData.direccion || '').toUpperCase()}`,
-            '',
-            ''
+            { content: `Direccion: ${String(headerData.direccion || '').toUpperCase()}`, colSpan: 3 }
         ]
     ];
-    y = createHeaderTable(doc, userDataBody, y);
-    doc.line(14, y, doc.internal.pageSize.width - 14, y);
 
+    (doc as any).autoTable({
+        body: userDataBody,
+        startY: y,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], lineWidth: 0.1 },
+        columnStyles: {
+            0: { cellWidth: 90 },
+            1: { cellWidth: 90 },
+            2: { cellWidth: 'auto' },
+        },
+    });
+    y = (doc as any).lastAutoTable.finalY;
 
-    // Tabla de productos
+    // --- Tabla de productos ---
     const tableBody = products.map((product, index) => {
         return tableHeaders.map(header => {
             if (header === 'Item') return index + 1;
@@ -122,8 +117,8 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         body: tableBody,
         startY: y + 2,
         theme: 'grid',
-        headStyles: { fillColor: [22, 160, 133], textColor: [255,255,255], fontSize: 8, halign: 'center', lineColor: [44, 62, 80], lineWidth: 0.1 },
-        styles: { fontSize: 7, cellPadding: 1.5, halign: 'center', lineColor: [44, 62, 80], lineWidth: 0.1 },
+        headStyles: { fillColor: [211, 211, 211], textColor: [0,0,0], fontSize: 8, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1 },
+        styles: { fontSize: 7, cellPadding: 1.5, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1 },
         alternateRowStyles: { fillColor: [240, 240, 240] },
         columnStyles: {
             'DENOMINACION': { halign: 'left', cellWidth: 50 },
@@ -131,19 +126,19 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         }
     });
 
-    let finalY = (doc as any).lastAutoTable.finalY + 10;
+    let finalY = (doc as any).lastAutoTable.finalY + 5;
     if (finalY > doc.internal.pageSize.getHeight() - 60) {
         doc.addPage();
         finalY = 20;
     }
     
-    // Consideraciones
+    // --- Consideraciones ---
+    applyStyles(doc, true);
     doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.text('CONSIDERACIONES:', 14, finalY);
+    doc.text('CONSIDERACIONES:', margin, finalY);
     finalY += 5;
 
-    doc.setFont('helvetica', 'normal');
+    applyStyles(doc, false);
     const considerationsText = [
         '(1) Se consigna para el caso de entrega o devolución de bienes muebles patrimoniales para teletrabajo',
         '(2) En caso de vehículos, se utiliza adicionalmente el Formato de Ficha Técnica de Vehículo, contemplado en el Anexo N°08',
@@ -151,24 +146,22 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         '> El usuario es responsable de la permanencia y conservación de cada uno de los bienes descritos, recomendándose tomar las precauciones del caso para evitar sustracciones, deterioros, etc.',
         '> Cualquier necesidad de traslado del bien mueble patrimonial dentro o fuera del local de la Entidad u Organización de la Entidad, es previamente comunicado al encargado de la OCP.',
     ];
-    
-    const splitText = doc.splitTextToSize(considerationsText.join('\n'), doc.internal.pageSize.getWidth() - 28);
-    doc.text(splitText, 14, finalY);
+    const splitText = doc.splitTextToSize(considerationsText.join('\n'), pageWidth - (margin * 2));
+    doc.text(splitText, margin, finalY);
+    finalY = doc.internal.pageSize.getHeight() - 45;
 
-    // Pie de página (Firmas)
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const signatureY = pageHeight - 45;
-    
-    doc.line(50, signatureY, 110, signatureY); 
-    doc.text("Responsable".toUpperCase(), 80, signatureY + 5, { align: 'center' });
+    // --- Firmas ---
+    const drawSignatureLine = (text: string, x: number, y: number, width: number) => {
+        const lineLength = Math.min(width * 0.8, 80);
+        const lineXStart = x + (width - lineLength) / 2;
+        doc.line(lineXStart, y, lineXStart + lineLength, y);
+        doc.text(text.toUpperCase(), x + width / 2, y + 5, { align: 'center' });
+    };
 
-    doc.line(180, signatureY, 240, signatureY); 
-    doc.text("Jefe del area".toUpperCase(), 210, signatureY + 5, { align: 'center' });
-
-    const signatureY2 = signatureY + 20;
-    doc.line(115, signatureY2, 175, signatureY2); 
-    doc.text("Oficina Administracion".toUpperCase(), 145, signatureY2 + 5, { align: 'center' });
-
+    const signatureWidth = pageWidth / 3;
+    drawSignatureLine("Responsable", 0, finalY, signatureWidth);
+    drawSignatureLine("Jefe del Area", signatureWidth, finalY, signatureWidth);
+    drawSignatureLine("Oficina Administracion", signatureWidth * 2, finalY, signatureWidth);
 
     doc.save(`Acta_Asignacion_${headerData.dni || 'usuario'}.pdf`);
 };
@@ -218,7 +211,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
 
     // Remite y Recibe
     const remiteRecibeDetails = [
-        [{ content: 'DATOS DEL RESPONSABLE DEL REMITE', styles: { fontStyle: 'bold', halign: 'center' } }, { content: 'DATOS RESPONSABLE DEL RECIBE', styles: { fontStyle: 'bold', halign: 'center' } }],
+        [{ content: 'DATOS DEL RESPONSABLE DEL REMITE', styles: { fontStyle: 'bold', halign: 'center', fillColor: [211,211,211] } }, { content: 'DATOS RESPONSABLE DEL RECIBE', styles: { fontStyle: 'bold', halign: 'center', fillColor: [211,211,211] } }],
         [`Nombre y Apellidos: ${String(headerData.remiteNombre || '').toUpperCase()}`, `Nombre y Apellidos: ${String(headerData.recibeNombre || '').toUpperCase()}`],
         [`DNI: ${String(headerData.remiteDNI || '').toUpperCase()}`, `DNI: ${String(headerData.recibeDNI || '').toUpperCase()}`],
         [`Correo Electronico: ${String(headerData.remiteCorreo || '').toUpperCase()}`, `Correo Electronico: ${String(headerData.recibeCorreo || '').toUpperCase()}`],
@@ -261,9 +254,8 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     });
     let finalY = (doc as any).lastAutoTable.finalY;
     
-    // Firmas
+    // --- Firmas ---
     const pageHeight = doc.internal.pageSize.getHeight();
-    // Check if there is enough space, otherwise add a new page.
     if (finalY > pageHeight - 80) { 
         doc.addPage();
         finalY = 20;
@@ -287,16 +279,16 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         });
     };
     
-    const signatureBlockY1 = finalY + 40;
+    const signatureBlockY1 = finalY + 15;
     const signatureBlockY2 = signatureBlockY1 + 40;
 
     const pageContentWidth = pageWidth - margin * 2;
 
     const sigs1 = [
-        ["FIRMA Y SELLO ADMINISTRADOR LOCAL", "SALE EL BIEN"],
-        ["FIRMA Y SELLO REMITE LA SALIDA"],
-        ["FIRMA Y SELLO ADMINISTRADOR LOCAL", "INGRESA EL BIEN"],
-        ["FIRMA Y SELLO RECIBE EL BIEN"]
+        ["Firma y sello Administrador Local", "(Sale el bien)"],
+        ["Firma y sello remite la Salida"],
+        ["Firma y Sello Administrador local", "(Ingresa el bien)"],
+        ["Firma y sello recibe el Bien"]
     ];
     const numSignatures1 = sigs1.length;
     const sigWidth1 = pageContentWidth / numSignatures1;
@@ -305,9 +297,9 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     });
 
     const sigs2 = [
-        ["DATOS VEHICULO", headerData.datosVehiculo || null],
-        ["NOMBRE Y FIRMA RESPONSABLE DEL TRASLADO", headerData.nombreResponsableTraslado || null],
-        ["NOMBRE Y FIRMA UNIDAD PATRIMONIO", headerData.nombreUnidadPatrimonio || null]
+        ["Datos Vehiculo", headerData.datosVehiculo || null],
+        ["Nombre y firma Responsable del traslado", headerData.nombreResponsableTraslado || null],
+        ["Nombre y firma Unidad Patrimonio", headerData.nombreUnidadPatrimonio || null]
     ];
     const numSignatures2 = sigs2.length;
     const sigWidth2 = pageContentWidth / numSignatures2;
