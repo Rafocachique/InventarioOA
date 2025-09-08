@@ -55,13 +55,12 @@ const createHeaderTable = (doc: jsPDF, body: any[], startY: number, options = {}
 
 export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Product[]) => {
     const doc = new jsPDF({ orientation: 'landscape' });
-    let y = 14; 
+    let y = 10; 
 
     // Títulos
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     
-    // Anexo N° 03 (Centrado)
     (doc as any).autoTable({
         body: [[{ content: 'ANEXO N° 03', styles: { halign: 'center', fontSize: 10 } }]],
         startY: y,
@@ -70,7 +69,6 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
     });
     y = (doc as any).lastAutoTable.finalY - 5;
     
-    // Título Principal (Centrado)
     (doc as any).autoTable({
         body: [[{ content: 'FICHA ASIGNACION EN USO Y DEVOLUCION DE BIENES MUEBLES PATRIMONIALES', styles: { halign: 'center' } }]],
         startY: y,
@@ -184,12 +182,12 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     doc.text('ORDEN SE SALIDA, REINGRESO Y DESPLAZAMIENTO INTERNO DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
     y += 8;
 
-    const createTwoColumnTable = (data: any[], startY: number) => {
+    const createTwoColumnTable = (data: any[], startY: number, options = {}) => {
         (doc as any).autoTable({
             body: data,
             startY: startY,
             theme: 'grid',
-            styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1 },
+            styles: { fontSize: 7, cellPadding: 1, lineColor: [0,0,0], lineWidth: 0.1, ...options },
             columnStyles: { 0: { fontStyle: 'bold' } },
         });
         return (doc as any).lastAutoTable.finalY;
@@ -229,6 +227,14 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     y+= 2;
 
     // Tabla de productos
+    (doc as any).autoTable({
+        head: [[{ content: 'DESCRIPCION', styles: { halign: 'center', fontStyle: 'bold', fillColor: [211,211,211] } }]],
+        startY: y,
+        theme: 'grid',
+        styles: { fontSize: 8, lineColor: [0,0,0], lineWidth: 0.1 },
+    });
+    y = (doc as any).lastAutoTable.finalY;
+
     const tableBody = products.map((product, index) => {
         return tableHeaders.map(header => {
             if (header === 'Item') return index + 1;
@@ -237,15 +243,6 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
             return String(value).toUpperCase();
         });
     });
-
-    (doc as any).autoTable({
-        head: [['DESCRIPCION']],
-        body: [],
-        startY: y,
-        theme: 'grid',
-        styles: { fontSize: 8, halign: 'center', fontStyle: 'bold', fillColor: [211,211,211], lineColor: [0,0,0], lineWidth: 0.1 },
-    });
-    y = (doc as any).lastAutoTable.finalY;
 
     (doc as any).autoTable({
         head: [tableHeaders.map(h => h.toUpperCase())],
@@ -259,41 +256,56 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
             'OBSERVACIONES': { halign: 'left', cellWidth: 40 },
         }
     });
-    y = (doc as any).lastAutoTable.finalY;
-    
+    let finalY = (doc as any).lastAutoTable.finalY;
+
     // Firmas
-    let finalY = y + 5;
     if (finalY > doc.internal.pageSize.getHeight() - 60) {
         doc.addPage();
         finalY = 20;
-    }
-
-    const signatureBlock = (text1: string, text2: string, x: number, yPos: number, width: number) => {
-        doc.rect(x, yPos, width, 15);
-        doc.text(text1.toUpperCase(), x + width/2, yPos + 5, { align: 'center', maxWidth: width - 2});
-        doc.text(text2.toUpperCase(), x + width/2, yPos + 10, { align: 'center', maxWidth: width - 2});
-    }
-
-    const signatureWidth = (pageWidth - (margin*2) - 15) / 4;
-    const startX = margin;
-    
-    signatureBlock("Firma y sello Administrador Local", "Sale el bien", startX, finalY, signatureWidth);
-    signatureBlock("Firma y sello remite la Salida", "", startX + signatureWidth + 5, finalY, signatureWidth);
-    signatureBlock("Firma y Sello Administrador local", "Ingresa el bien", startX + 2 * (signatureWidth + 5), finalY, signatureWidth);
-    signatureBlock("Firma y sello recibe el Biem", "", startX + 3 * (signatureWidth + 5), finalY, signatureWidth);
-
-    finalY += 20;
-
-    if (headerData.tipo === 'Transferencia') {
-        const bottomSignatureWidth = (pageWidth - (margin*2) - 10) / 3;
-        signatureBlock("Datos Vehiculo", String(headerData.datosVehiculo || '').toUpperCase(), startX, finalY, bottomSignatureWidth);
-        signatureBlock("Nombre y firma Responsable del traslado", String(headerData.nombreResponsableTraslado || '').toUpperCase(), startX + bottomSignatureWidth + 5, finalY, bottomSignatureWidth);
-        signatureBlock("Nombre y firma Unidada Patrimonio", String(headerData.nombreUnidadPatrimonio || '').toUpperCase(), startX + 2 * (bottomSignatureWidth + 5), finalY, bottomSignatureWidth);
     } else {
-        const bottomSignatureWidth = (pageWidth - (margin*2) - 5) / 2;
-        signatureBlock("Datos Vehiculo", String(headerData.datosVehiculo || '').toUpperCase(), startX, finalY, bottomSignatureWidth);
-        signatureBlock("Nombre y firma Responsable del traslado", String(headerData.nombreResponsableTraslado || '').toUpperCase(), startX + bottomSignatureWidth + 5, finalY, bottomSignatureWidth);
+        finalY += 5;
     }
+    
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+
+    const signatureBox = (text: string, x: number, yPos: number, width: number, height: number) => {
+        doc.rect(x, yPos, width, height);
+        const splitText = doc.splitTextToSize(text.toUpperCase(), width - 4);
+        doc.text(splitText, x + width/2, yPos + height/2, { align: 'center', baseline: 'middle' });
+    }
+
+    const boxHeight = 15;
+    const boxGap = 5;
+    const availableWidth = pageWidth - (margin * 2);
+    
+    // Fila 1 de firmas (4 cajas)
+    const sigBoxWidth1 = (availableWidth - (boxGap * 3)) / 4;
+    let currentX = margin;
+    signatureBox("Firma y Sello Administrador Local", currentX, finalY, sigBoxWidth1, boxHeight);
+    currentX += sigBoxWidth1 + boxGap;
+    signatureBox("Firma y Sello Remite la Salida", currentX, finalY, sigBoxWidth1, boxHeight);
+    currentX += sigBoxWidth1 + boxGap;
+    signatureBox("Firma y Sello Administrador Local", currentX, finalY, sigBoxWidth1, boxHeight);
+    currentX += sigBoxWidth1 + boxGap;
+    signatureBox("Firma y Sello Recibe el Bien", currentX, finalY, sigBoxWidth1, boxHeight);
+    finalY += boxHeight + boxGap;
+
+    // Fila 2 de firmas (2 cajas)
+    const sigBoxWidth2 = (availableWidth - boxGap) / 2;
+    currentX = margin;
+    signatureBox(`Datos Vehiculo\n${String(headerData.datosVehiculo || '').toUpperCase()}`, currentX, finalY, sigBoxWidth2, boxHeight);
+    currentX += sigBoxWidth2 + boxGap;
+    signatureBox(`Nombre y firma Responsable del traslado\n${String(headerData.nombreResponsableTraslado || '').toUpperCase()}`, currentX, finalY, sigBoxWidth2, boxHeight);
+    finalY += boxHeight + boxGap;
+    
+    // Fila 3 de firmas (1 caja) - solo para transferencia
+    if (headerData.tipo === 'Transferencia') {
+      const sigBoxWidth3 = availableWidth;
+      currentX = margin;
+      signatureBox(`Nombre y firma Unidad Patrimonio\n${String(headerData.nombreUnidadPatrimonio || '').toUpperCase()}`, currentX, finalY, sigBoxWidth3, boxHeight);
+    }
+
 
     doc.save(`Acta_${(headerData.tipo || 'Reporte').replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
 }
