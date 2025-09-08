@@ -137,7 +137,7 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
         }
     });
 
-    let finalY = (doc as any).lastAutoTable.finalY + 15; // Adjusted separation
+    let finalY = (doc as any).lastAutoTable.finalY + 15;
     
     if (finalY > doc.internal.pageSize.getHeight() - 60) {
         doc.addPage();
@@ -223,7 +223,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
 
     // Remite y Recibe
     const remiteRecibeDetails = [
-        [{ content: 'DATOS DEL RESPONSABLE DEL REMITE', styles: { fontStyle: 'bold', halign: 'center', fillColor: [211,211,211] } }, { content: 'DATOS RESPONSABLE DEL RECIBE', styles: { fontStyle: 'bold', halign: 'center', fillColor: [211,211,211] } }],
+        [{ content: 'DATOS DEL RESPONSABLE DEL REMITE', styles: { fontStyle: 'bold', halign: 'center', fillColor: [255, 255, 255] } }, { content: 'DATOS RESPONSABLE DEL RECIBE', styles: { fontStyle: 'bold', halign: 'center', fillColor: [255, 255, 255] } }],
         [`Nombre y Apellidos: ${String(headerData.remiteNombre || '').toUpperCase()}`, `Nombre y Apellidos: ${String(headerData.recibeNombre || '').toUpperCase()}`],
         [`DNI: ${String(headerData.remiteDNI || '').toUpperCase()}`, `DNI: ${String(headerData.recibeDNI || '').toUpperCase()}`],
         [`Correo Electronico: ${String(headerData.remiteCorreo || '').toUpperCase()}`, `Correo Electronico: ${String(headerData.recibeCorreo || '').toUpperCase()}`],
@@ -236,7 +236,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
 
     // Tabla de productos
     (doc as any).autoTable({
-        head: [[{ content: 'DESCRIPCION DE LOS BIENES', styles: { halign: 'center', fontStyle: 'bold', fillColor: [211,211,211] } }]],
+        head: [[{ content: 'DESCRIPCION DE LOS BIENES', styles: { halign: 'center', fontStyle: 'bold', fillColor: [255, 255, 255] } }]],
         startY: y,
         theme: 'grid',
         styles: { fontSize: 8, lineColor: [0,0,0], lineWidth: 0.1 },
@@ -257,7 +257,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         body: tableBody,
         startY: y,
         theme: 'grid',
-        headStyles: { fillColor: [211, 211, 211], textColor: [0,0,0], fontSize: 7, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1 },
+        headStyles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontSize: 7, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1 },
         styles: { fontSize: 7, cellPadding: 1, halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.1 },
         columnStyles: {
             'DENOMINACION': { halign: 'left', cellWidth: 60 },
