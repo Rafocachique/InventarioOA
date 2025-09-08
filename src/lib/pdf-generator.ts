@@ -182,6 +182,23 @@ export const generateAsignacionPDF = (headerData: ReportHeaderData, products: Pr
 };
 
 
+const drawStyledCellText = (label: string, value: string, data: any) => {
+    if (!label || value === undefined || value === null) return;
+    const { doc, cell, settings } = data;
+    const x = cell.x + settings.cellPadding;
+    // A more robust way to calculate vertical center
+    const yPos = cell.y + cell.height / 2 + doc.getLineHeight() / 2 - 1;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${label}:`, x, yPos);
+    
+    const labelWidth = doc.getTextWidth(`${label}: `);
+
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(value).toUpperCase(), x + labelWidth, yPos);
+};
+
+
 export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, products: Product[]) => {
     const doc = new jsPDF({ orientation: 'landscape' });
     const margin = 14;
@@ -194,20 +211,6 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     doc.text('ORDEN DE SALIDA, REINGRESO Y DESPLAZAMIENTO INTERNO DE BIENES MUEBLES PATRIMONIALES', pageWidth / 2, y, { align: 'center' });
     y += 8;
 
-    const drawStyledCellText = (label: string, value: string, data: any) => {
-        if (!label) return;
-        const { doc, cell, settings } = data;
-        const x = cell.x + settings.cellPadding;
-        const yPos = cell.y + cell.height / 2 + 1.5; 
-
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${label}:`, x, yPos);
-        
-        const labelWidth = doc.getTextWidth(`${label}: `);
-
-        doc.setFont('helvetica', 'normal');
-        doc.text(String(value || '').toUpperCase(), x + labelWidth, yPos);
-    };
 
     // Header section
     (doc as any).autoTable({
