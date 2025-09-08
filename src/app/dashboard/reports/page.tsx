@@ -87,8 +87,8 @@ export default function AssetSearchPage() {
         remiteNombre: "",
         remiteDNI: "",
         remiteCorreo: "",
-        remiteUnidadOrganica: "",
-        remiteLocalSede: "",
+        remiteUnidadOrganica: "FACULTAD DE ADMINISTRACION",
+        remiteLocalSede: "PREDIO PROPIO Nro 008 - (SL07)",
         remiteOficio: "",
         recibeNombre: "",
         recibeDNI: "",
@@ -211,19 +211,23 @@ export default function AssetSearchPage() {
         }
     };
     
+    const getProductUniqueId = (product: Product): string => {
+        return (product as ScanRecord).scanId || product.firebaseId;
+    };
+
     const isProductSelected = (product: Product) => {
-        const uniqueId = (product as ScanRecord).scanId || product.firebaseId;
-        return selectedProducts.some(p => (p.scanId || p.firebaseId) === uniqueId);
+        const uniqueId = getProductUniqueId(product);
+        return selectedProducts.some(p => getProductUniqueId(p) === uniqueId);
     };
 
     const handleSelectAllHistory = (isChecked: boolean) => {
         const visibleHistoryScans = filteredHistory;
         if (isChecked) {
-            const newProductsToAdd = visibleHistoryScans.map(scan => ({ ...scan, Observacion_Reporte: scan.Observacion || "" }));
-            setSelectedProducts(newProductsToAdd);
+             const productsToAdd = visibleHistoryScans
+                .map(scan => ({ ...scan, Observacion_Reporte: scan.Observacion || "" }))
+            setSelectedProducts(productsToAdd);
         } else {
-            const visibleScanIds = new Set(visibleHistoryScans.map(s => s.scanId));
-            setSelectedProducts(prev => prev.filter(p => !visibleScanIds.has(p.scanId)));
+             setSelectedProducts([]);
         }
     };
 
@@ -231,8 +235,7 @@ export default function AssetSearchPage() {
     const allVisibleHistorySelected = React.useMemo(() => {
         const visibleScanIds = new Set(filteredHistory.map(s => s.scanId));
         if (visibleScanIds.size === 0) return false;
-        const selectedScanIds = new Set(selectedProducts.map(p => p.scanId));
-        return filteredHistory.every(scan => selectedScanIds.has(scan.scanId));
+        return filteredHistory.every(scan => selectedProducts.some(p => p.scanId === scan.scanId));
     }, [filteredHistory, selectedProducts]);
 
     const handleGeneratePDF = () => {
@@ -285,8 +288,8 @@ export default function AssetSearchPage() {
                                 {isLoading && searchTerm ? (
                                     <TableRow><TableCell colSpan={headers.length + 1} className="text-center h-24"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
                                 ) : filteredResults.length > 0 ? (
-                                    filteredResults.map((product, index) => (
-                                        <TableRow key={`${product.firebaseId}-${index}`} data-state={isProductSelected(product) ? "selected" : ""}>
+                                    filteredResults.map((product) => (
+                                        <TableRow key={product.firebaseId} data-state={isProductSelected(product) ? "selected" : ""}>
                                             <TableCell>
                                                 <Checkbox
                                                     checked={isProductSelected(product)}
@@ -421,10 +424,10 @@ export default function AssetSearchPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {selectedProducts.map((p, index) => (
-                                            <TableRow key={`${(p as ScanRecord).scanId || p.firebaseId}-${index}`}>
+                                            <TableRow key={`${getProductUniqueId(p)}-${index}`}>
                                                 {reportHeaders.map(header => {
                                                     const dbField = reportColumnMapping[header as keyof typeof reportColumnMapping];
-                                                    const uniqueId = (p as ScanRecord).scanId || p.firebaseId;
+                                                    const uniqueId = getProductUniqueId(p);
                                                     if (header === 'Item') {
                                                         return <TableCell key={header} className="whitespace-nowrap">{index + 1}</TableCell>;
                                                     }
