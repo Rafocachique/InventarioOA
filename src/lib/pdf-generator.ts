@@ -194,23 +194,18 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
     y += 8;
 
     const topTableBody = [
-        [{ content: `ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, colSpan: 3, styles: { fontStyle: 'bold', fontSize: 8 } }, `Numero Movimiento: ${String(headerData.numeroMovimiento || '').toUpperCase()}`],
-        [`Tipo: ${String(headerData.tipo || '').toUpperCase()}`, `Salida: ${String(headerData.salida || '').toUpperCase()}`, `Reingreso: ${String(headerData.reingreso || '').toUpperCase()}`, `Desplazamiento: ${String(headerData.desplazamiento || '').toUpperCase()}`],
-        [{ content: `Motivo: ${String(headerData.motivo || '').toUpperCase()}`, colSpan: 2 }, `Mantenimiento: ${String(headerData.mantenimiento || '').toUpperCase()}`, `Comision Servicio: ${String(headerData.comisionServicio || '').toUpperCase()}`],
-        [{ content: `Capacitacion o Evento: ${String(headerData.capacitacionEvento || '').toUpperCase()}`, colSpan: 4 }]
+        [`ENTIDAD: ${String(headerData.entidad || '').toUpperCase()}`, `Numero Movimiento: ${String(headerData.numeroMovimiento || '').toUpperCase()}`],
+        [`Tipo: ${String(headerData.tipo || '').toUpperCase()}`, `Salida: ${String(headerData.salida || '').toUpperCase()}`],
+        [`Motivo: ${String(headerData.motivo || '').toUpperCase()}`, `Reingreso: ${String(headerData.reingreso || '').toUpperCase()}`],
+        [`Mantenimiento: ${String(headerData.mantenimiento || '').toUpperCase()}`, `Desplazamiento: ${String(headerData.desplazamiento || '').toUpperCase()}`],
+        [`Comision Servicio: ${String(headerData.comisionServicio || '').toUpperCase()}`, `Capacitacion o Evento: ${String(headerData.capacitacionEvento || '').toUpperCase()}`]
     ];
     
     (doc as any).autoTable({
         body: topTableBody,
         startY: y,
-        theme: 'grid',
-        styles: { fontSize: 7, cellPadding: 1.5, lineColor: [0,0,0], lineWidth: 0.1, fillColor: [255, 255, 255], textColor: [0, 0, 0], valign: 'middle', minCellHeight: 6 },
-        columnStyles: {
-            0: { cellWidth: 70 },
-            1: { cellWidth: 70 },
-            2: { cellWidth: 70 },
-            3: { cellWidth: 'auto' }
-        }
+        theme: 'plain',
+        styles: { fontSize: 7, cellPadding: 1, textColor: [0, 0, 0] },
     });
     y = (doc as any).lastAutoTable.finalY + 2;
 
@@ -280,16 +275,18 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
 
         let currentY = y + 4;
         textLines.forEach(line => {
-            doc.text(String(line || '').toUpperCase(), x + width / 2, currentY, { align: 'center' });
+            doc.text(String(line || '').toUpperCase(), x + (width / 2), currentY, { align: 'center' });
             currentY += 4;
         });
     };
     
-    let signatureBlock1Y = finalY + 25; 
-    if (signatureBlock1Y > doc.internal.pageSize.getHeight() - 60) {
+    const signatureBlockHeight = 50; 
+    if (finalY > doc.internal.pageSize.getHeight() - signatureBlockHeight) {
         doc.addPage();
-        signatureBlock1Y = 20;
+        finalY = 20; 
     }
+
+    let signatureBlock1Y = finalY + 15;
 
     const sigs1 = [
         ["FIRMA Y SELLO ADMINISTRADOR LOCAL", "(SALE EL BIEN)"],
@@ -303,7 +300,7 @@ export const generateBajaTransferenciaPDF = (headerData: ReportHeaderData, produ
         drawSignatureLine(lines, margin + (index * sigWidth1), signatureBlock1Y, sigWidth1);
     });
     
-    let signatureBlock2Y = signatureBlock1Y + 30;
+    let signatureBlock2Y = signatureBlock1Y + 20;
 
     const sigs2 = [
         {key: 'datosVehiculo', default: "DATOS VEHICULO"},
