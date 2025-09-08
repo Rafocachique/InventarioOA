@@ -67,6 +67,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const { toast } = useToast();
   const [currentUser, setCurrentUser] = React.useState<UserData | null>(null);
+  const [isUserLoading, setIsUserLoading] = React.useState(true);
   const [initials, setInitials] = React.useState("");
   const [isProfileDialogOpen, setIsProfileDialogOpen] = React.useState(false);
   const [editableName, setEditableName] = React.useState("");
@@ -101,14 +102,14 @@ export default function DashboardLayout({
 
 
   React.useEffect(() => {
+    setIsUserLoading(true);
     const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
       if (user) {
-        // User is signed in
-        fetchUserData(user);
+        await fetchUserData(user);
       } else {
-        // User is signed out
         router.push('/');
       }
+      setIsUserLoading(false);
     });
 
     return () => unsubscribe();
@@ -184,7 +185,7 @@ export default function DashboardLayout({
         </SidebarHeader>
 
         <SidebarContent className="p-2">
-          <DashboardNav role={currentUser?.role} />
+          <DashboardNav role={currentUser?.role} isLoading={isUserLoading} />
         </SidebarContent>
       </Sidebar>
 

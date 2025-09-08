@@ -10,6 +10,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuSkeleton,
 } from '@/components/ui/sidebar';
 
 const allNavItems = [
@@ -22,15 +23,27 @@ const allNavItems = [
 
 interface DashboardNavProps {
     role?: string;
+    isLoading?: boolean;
 }
 
-export function DashboardNav({ role }: DashboardNavProps) {
+export function DashboardNav({ role, isLoading }: DashboardNavProps) {
   const pathname = usePathname();
 
   const navItems = React.useMemo(() => {
     if (!role) return [];
     return allNavItems.filter(item => item.roles.includes(role));
   }, [role]);
+
+  if (isLoading) {
+    return (
+        <SidebarMenu>
+            <SidebarMenuSkeleton showIcon />
+            <SidebarMenuSkeleton showIcon />
+            <SidebarMenuSkeleton showIcon />
+        </SidebarMenu>
+    );
+  }
+
 
   return (
     <SidebarMenu>
