@@ -90,10 +90,14 @@ export default function DataCleansingPage() {
   const [isUnstandardizedLoading, setIsUnstandardizedLoading] = React.useState(true);
   
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
-  const [isNewProduct, setIsNewProduct] = React.useState(false);
 
   const [stdOptions, setStdOptions] = React.useState<StandardizationOptions>({ cnumes: [], nombre_ofis: [], oficinas: [] });
   const [isClearing, setIsClearing] = React.useState(false);
+
+  // State for new manual entries in the dialog
+  const [newCnum, setNewCnum] = React.useState("");
+  const [newNombreOfi, setNewNombreOfi] = React.useState("");
+  const [newOficina, setNewOficina] = React.useState("");
 
   const { toast } = useToast();
   
@@ -249,13 +253,11 @@ export default function DataCleansingPage() {
     reader.readAsArrayBuffer(uploadFile);
   };
   
-  const handleEditProduct = (product: Product, isNew: boolean = false) => {
-    setIsNewProduct(isNew);
-    if(isNew) {
-      setEditingProduct({});
-    } else {
-      setEditingProduct(product);
-    }
+  const handleEditProduct = (product: Product) => {
+    setNewCnum("");
+    setNewNombreOfi("");
+    setNewOficina("");
+    setEditingProduct(product);
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -285,10 +287,16 @@ export default function DataCleansingPage() {
         
         // Prepare data for saving, remove the temporary firebaseId
         const { firebaseId, ...dataToSave } = editingProduct;
+
+        // Prioritize new manual entries over selected dropdown values
+        if (newCnum.trim()) dataToSave.CNUME = newCnum.trim();
+        if (newNombreOfi.trim()) dataToSave.nombre_ofi = newNombreOfi.trim();
+        if (newOficina.trim()) dataToSave.oficina = newOficina.trim();
+
         await setDoc(newProductDocRef, dataToSave);
 
         // If it was an existing unstandardized product, delete it from the temp collection
-        if (unstandardizedDocId && !isNewProduct) {
+        if (unstandardizedDocId) {
             await deleteDoc(doc(db, "unstandardized_products", unstandardizedDocId));
         }
 
@@ -389,9 +397,6 @@ export default function DataCleansingPage() {
                         <CardDescription>Estos 'codbien' son nuevos. Edítelos para añadir los datos de estandarización correctos y guardarlos en la base de datos principal.</CardDescription>
                     </div>
                     <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handleEditProduct({}, true)}>
-                           <PlusCircle className="mr-2 h-4 w-4" /> Añadir Manualmente
-                        </Button>
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="destructive" size="sm" disabled={isClearing || unstandardizedProducts.length === 0}>
@@ -449,50 +454,56 @@ export default function DataCleansingPage() {
         <Dialog open={!!editingProduct} onOpenChange={() => setEditingProduct(null)}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{isNewProduct ? "Añadir Nuevo Inmobiliario" : `Estandarizar Inmobiliario: ${editingProduct.codbien}`}</DialogTitle>
-              <DialogDescription>Añada o seleccione los valores de estandarización. Los demás datos provienen del archivo que cargó (si aplica).</DialogDescription>
+              <DialogTitle>Estandarizar Inmobiliario: {editingProduct.codbien}</DialogTitle>
+              <DialogDescription>Añada o seleccione los valores de estandarización. Los demás datos provienen del archivo que cargó.</DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-6">
+            <div className="grid gap-6 py-4 max-h-[60vh] overflow-y-auto pr-6">
               
-              {/* Standardization Fields as Dropdowns */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="CNUME" className="text-right">CNUME</Label>
+              {/* Standardization Fields with manual override */}
+              <div className="space-y-2">
+                  <Label htmlFor="CNUME">CNUME</Label>
                   <Select onValueChange={(value) => handleSelectChange('CNUME', value)} value={editingProduct.CNUME ?? ""}>
-                      <SelectTrigger className="col-span-3"><SelectValue placeholder="Seleccione un CNUME..." /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Seleccione un CNUME existente..." /></SelectTrigger>
                       <SelectContent>{stdOptions.cnumes.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                   </Select>
+                  <Input value={newCnum} onChange={(e) => setNewCnum(e.target.value)} className="mt-2" placeholder="O ingrese un nuevo valor para CNUME..."/>
               </div>
-               <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="nombre_ofi" className="text-right">Nombre Oficina</Label>
+              
+              <div className="space-y-2">
+                  <Label htmlFor="nombre_ofi">Nombre Oficina</Label>
                   <Select onValueChange={(value) => handleSelectChange('nombre_ofi', value)} value={editingProduct.nombre_ofi ?? ""}>
-                      <SelectTrigger className="col-span-3"><SelectValue placeholder="Seleccione una oficina..." /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Seleccione una oficina existente..." /></SelectTrigger>
                       <SelectContent>{stdOptions.nombre_ofis.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                   </Select>
+                   <Input value={newNombreOfi} onChange={(e) => setNewNombreOfi(e.target.value)} className="mt-2" placeholder="O ingrese un nuevo nombre de oficina..."/>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="oficina" className="text-right">Oficina</Label>
+
+              <div className="space-y-2">
+                  <Label htmlFor="oficina">Oficina</Label>
                   <Select onValueChange={(value) => handleSelectChange('oficina', value)} value={editingProduct.oficina ?? ""}>
-                      <SelectTrigger className="col-span-3"><SelectValue placeholder="Seleccione una oficina..." /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Seleccione una oficina existente..." /></SelectTrigger>
                       <SelectContent>{stdOptions.oficinas.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                   </Select>
+                  <Input value={newOficina} onChange={(e) => setNewOficina(e.target.value)} className="mt-2" placeholder="O ingrese una nueva oficina..."/>
               </div>
               
-              <hr className="my-4 col-span-4" />
+              <hr className="my-4 col-span-full" />
               
               {/* Other fields as inputs */}
-              {Object.keys(editingProduct).filter(k => !['CNUME', 'nombre_ofi', 'oficina', 'firebaseId'].includes(k)).map(key => (
-                  <div key={key} className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor={key} className="text-right capitalize">{key.replace(/_/g, ' ')}</Label>
-                      <Input id={key} value={editingProduct[key] ?? ''} onChange={handleInputChange} className="col-span-3" />
-                  </div>
-              ))}
-               {/* Add codbien if it's a new product */}
-                {!Object.keys(editingProduct).includes('codbien') && (
-                     <div className="grid grid-cols-4 items-center gap-4">
-                         <Label htmlFor={'codbien'} className="text-right font-bold">Codbien *</Label>
-                         <Input id={'codbien'} value={editingProduct['codbien'] ?? ''} onChange={handleInputChange} className="col-span-3" placeholder="Campo obligatorio"/>
-                     </div>
-                )}
+              <div className="grid grid-cols-2 gap-4">
+                {Object.keys(editingProduct).filter(k => !['CNUME', 'nombre_ofi', 'oficina', 'firebaseId'].includes(k)).map(key => (
+                    <div key={key} className="space-y-2">
+                        <Label htmlFor={key} className="capitalize">{key.replace(/_/g, ' ')}</Label>
+                        <Input id={key} value={editingProduct[key] ?? ''} onChange={handleInputChange} />
+                    </div>
+                ))}
+                 {/* Codbien must be editable */}
+                <div className="space-y-2">
+                    <Label htmlFor="codbien" className="font-bold">Codbien *</Label>
+                    <Input id="codbien" value={editingProduct['codbien'] ?? ''} onChange={handleInputChange} placeholder="Campo obligatorio"/>
+                </div>
+              </div>
+
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditingProduct(null)}>Cancelar</Button>
@@ -508,3 +519,4 @@ export default function DataCleansingPage() {
     </div>
   );
 }
+
