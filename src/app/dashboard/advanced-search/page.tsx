@@ -161,7 +161,11 @@ export default function AdvancedSearchPage() {
     }
     const dataToExport = filteredProducts.map(p => {
         const { firebaseId, ...rest } = p;
-        return rest;
+        const orderedData: {[key: string]: any} = {};
+        allHeaders.forEach(header => {
+            orderedData[header] = rest[header] ?? '';
+        });
+        return orderedData;
     });
 
     if (format === 'excel') {
@@ -182,194 +186,200 @@ export default function AdvancedSearchPage() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Búsqueda Avanzada de Inventario</CardTitle>
-          <CardDescription>
-            Utilice filtros por columnas y una búsqueda global para encontrar los activos que necesita.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Global Search */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-grow">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Buscar en columnas seleccionadas..."
-                className="pl-8 w-full"
-                value={globalSearchTerm}
-                onChange={(e) => setGlobalSearchTerm(e.target.value)}
-              />
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="shrink-0">
-                  <Filter className="mr-2 h-4 w-4" />
-                  Buscar en ({searchableHeaders.size})
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Buscar en Columnas</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {allHeaders.map(header => (
-                  <DropdownMenuCheckboxItem
-                    key={header}
-                    checked={searchableHeaders.has(header)}
-                    onCheckedChange={(checked) => {
-                      setSearchableHeaders(prev => {
-                        const newSet = new Set(prev);
-                        if (checked) newSet.add(header);
-                        else newSet.delete(header);
-                        return newSet;
-                      })
-                    }}
-                  >
-                    {header}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          {/* Per-column Filters */}
-          <div>
-            <h3 className="text-lg font-medium mb-4">Filtros por Columna</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {allHeaders.map(header => (
-                <div key={header} className="space-y-2">
-                  <Label htmlFor={`filter-${header}`}>{header}</Label>
-                  {uniqueColumnValues[header] ? (
-                     <Select onValueChange={(value) => handleColumnFilterChange(header, value === 'all' ? '' : value)} defaultValue="all">
-                        <SelectTrigger id={`filter-${header}`}>
-                            <SelectValue placeholder="Seleccionar..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todos</SelectItem>
-                            {Array.from(uniqueColumnValues[header]).map(val => (
-                                <SelectItem key={val} value={val}>{val}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                  ) : (
+    <div className="grid flex-1 grid-cols-1 gap-4 md:gap-8 lg:grid-cols-3">
+        <div className="flex flex-col gap-4 md:gap-8 lg:col-span-1">
+            <Card>
+                <CardHeader>
+                <CardTitle>Filtros de Búsqueda</CardTitle>
+                <CardDescription>
+                    Busque globalmente en columnas o filtre por cada una.
+                </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                {/* Global Search */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="relative flex-grow">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
-                        id={`filter-${header}`}
-                        placeholder={`Filtrar por ${header}...`}
-                        value={columnFilters[header] || ""}
-                        onChange={(e) => handleColumnFilterChange(header, e.target.value)}
+                        type="search"
+                        placeholder="Buscar en columnas..."
+                        className="pl-8 w-full"
+                        value={globalSearchTerm}
+                        onChange={(e) => setGlobalSearchTerm(e.target.value)}
                     />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card className="flex flex-grow flex-col">
-        <CardHeader>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <CardTitle>Resultados de la Búsqueda</CardTitle>
-                  <CardDescription>
-                      Mostrando {paginatedProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-{(currentPage - 1) * itemsPerPage + paginatedProducts.length} de {filteredProducts.length} resultados.
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                   <Button variant="outline" size="sm" onClick={() => handleExport('excel')}><FileSpreadsheet className="mr-2 h-4 w-4"/>Exportar a Excel</Button>
-                   <Button variant="outline" size="sm" onClick={() => handleExport('pdf')}><Printer className="mr-2 h-4 w-4"/>Exportar a PDF</Button>
-                   <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-9 gap-1">
-                            <Settings className="h-4 w-4" />
-                            <span>Columnas</span>
-                          </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Columnas Visibles en Tabla</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          {allHeaders.map(header => (
-                          <DropdownMenuCheckboxItem
-                              key={header}
-                              checked={visibleTableHeaders.has(header)}
-                              onCheckedChange={(checked) => {
-                                setVisibleTableHeaders(prev => {
-                                    const newSet = new Set(prev);
-                                    if(checked) newSet.add(header);
-                                    else newSet.delete(header);
-                                    return newSet;
-                                });
-                              }}
-                          >
-                              {header}
-                          </DropdownMenuCheckboxItem>
-                          ))}
-                      </DropdownMenuContent>
+                    </div>
+                    <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="shrink-0">
+                        <Filter className="mr-2 h-4 w-4" />
+                        Columnas ({searchableHeaders.size})
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuLabel>Buscar en Columnas</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {allHeaders.map(header => (
+                        <DropdownMenuCheckboxItem
+                            key={header}
+                            checked={searchableHeaders.has(header)}
+                            onCheckedChange={(checked) => {
+                            setSearchableHeaders(prev => {
+                                const newSet = new Set(prev);
+                                if (checked) newSet.add(header);
+                                else newSet.delete(header);
+                                return newSet;
+                            })
+                            }}
+                        >
+                            {header}
+                        </DropdownMenuCheckboxItem>
+                        ))}
+                    </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
-            </div>
-        </CardHeader>
-        <CardContent className="flex-grow p-0">
-          <div className="relative h-full w-full overflow-auto">
-            <Table>
-                <TableHeader>
-                  <TableRow>
-                      {displayedTableHeaders.map(header => <TableHead key={header}>{header}</TableHead>)}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                {isLoading ? (
+
+                {/* Per-column Filters */}
+                <div>
+                    <h3 className="text-base font-medium mb-4">Filtros por Columna</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {allHeaders.map(header => (
+                        <div key={header} className="space-y-2">
+                        <Label htmlFor={`filter-${header}`}>{header}</Label>
+                        {uniqueColumnValues[header] ? (
+                            <Select onValueChange={(value) => handleColumnFilterChange(header, value === 'all' ? '' : value)} defaultValue="all">
+                                <SelectTrigger id={`filter-${header}`}>
+                                    <SelectValue placeholder="Seleccionar..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos</SelectItem>
+                                    {Array.from(uniqueColumnValues[header]).map(val => (
+                                        <SelectItem key={val} value={val}>{val}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        ) : (
+                            <Input
+                                id={`filter-${header}`}
+                                placeholder={`Filtrar por ${header}...`}
+                                value={columnFilters[header] || ""}
+                                onChange={(e) => handleColumnFilterChange(header, e.target.value)}
+                            />
+                        )}
+                        </div>
+                    ))}
+                    </div>
+                </div>
+                </CardContent>
+            </Card>
+        </div>
+      
+      <div className="flex flex-col gap-4 md:gap-8 lg:col-span-2">
+        <Card className="flex flex-grow flex-col">
+            <CardHeader>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                    <CardTitle>Resultados de la Búsqueda</CardTitle>
+                    <CardDescription>
+                        Mostrando {paginatedProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-{(currentPage - 1) * itemsPerPage + paginatedProducts.length} de {filteredProducts.length} resultados.
+                    </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap justify-end">
+                    <Button variant="outline" size="sm" onClick={() => handleExport('excel')}><FileSpreadsheet className="mr-2 h-4 w-4"/>Exportar a Excel</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleExport('pdf')}><Printer className="mr-2 h-4 w-4"/>Exportar a PDF</Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-9 gap-1">
+                                <Settings className="h-4 w-4" />
+                                <span>Columnas</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Columnas Visibles en Tabla</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {allHeaders.map(header => (
+                            <DropdownMenuCheckboxItem
+                                key={header}
+                                checked={visibleTableHeaders.has(header)}
+                                onCheckedChange={(checked) => {
+                                    setVisibleTableHeaders(prev => {
+                                        const newSet = new Set(prev);
+                                        if(checked) newSet.add(header);
+                                        else newSet.delete(header);
+                                        return newSet;
+                                    });
+                                }}
+                            >
+                                {header}
+                            </DropdownMenuCheckboxItem>
+                            ))}
+                        </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent className="flex-grow p-0">
+            <div className="relative h-full w-full overflow-auto">
+                <Table>
+                    <TableHeader>
                     <TableRow>
-                    <TableCell colSpan={displayedTableHeaders.length} className="h-24 text-center">
-                        <Loader2 className="mx-auto h-8 w-8 animate-spin" />
-                    </TableCell>
+                        {displayedTableHeaders.map(header => <TableHead key={header}>{header}</TableHead>)}
                     </TableRow>
-                ) : paginatedProducts.length === 0 ? (
-                    <TableRow>
-                    <TableCell colSpan={displayedTableHeaders.length} className="h-24 text-center">
-                        No se encontraron resultados con los filtros aplicados.
-                    </TableCell>
-                    </TableRow>
-                ) : (
-                    paginatedProducts.map((product) => (
-                    <TableRow key={product.firebaseId}>
-                        {displayedTableHeaders.map(header => (
-                        <TableCell key={header} className="whitespace-nowrap">
-                            {String(product[header] ?? '')}
+                    </TableHeader>
+                    <TableBody>
+                    {isLoading ? (
+                        <TableRow>
+                        <TableCell colSpan={displayedTableHeaders.length} className="h-24 text-center">
+                            <Loader2 className="mx-auto h-8 w-8 animate-spin" />
                         </TableCell>
-                        ))}
-                    </TableRow>
-                    ))
-                )}
-                </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-        <CardFooter className="flex items-center justify-between border-t pt-6">
-            <div className="text-sm text-muted-foreground">Página {currentPage} de {totalPages}</div>
-            <div className="flex items-center gap-2">
-                <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
-                >
-                    <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages}
-                >
-                    <ChevronRight className="h-4 w-4" />
-                </Button>
+                        </TableRow>
+                    ) : paginatedProducts.length === 0 ? (
+                        <TableRow>
+                        <TableCell colSpan={displayedTableHeaders.length} className="h-24 text-center">
+                            No se encontraron resultados con los filtros aplicados.
+                        </TableCell>
+                        </TableRow>
+                    ) : (
+                        paginatedProducts.map((product) => (
+                        <TableRow key={product.firebaseId}>
+                            {displayedTableHeaders.map(header => (
+                            <TableCell key={header} className="whitespace-nowrap">
+                                {String(product[header] ?? '')}
+                            </TableCell>
+                            ))}
+                        </TableRow>
+                        ))
+                    )}
+                    </TableBody>
+                </Table>
             </div>
-        </CardFooter>
-      </Card>
+            </CardContent>
+            <CardFooter className="flex items-center justify-between border-t pt-6">
+                <div className="text-sm text-muted-foreground">Página {currentPage} de {totalPages}</div>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                    >
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
+                </div>
+            </CardFooter>
+        </Card>
+      </div>
     </div>
   );
 }
+
+    
