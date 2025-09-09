@@ -132,13 +132,13 @@ export default function AdvancedSearchPage() {
         return value !== null && value !== undefined && String(value).toLowerCase().includes(globalSearchTerm.toLowerCase());
       });
 
-      // Per-column filter logic (uses exact match)
+      // Per-column filter logic (uses exact match after normalizing)
       const matchesColumnFilters = Object.entries(columnFilters).every(([header, filterValue]) => {
-        if (filterValue === "") return true;
+        if (!filterValue) return true;
         const value = product[header];
-        const productValue = String(value ?? '').toLowerCase().trim();
-        const filterText = filterValue.toLowerCase().trim();
-        return productValue === filterText;
+        const productValueStr = String(value ?? '').toLowerCase().trim();
+        const filterValueStr = String(filterValue).toLowerCase().trim();
+        return productValueStr === filterValueStr;
       });
       
       return matchesGlobalSearch && matchesColumnFilters;
@@ -420,3 +420,4 @@ export default function AdvancedSearchPage() {
     </div>
   );
 }
+
