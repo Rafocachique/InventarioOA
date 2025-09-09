@@ -2,13 +2,12 @@
 "use client";
 
 import * as React from 'react';
-import { PanelLeft } from 'lucide-react';
+import { PanelLeft, Building2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import Image from 'next/image';
 
 
 import { Button } from '@/components/ui/button';
@@ -170,7 +169,7 @@ export default function DashboardLayout({
       <Sidebar side="left" collapsible="icon">
         <SidebarHeader className="h-14 justify-center p-2 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10">
           <Link href="/dashboard" className="flex items-center gap-2 text-primary font-bold">
-            <Image src="/logo-rce.svg" width={24} height={24} alt="RCE Logo" className="shrink-0" />
+            <Building2 className="h-6 w-6 shrink-0" />
             <span className="text-lg group-data-[collapsible=icon]:hidden font-headline">Gestión de inmuebles OA</span>
           </Link>
         </SidebarHeader>
