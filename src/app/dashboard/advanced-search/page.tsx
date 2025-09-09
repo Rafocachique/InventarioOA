@@ -126,17 +126,19 @@ export default function AdvancedSearchPage() {
   const filteredProducts = React.useMemo(() => {
     setCurrentPage(1); // Reset page on filter change
     return allProducts.filter(product => {
-      // Global search logic
+      // Global search logic (uses partial match)
       const matchesGlobalSearch = globalSearchTerm === "" || Array.from(searchableHeaders).some(header => {
         const value = product[header];
         return value !== null && value !== undefined && String(value).toLowerCase().includes(globalSearchTerm.toLowerCase());
       });
 
-      // Per-column filter logic
+      // Per-column filter logic (uses exact match)
       const matchesColumnFilters = Object.entries(columnFilters).every(([header, filterValue]) => {
         if (filterValue === "") return true;
         const value = product[header];
-        return value !== null && value !== undefined && String(value).toLowerCase().includes(filterValue.toLowerCase());
+        const productValue = String(value ?? '').toLowerCase().trim();
+        const filterText = filterValue.toLowerCase().trim();
+        return productValue === filterText;
       });
       
       return matchesGlobalSearch && matchesColumnFilters;
