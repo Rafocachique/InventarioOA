@@ -364,55 +364,59 @@ export default function DataCleansingPage() {
 
 
   return (
-    <div className="grid flex-1 grid-cols-1 gap-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Limpieza y Estandarización de Datos</CardTitle>
-          <CardDescription>
-            Cargue un archivo Excel. El sistema actualizará los inmobiliarios existentes usando 'codbien' como clave y separará los nuevos para su estandarización manual.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 border rounded-lg">
-             <div className="grid w-full max-w-sm items-center gap-1.5">
-                <Label htmlFor="excel-file">Archivo de Excel (.xlsx)</Label>
-                <Input id="excel-file" type="file" onChange={handleFileUpload} accept=".xlsx, .xls" />
-             </div>
-             <Button onClick={handleProcessFile} disabled={isProcessing || !uploadFile}>
-                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
-                {isProcessing ? 'Procesando...' : 'Procesar Archivo'}
-             </Button>
-          </div>
-          {isProcessing && <Progress value={progress} />}
-        </CardContent>
-      </Card>
+    <div className="grid flex-1 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
       
-      {uploadResult && (
+      <div className="flex flex-col gap-8 md:col-span-1 lg:col-span-1">
         <Card>
             <CardHeader>
-                <CardTitle className="flex items-center gap-2"><CheckCircle className="text-green-500"/> Inmobiliarios Actualizados ({uploadResult.updated.length})</CardTitle>
-                <CardDescription>Estos inmobiliarios ya existían y han sido actualizados. Las columnas CNUME, codbien, nombre_ofi y oficina se mantuvieron intactas.</CardDescription>
+            <CardTitle>Limpieza y Estandarización de Datos</CardTitle>
+            <CardDescription>
+                Cargue un archivo Excel. El sistema actualizará los inmobiliarios existentes usando 'codbien' como clave y separará los nuevos para su estandarización manual.
+            </CardDescription>
             </CardHeader>
-            <CardContent className="max-h-96 overflow-auto">
-                 <Table>
-                    <TableHeader>
-                        <TableRow>{uploadResult.headers.map(h => <TableHead key={h}>{h}</TableHead>)}</TableRow>
-                    </TableHeader>
-                    <TableBody>
-                       {uploadResult.updated.map((product, idx) => (
-                            <TableRow key={`updated-${product.codbien}-${idx}`}>
-                                {uploadResult.headers.map(header => (
-                                    <TableCell key={header}>{String(product[header] ?? '')}</TableCell>
-                                ))}
-                            </TableRow>
-                       ))}
-                    </TableBody>
-                 </Table>
+            <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 border rounded-lg">
+                <div className="grid w-full max-w-sm items-center gap-1.5">
+                    <Label htmlFor="excel-file">Archivo de Excel (.xlsx)</Label>
+                    <Input id="excel-file" type="file" onChange={handleFileUpload} accept=".xlsx, .xls" />
+                </div>
+                <Button onClick={handleProcessFile} disabled={isProcessing || !uploadFile}>
+                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
+                    {isProcessing ? 'Procesando...' : 'Procesar Archivo'}
+                </Button>
+            </div>
+            {isProcessing && <Progress value={progress} />}
             </CardContent>
         </Card>
-      )}
 
-       <Card>
+         {uploadResult && (
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><CheckCircle className="text-green-500"/> Inmobiliarios Actualizados ({uploadResult.updated.length})</CardTitle>
+                    <CardDescription>Estos inmobiliarios ya existían y han sido actualizados.</CardDescription>
+                </CardHeader>
+                <CardContent className="max-h-96 overflow-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>{uploadResult.headers.map(h => <TableHead key={h}>{h}</TableHead>)}</TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {uploadResult.updated.map((product, idx) => (
+                                <TableRow key={`updated-${product.codbien}-${idx}`}>
+                                    {uploadResult.headers.map(header => (
+                                        <TableCell key={header}>{String(product[header] ?? '')}</TableCell>
+                                    ))}
+                                </TableRow>
+                        ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-8 md:col-span-1 lg:col-span-2">
+        <Card className="flex flex-col flex-grow">
             <CardHeader>
                 <div className="flex justify-between items-start">
                     <div>
@@ -443,35 +447,39 @@ export default function DataCleansingPage() {
                     </div>
                 </div>
             </CardHeader>
-            <CardContent className="max-h-96 overflow-auto">
-                 <Table>
-                    <TableHeader>
-                        <TableRow>
-                            {getCommonHeaders().map(h => <TableHead key={h}>{h}</TableHead>)}
-                            <TableHead className="text-right">Acciones</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                       {isUnstandardizedLoading ? (
-                           <TableRow><TableCell colSpan={getCommonHeaders().length + 1} className="h-24 text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin" /></TableCell></TableRow>
-                       ) : unstandardizedProducts.length > 0 ? (
-                           unstandardizedProducts.map((product) => (
-                                <TableRow key={`notfound-${product.firebaseId}`}>
-                                    {getCommonHeaders().map(header => (
-                                        <TableCell key={header}>{String(product[header] ?? '')}</TableCell>
-                                    ))}
-                                    <TableCell className="text-right">
-                                        <Button variant="outline" size="sm" onClick={() => handleEditProduct(product)}>Estandarizar</Button>
-                                    </TableCell>
-                                </TableRow>
-                           ))
-                       ) : (
-                           <TableRow><TableCell colSpan={getCommonHeaders().length + 1} className="h-24 text-center">No hay inmobiliarios pendientes de estandarizar.</TableCell></TableRow>
-                       )}
-                    </TableBody>
-                 </Table>
+            <CardContent className="flex-grow p-0">
+                 <div className="relative h-full w-full overflow-auto max-h-[calc(100vh-25rem)]">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                {getCommonHeaders().map(h => <TableHead key={h}>{h}</TableHead>)}
+                                <TableHead className="text-right">Acciones</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {isUnstandardizedLoading ? (
+                            <TableRow><TableCell colSpan={getCommonHeaders().length + 1} className="h-24 text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin" /></TableCell></TableRow>
+                        ) : unstandardizedProducts.length > 0 ? (
+                            unstandardizedProducts.map((product) => (
+                                    <TableRow key={`notfound-${product.firebaseId}`}>
+                                        {getCommonHeaders().map(header => (
+                                            <TableCell key={header}>{String(product[header] ?? '')}</TableCell>
+                                        ))}
+                                        <TableCell className="text-right">
+                                            <Button variant="outline" size="sm" onClick={() => handleEditProduct(product)}>Estandarizar</Button>
+                                        </TableCell>
+                                    </TableRow>
+                            ))
+                        ) : (
+                            <TableRow><TableCell colSpan={getCommonHeaders().length + 1} className="h-24 text-center">No hay inmobiliarios pendientes de estandarizar.</TableCell></TableRow>
+                        )}
+                        </TableBody>
+                    </Table>
+                 </div>
             </CardContent>
         </Card>
+      </div>
+
 
       {editingProduct && (
         <Dialog open={!!editingProduct} onOpenChange={() => setEditingProduct(null)}>
@@ -542,6 +550,3 @@ export default function DataCleansingPage() {
     </div>
   );
 }
-
-
-    
