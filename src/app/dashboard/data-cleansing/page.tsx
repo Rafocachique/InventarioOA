@@ -16,7 +16,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -36,12 +35,11 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, writeBatch, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, writeBatch, doc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 
@@ -56,6 +54,8 @@ interface UploadResult {
   headers: string[];
 }
 
+const LOCAL_STORAGE_KEY = 'dataCleansingSession';
+
 export default function DataCleansingPage() {
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
@@ -64,6 +64,19 @@ export default function DataCleansingPage() {
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
 
   const { toast } = useToast();
+  
+  React.useEffect(() => {
+    // Load from localStorage on initial mount
+    try {
+        const savedSession = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (savedSession) {
+            setUploadResult(JSON.parse(savedSession));
+        }
+    } catch(e) {
+        console.error("Failed to parse session from localStorage", e);
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+    }
+  }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -83,7 +96,10 @@ export default function DataCleansingPage() {
 
     setIsProcessing(true);
     setProgress(0);
+    
+    // Clear previous session from state and localStorage
     setUploadResult(null);
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
 
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -133,7 +149,6 @@ export default function DataCleansingPage() {
                 const docRef = doc(db, "products", firebaseId);
                 
                 const dataToUpdate = { ...newProduct };
-                // Remove protected columns from the update object
                 protectedColumns.forEach(col => {
                     const keyToDelete = Object.keys(dataToUpdate).find(k => k.toLowerCase() === col.toLowerCase());
                     if(keyToDelete) {
@@ -141,10 +156,8 @@ export default function DataCleansingPage() {
                     }
                 });
 
-
                 batch.update(docRef, dataToUpdate);
                 updatedProducts.push({ firebaseId, ...newProduct });
-
             } else {
                 notFoundProducts.push(newProduct);
             }
@@ -159,9 +172,12 @@ export default function DataCleansingPage() {
           title: "Proceso Completado",
           description: `${updatedProducts.length} inmobiliarios actualizados. ${notFoundProducts.length} no encontrados.`,
         });
-
-        setUploadResult({ updated: updatedProducts, notFound: notFoundProducts, headers: headersFromExcel });
+        
+        const result: UploadResult = { updated: updatedProducts, notFound: notFoundProducts, headers: headersFromExcel };
+        setUploadResult(result);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(result));
         setIsProcessing(false);
+        setUploadFile(null); // Clear the file input
 
       } catch (error) {
         console.error("Error processing file: ", error);
@@ -191,7 +207,6 @@ export default function DataCleansingPage() {
     setIsProcessing(true);
     try {
         const newDocRef = doc(collection(db, "products"));
-        // Ensure no firebaseId is saved
         const { firebaseId, ...dataToSave } = editingProduct;
         await setDoc(newDocRef, dataToSave);
 
@@ -200,14 +215,12 @@ export default function DataCleansingPage() {
             description: "El nuevo inmobiliario ha sido añadido a la base de datos.",
         });
 
-        // Remove from the not found list
-        setUploadResult(prev => {
-            if (!prev) return null;
-            return {
-                ...prev,
-                notFound: prev.notFound.filter(p => p.codbien !== editingProduct.codbien)
-            };
-        });
+        const newUploadResult = {
+            ...uploadResult!,
+            notFound: uploadResult!.notFound.filter(p => p.codbien !== editingProduct.codbien)
+        };
+        setUploadResult(newUploadResult);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newUploadResult));
 
         setEditingProduct(null);
     } catch(error) {
@@ -257,7 +270,7 @@ export default function DataCleansingPage() {
                         </TableHeader>
                         <TableBody>
                            {uploadResult.updated.map((product, idx) => (
-                                <TableRow key={`updated-${idx}`}>
+                                <TableRow key={`updated-${product.codbien}-${idx}`}>
                                     {uploadResult.headers.map(header => (
                                         <TableCell key={header}>{String(product[header] ?? '')}</TableCell>
                                     ))}
@@ -283,7 +296,7 @@ export default function DataCleansingPage() {
                         </TableHeader>
                         <TableBody>
                            {uploadResult.notFound.map((product, idx) => (
-                                <TableRow key={`notfound-${idx}`}>
+                                <TableRow key={`notfound-${product.codbien}-${idx}`}>
                                     {uploadResult.headers.map(header => (
                                         <TableCell key={header}>{String(product[header] ?? '')}</TableCell>
                                     ))}
@@ -308,19 +321,22 @@ export default function DataCleansingPage() {
               <DialogDescription>Añada los valores de estandarización. Los demás datos provienen del archivo que cargó.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-6">
-              {Object.keys(editingProduct).map(key => (
-                <div key={key} className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor={key} className="text-right">{key.charAt(0).toUpperCase() + key.slice(1)}</Label>
-                  <Input
-                    id={key}
-                    type={typeof editingProduct[key] === 'number' ? 'number' : 'text'}
-                    value={editingProduct[key] ?? ''}
-                    onChange={handleInputChange}
-                    className="col-span-3" 
-                    readOnly={!['CNUME', 'nombre_ofi', 'oficina'].includes(key) && key in (uploadResult?.notFound[0] || {})}
-                    />
-                </div>
-              ))}
+              {Object.keys(editingProduct).map(key => {
+                const isReadOnly = !['CNUME', 'nombre_ofi', 'oficina'].includes(key) && uploadResult?.headers.includes(key);
+                return (
+                    <div key={key} className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor={key} className="text-right capitalize">{key.replace(/_/g, ' ')}</Label>
+                        <Input
+                            id={key}
+                            type={typeof editingProduct[key] === 'number' ? 'number' : 'text'}
+                            value={editingProduct[key] ?? ''}
+                            onChange={handleInputChange}
+                            className="col-span-3" 
+                            readOnly={isReadOnly}
+                        />
+                    </div>
+                )
+              })}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditingProduct(null)}>Cancelar</Button>
@@ -336,7 +352,3 @@ export default function DataCleansingPage() {
     </div>
   );
 }
-
-    
-
-    
