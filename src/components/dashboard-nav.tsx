@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Database, Home, ScanLine, Search, Users, Filter } from 'lucide-react';
+import { Database, Home, ScanLine, Search, Users, ClipboardCheck } from 'lucide-react';
 import * as React from 'react';
 
 import {
@@ -18,7 +18,7 @@ const allNavItems = [
   { href: '/dashboard/data', label: 'Gestión de Datos', icon: Database, roles: ['Administrador'] },
   { href: '/dashboard/scan', label: 'Escanear y Verificar', icon: ScanLine, roles: ['Administrador', 'Supervisor'] },
   { href: '/dashboard/reports', label: 'Búsqueda y Reportes', icon: Search, roles: ['Administrador', 'Supervisor'] },
-  { href: '/dashboard/advanced-search', label: 'Búsqueda Avanzada', icon: Filter, roles: ['Administrador', 'Supervisor'] },
+  { href: '/dashboard/data-cleansing', label: 'Limpieza de Datos', icon: ClipboardCheck, roles: ['Administrador'] },
   { href: '/dashboard/roles', label: 'Gestión de Roles', icon: Users, roles: ['Administrador'] },
 ];
 
