@@ -226,6 +226,9 @@ export default function DashboardLayout({
           <div className="flex flex-col flex-1 space-y-4 p-4 md:p-6">
             {children}
           </div>
+           <footer className="p-4 text-center text-xs text-muted-foreground">
+              Copyright © {new Date().getFullYear()} RCE. Todos los derechos reservados.
+          </footer>
         </main>
       </SidebarInset>
 
