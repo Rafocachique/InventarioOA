@@ -192,6 +192,14 @@ export default function AdvancedSearchPage() {
         setSearchableHeaders(new Set());
     }
   };
+  
+  const handleToggleAllVisible = (selectAll: boolean) => {
+    if (selectAll) {
+        setVisibleTableHeaders(new Set(allHeaders));
+    } else {
+        setVisibleTableHeaders(new Set());
+    }
+  };
 
   return (
     <div className="grid flex-1 grid-cols-1 gap-4 md:gap-8 lg:grid-cols-3">
@@ -321,10 +329,14 @@ export default function AdvancedSearchPage() {
                         <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Columnas Visibles en Tabla</DropdownMenuLabel>
                             <DropdownMenuSeparator />
+                            <DropdownMenuItem onSelect={() => handleToggleAllVisible(true)}>Marcar Todas</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => handleToggleAllVisible(false)}>Desmarcar Todas</DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             {allHeaders.map(header => (
                             <DropdownMenuCheckboxItem
                                 key={header}
                                 checked={visibleTableHeaders.has(header)}
+                                onSelect={(e) => e.preventDefault()}
                                 onCheckedChange={(checked) => {
                                     setVisibleTableHeaders(prev => {
                                         const newSet = new Set(prev);
