@@ -56,6 +56,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 import { db } from "@/lib/firebase";
@@ -507,5 +508,3 @@ export default function DataCleansingPage() {
     </div>
   );
 }
-
-    
