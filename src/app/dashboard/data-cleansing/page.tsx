@@ -364,9 +364,9 @@ export default function DataCleansingPage() {
 
 
   return (
-    <div className="grid flex-1 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    <div className="grid flex-1 grid-cols-1 lg:grid-cols-3 gap-8">
       
-      <div className="flex flex-col gap-8 md:col-span-1 lg:col-span-1">
+      <div className="flex flex-col gap-8 lg:col-span-1">
         <Card>
             <CardHeader>
             <CardTitle>Limpieza y Estandarización de Datos</CardTitle>
@@ -415,7 +415,7 @@ export default function DataCleansingPage() {
         )}
       </div>
 
-      <div className="flex flex-col gap-8 md:col-span-1 lg:col-span-2">
+      <div className="flex flex-col gap-8 lg:col-span-2">
         <Card className="flex flex-col flex-grow">
             <CardHeader>
                 <div className="flex justify-between items-start">
