@@ -132,13 +132,19 @@ export default function AdvancedSearchPage() {
         return value !== null && value !== undefined && String(value).toLowerCase().includes(globalSearchTerm.toLowerCase());
       });
 
-      // Per-column filter logic (uses exact match after normalizing)
+      // Per-column filter logic
       const matchesColumnFilters = Object.entries(columnFilters).every(([header, filterValue]) => {
         if (!filterValue) return true;
         const value = product[header];
         const productValueStr = String(value ?? '').toLowerCase().trim();
         const filterValueStr = String(filterValue).toLowerCase().trim();
-        return productValueStr === filterValueStr;
+        
+        // Exact match for 'CNUME', partial match for others
+        if (header.toUpperCase() === 'CNUME') {
+            return productValueStr === filterValueStr;
+        } else {
+            return productValueStr.includes(filterValueStr);
+        }
       });
       
       return matchesGlobalSearch && matchesColumnFilters;
