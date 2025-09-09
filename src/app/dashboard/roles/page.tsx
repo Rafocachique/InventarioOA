@@ -29,7 +29,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { db, auth } from "@/lib/firebase";
 import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc } from "firebase/firestore";
-import { createUserWithEmailAndPassword, deleteUser, signInWithCredential, EmailAuthProvider, signInWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, deleteUser, signInWithCredential, EmailAuthProvider, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -43,6 +43,7 @@ interface User {
 export default function RolesPage() {
   const [users, setUsers] = React.useState<User[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isAddUserOpen, setIsAddUserOpen] = React.useState(false);
   const [managingUser, setManagingUser] = React.useState<User | null>(null);
 
@@ -84,26 +85,27 @@ export default function RolesPage() {
       });
       return;
     }
-
+    
+    setIsSubmitting(true);
     const adminUser = auth.currentUser;
-    if (!adminUser || !adminUser.email) {
-      toast({ variant: "destructive", title: "Error de Administrador", description: "No se pudo verificar la sesión del administrador." });
-      return;
-    }
-    const adminEmail = adminUser.email;
-    const adminPassword = prompt("Para confirmar, por favor ingrese su contraseña de administrador:");
 
-    if (!adminPassword) {
-      toast({ variant: "destructive", title: "Operación Cancelada", description: "Se requiere la contraseña del administrador." });
+    if (!adminUser || !adminUser.email) {
+      toast({ variant: "destructive", title: "Error de Administrador", description: "No se pudo verificar la sesión del administrador. Por favor, inicie sesión de nuevo." });
+      setIsSubmitting(false);
       return;
     }
     
+    // Temporarily sign out the admin to avoid session conflicts
+    const adminCredential = { email: adminUser.email, uid: adminUser.uid };
+
     try {
-      // Step 1: Create user in Firebase Auth
+      await signOut(auth); // Sign out admin temporarily
+
+      // Create the new user
       const userCredential = await createUserWithEmailAndPassword(auth, newUserEmail, newUserPassword);
       const newUser = userCredential.user;
 
-      // Step 2: Store user role and name in Firestore
+      // Store user role and name in Firestore
       await setDoc(doc(db, "users", newUser.uid), {
         name: newUserName,
         email: newUserEmail,
@@ -114,10 +116,7 @@ export default function RolesPage() {
         title: "Usuario Creado",
         description: "El nuevo usuario ha sido añadido con éxito.",
       });
-      
-      // Step 3: Re-authenticate the admin to keep their session active
-      await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
-      
+
       // Reset form and close dialog
       setNewUserName("");
       setNewUserEmail("");
@@ -134,14 +133,6 @@ export default function RolesPage() {
         description = "El correo electrónico ya está en uso por otra cuenta.";
       } else if (error.code === 'auth/weak-password') {
         description = "La contraseña debe tener al menos 6 caracteres.";
-      } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        description = "La contraseña de administrador es incorrecta. No se creó el usuario.";
-      }
-
-      // If user creation succeeded but re-login failed, the admin is logged out.
-      // We should inform them about this.
-      if (auth.currentUser?.email !== adminEmail) {
-          description += " Se ha cerrado la sesión de administrador."
       }
 
       toast({
@@ -149,6 +140,28 @@ export default function RolesPage() {
         title: "Error de Creación",
         description: description,
       });
+    } finally {
+        // IMPORTANT: Re-login the admin regardless of success or failure
+        const password = prompt(`Para continuar, por favor re-ingrese la contraseña de ${adminCredential.email}`);
+        if(password) {
+            try {
+                await signInWithEmailAndPassword(auth, adminCredential.email, password);
+            } catch (reauthError) {
+                toast({
+                    variant: "destructive",
+                    title: "Sesión de Administrador Perdida",
+                    description: "No se pudo re-autenticar. Por favor, inicie sesión de nuevo.",
+                });
+                // Consider redirecting to login page here if re-auth fails
+            }
+        } else {
+             toast({
+                variant: "destructive",
+                title: "Sesión de Administrador Perdida",
+                description: "No se ingresó la contraseña. Por favor, inicie sesión de nuevo.",
+            });
+        }
+        setIsSubmitting(false);
     }
   };
   
@@ -309,7 +322,10 @@ export default function RolesPage() {
             </div>
             <DialogFooter>
                 <Button variant="outline" onClick={() => setIsAddUserOpen(false)}>Cancelar</Button>
-                <Button onClick={handleCreateUser}>Crear Usuario</Button>
+                <Button onClick={handleCreateUser} disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Crear Usuario
+                </Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -346,3 +362,5 @@ export default function RolesPage() {
     </>
   );
 }
+
+    
