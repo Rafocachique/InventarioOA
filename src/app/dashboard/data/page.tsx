@@ -444,13 +444,13 @@ export default function DataManagementPage() {
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   
-  const handleColumnVisibilityChange = (header: string) => {
+  const handleColumnVisibilityChange = (header: string, checked: boolean) => {
     setVisibleHeaders(prev => {
         const newSet = new Set(prev);
-        if (newSet.has(header)) {
-            newSet.delete(header);
-        } else {
+        if (checked) {
             newSet.add(header);
+        } else {
+            newSet.delete(header);
         }
         return newSet;
     });
@@ -653,7 +653,7 @@ export default function DataManagementPage() {
                               key={header}
                               checked={visibleHeaders.has(header)}
                               onSelect={(e) => e.preventDefault()}
-                              onCheckedChange={() => handleColumnVisibilityChange(header)}
+                              onCheckedChange={(checked) => handleColumnVisibilityChange(header, checked)}
                           >
                               {header.charAt(0).toUpperCase() + header.slice(1)}
                           </DropdownMenuCheckboxItem>
@@ -799,3 +799,5 @@ export default function DataManagementPage() {
     </div>
   );
 }
+
+    
