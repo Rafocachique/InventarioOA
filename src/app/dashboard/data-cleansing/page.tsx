@@ -447,8 +447,8 @@ export default function DataCleansingPage() {
                     </div>
                 </div>
             </CardHeader>
-            <CardContent className="flex flex-col flex-grow p-0">
-                 <div className="relative flex-grow overflow-auto max-h-[calc(100vh-25rem)]">
+            <CardContent className="flex-grow p-0 flex flex-col">
+                 <div className="overflow-auto max-h-[calc(100vh-25rem)]">
                     <Table>
                         <TableHeader>
                             <TableRow>
