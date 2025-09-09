@@ -10,6 +10,7 @@ import {
   FileSpreadsheet,
   Save,
   Trash2,
+  MoreHorizontal,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,14 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -89,6 +98,7 @@ export default function DataCleansingPage() {
   const [isUnstandardizedLoading, setIsUnstandardizedLoading] = React.useState(true);
   
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
+  const [deletingProduct, setDeletingProduct] = React.useState<Product | null>(null);
   const [columnOrder, setColumnOrder] = React.useState<string[]>([]);
 
   const [stdOptions, setStdOptions] = React.useState<StandardizationOptions>({ cnumes: [], nombre_ofis: [], oficinas: [] });
@@ -336,6 +346,21 @@ export default function DataCleansingPage() {
         setIsProcessing(false);
     }
   };
+
+  const handleDeleteUnstandardizedProduct = async () => {
+    if (!deletingProduct || !deletingProduct.firebaseId) return;
+    try {
+        await deleteDoc(doc(db, "unstandardized_products", deletingProduct.firebaseId));
+        toast({
+            title: "Registro Eliminado",
+            description: "El inmobiliario pendiente ha sido eliminado.",
+        });
+        setDeletingProduct(null);
+    } catch (error) {
+        console.error("Error deleting unstandardized product:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar el registro.' });
+    }
+  };
   
   const handleClearUnstandardized = async () => {
       setIsClearing(true);
@@ -466,7 +491,23 @@ export default function DataCleansingPage() {
                                             <TableCell key={header}>{String(product[header] ?? '')}</TableCell>
                                         ))}
                                         <TableCell className="text-right">
-                                            <Button variant="outline" size="sm" onClick={() => handleEditProduct(product)}>Estandarizar</Button>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                    <DropdownMenuItem onSelect={() => handleEditProduct(product)}>
+                                                        Estandarizar
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem onSelect={() => setDeletingProduct(product)} className="text-red-600">
+                                                        Eliminar
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </TableCell>
                                     </TableRow>
                             ))
@@ -545,6 +586,24 @@ export default function DataCleansingPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      )}
+
+      {deletingProduct && (
+        <AlertDialog open={!!deletingProduct} onOpenChange={() => setDeletingProduct(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>¿Está seguro de que desea eliminar este inmobiliario pendiente?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta acción no se puede deshacer. Se eliminará permanentemente el inmobiliario con codbien:
+                        <span className="font-bold"> {deletingProduct.codbien}</span> de la lista de pendientes.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteUnstandardizedProduct}>Confirmar y Eliminar</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
       )}
 
     </div>
