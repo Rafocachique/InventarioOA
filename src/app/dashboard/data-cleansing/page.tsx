@@ -9,7 +9,6 @@ import {
   AlertCircle,
   FileSpreadsheet,
   Save,
-  PlusCircle,
   Trash2,
 } from "lucide-react";
 
@@ -115,11 +114,15 @@ export default function DataCleansingPage() {
             if (data.nombre_ofi) nombre_ofis.add(String(data.nombre_ofi));
             if (data.oficina) oficinas.add(String(data.oficina));
         });
+        
+        const sortedCnumes = Array.from(cnumes).sort((a, b) => Number(a) - Number(b));
+        const sortedNombreOfis = Array.from(nombre_ofis).sort((a, b) => a.localeCompare(b));
+        const sortedOficinas = Array.from(oficinas).sort((a, b) => a.localeCompare(b));
 
         setStdOptions({
-            cnumes: Array.from(cnumes).sort(),
-            nombre_ofis: Array.from(nombre_ofis).sort(),
-            oficinas: Array.from(oficinas).sort(),
+            cnumes: sortedCnumes,
+            nombre_ofis: sortedNombreOfis,
+            oficinas: sortedOficinas,
         });
 
     } catch (error) {
@@ -154,7 +157,10 @@ export default function DataCleansingPage() {
           setUnstandardizedProducts(products);
           
           if(columnOrder.length === 0 && products.length > 0) {
-              setColumnOrder(Object.keys(products[0]).filter(k => k !== 'firebaseId'));
+              const firstProductKeys = Object.keys(products[0]).filter(k => k !== 'firebaseId');
+              if(firstProductKeys.length > 0) {
+                setColumnOrder(firstProductKeys);
+              }
           }
 
           setIsUnstandardizedLoading(false);
@@ -537,3 +543,5 @@ export default function DataCleansingPage() {
   );
 }
 
+
+    
