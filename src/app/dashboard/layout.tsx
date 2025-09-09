@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from "firebase/firestore";
+import Image from 'next/image';
 
 
 import { Button } from '@/components/ui/button';
@@ -47,16 +48,6 @@ interface UserData {
     name?: string;
     email?: string;
     role?: string;
-}
-
-
-function CheckSquareIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 11l3 3L22 4" />
-      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-    </svg>
-  );
 }
 
 export default function DashboardLayout({
@@ -179,8 +170,8 @@ export default function DashboardLayout({
       <Sidebar side="left" collapsible="icon">
         <SidebarHeader className="h-14 justify-center p-2 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10">
           <Link href="/dashboard" className="flex items-center gap-2 text-primary font-bold">
-            <CheckSquareIcon className="size-6 text-primary shrink-0" />
-            <span className="text-lg group-data-[collapsible=icon]:hidden font-headline">StockCheck Pro</span>
+            <Image src="/logo-rce.svg" width={24} height={24} alt="RCE Logo" className="shrink-0" />
+            <span className="text-lg group-data-[collapsible=icon]:hidden font-headline">Gestión de inmuebles OA</span>
           </Link>
         </SidebarHeader>
 
@@ -227,7 +218,7 @@ export default function DashboardLayout({
             {children}
           </div>
            <footer className="p-4 text-center text-xs text-muted-foreground">
-              Copyright © {new Date().getFullYear()} RCE. Todos los derechos reservados.
+              Copyright © 2025 RCE. Todos los derechos reservados.
           </footer>
         </main>
       </SidebarInset>
