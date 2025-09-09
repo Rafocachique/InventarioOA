@@ -60,7 +60,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import { db } from "@/lib/firebase";
-import { collection, getDocs, writeBatch, doc, setDoc, onSnapshot, deleteDoc, query } from "firebase/firestore";
+import { collection, getDocs, writeBatch, doc, setDoc, onSnapshot, deleteDoc, query, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 
@@ -90,6 +90,7 @@ export default function DataCleansingPage() {
   const [isUnstandardizedLoading, setIsUnstandardizedLoading] = React.useState(true);
   
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
+  const [columnOrder, setColumnOrder] = React.useState<string[]>([]);
 
   const [stdOptions, setStdOptions] = React.useState<StandardizationOptions>({ cnumes: [], nombre_ofis: [], oficinas: [] });
   const [isClearing, setIsClearing] = React.useState(false);
@@ -101,7 +102,6 @@ export default function DataCleansingPage() {
 
   const { toast } = useToast();
   
-  // Fetch existing values for dropdowns
   const fetchStandardizationOptions = React.useCallback(async () => {
     try {
         const productsSnapshot = await getDocs(collection(db, "products"));
@@ -127,10 +127,22 @@ export default function DataCleansingPage() {
         toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron cargar las opciones para estandarizar.' });
     }
   }, [toast]);
+  
+  const fetchColumnOrder = React.useCallback(async () => {
+    try {
+        const columnOrderDocRef = doc(db, "_config", "columnOrder");
+        const columnOrderDoc = await getDoc(columnOrderDocRef);
+        if (columnOrderDoc.exists()) {
+            setColumnOrder(columnOrderDoc.data().headers);
+        }
+    } catch(err) {
+        console.error("Error fetching column order", err);
+    }
+  }, []);
 
-  // Listener for unstandardized products and initial data fetch
   React.useEffect(() => {
       fetchStandardizationOptions();
+      fetchColumnOrder();
       
       const q = query(collection(db, "unstandardized_products"));
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -140,6 +152,11 @@ export default function DataCleansingPage() {
               products.push({ firebaseId: doc.id, ...doc.data() });
           });
           setUnstandardizedProducts(products);
+          
+          if(columnOrder.length === 0 && products.length > 0) {
+              setColumnOrder(Object.keys(products[0]).filter(k => k !== 'firebaseId'));
+          }
+
           setIsUnstandardizedLoading(false);
       }, (error) => {
           console.error("Error fetching unstandardized products:", error);
@@ -148,7 +165,7 @@ export default function DataCleansingPage() {
       });
 
       return () => unsubscribe();
-  }, [fetchStandardizationOptions, toast]);
+  }, [fetchStandardizationOptions, fetchColumnOrder, toast, columnOrder.length]);
 
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -241,8 +258,11 @@ export default function DataCleansingPage() {
         
         setUploadResult({ updated: updatedProducts, headers: headersFromExcel });
         setIsProcessing(false);
-        setUploadFile(null); // Clear the file input
-        fetchStandardizationOptions(); // Refresh dropdowns with potentially new data
+        setUploadFile(null);
+        fetchStandardizationOptions(); 
+        if (columnOrder.length === 0) {
+            setColumnOrder(headersFromExcel);
+        }
 
       } catch (error) {
         console.error("Error processing file: ", error);
@@ -274,7 +294,6 @@ export default function DataCleansingPage() {
   const handleSaveStandardizedProduct = async () => {
     if (!editingProduct) return;
     
-    // Basic validation
     if (!editingProduct.codbien) {
         toast({ variant: 'destructive', title: 'Error', description: 'El campo "codbien" es obligatorio.' });
         return;
@@ -285,17 +304,14 @@ export default function DataCleansingPage() {
         const newProductDocRef = doc(collection(db, "products"));
         const unstandardizedDocId = editingProduct.firebaseId;
         
-        // Prepare data for saving, remove the temporary firebaseId
         const { firebaseId, ...dataToSave } = editingProduct;
 
-        // Prioritize new manual entries over selected dropdown values
         if (newCnum.trim()) dataToSave.CNUME = newCnum.trim();
         if (newNombreOfi.trim()) dataToSave.nombre_ofi = newNombreOfi.trim();
         if (newOficina.trim()) dataToSave.oficina = newOficina.trim();
 
         await setDoc(newProductDocRef, dataToSave);
 
-        // If it was an existing unstandardized product, delete it from the temp collection
         if (unstandardizedDocId) {
             await deleteDoc(doc(db, "unstandardized_products", unstandardizedDocId));
         }
@@ -306,7 +322,7 @@ export default function DataCleansingPage() {
         });
         
         setEditingProduct(null);
-        fetchStandardizationOptions(); // Refresh dropdowns as new standards might have been set
+        fetchStandardizationOptions();
     } catch(error) {
         console.error("Error saving new product: ", error);
         toast({ variant: 'destructive', title: 'Error', description: 'No se pudo guardar el nuevo inmobiliario.' });
@@ -334,6 +350,7 @@ export default function DataCleansingPage() {
   };
 
   const getCommonHeaders = (): string[] => {
+      if (columnOrder.length > 0) return columnOrder;
       if (uploadResult?.headers) return uploadResult.headers;
       if (unstandardizedProducts.length > 0) return Object.keys(unstandardizedProducts[0]).filter(k => k !== 'firebaseId');
       return ['codbien', 'descrip'];
