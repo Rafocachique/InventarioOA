@@ -445,9 +445,16 @@ export default function DataManagementPage() {
         return products;
     }
     return products.filter(product =>
-        Array.from(searchColumns).some(header =>
-            String(product[header]).toLowerCase().includes(searchTerm.toLowerCase())
-        )
+        Array.from(searchColumns).some(header => {
+            const fieldValue = product[header];
+            const searchTermLower = searchTerm.toLowerCase();
+
+            if (typeof fieldValue === 'number') {
+                return String(fieldValue).toLowerCase() === searchTermLower;
+            }
+            
+            return String(fieldValue).toLowerCase().includes(searchTermLower);
+        })
     );
   }, [products, searchTerm, searchColumns]);
 
