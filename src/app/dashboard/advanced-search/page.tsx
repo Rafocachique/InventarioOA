@@ -296,6 +296,19 @@ export default function AdvancedSearchPage() {
                     </CardDescription>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap justify-end">
+                    <div className="flex items-center gap-2">
+                        <Label htmlFor="items-per-page" className="text-sm whitespace-nowrap">Filas por página</Label>
+                        <Select value={String(itemsPerPage)} onValueChange={(value) => setItemsPerPage(Number(value))}>
+                            <SelectTrigger id="items-per-page" className="h-9 w-[70px]">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="10">10</SelectItem>
+                                <SelectItem value="20">20</SelectItem>
+                                <SelectItem value="50">50</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                     <Button variant="outline" size="sm" onClick={() => handleExport('excel')}><FileSpreadsheet className="mr-2 h-4 w-4"/>Exportar a Excel</Button>
                     <Button variant="outline" size="sm" onClick={() => handleExport('pdf')}><Printer className="mr-2 h-4 w-4"/>Exportar a PDF</Button>
                     <DropdownMenu>
