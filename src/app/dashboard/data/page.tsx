@@ -668,16 +668,18 @@ export default function DataManagementPage() {
                   <DropdownMenuItem onSelect={() => handleToggleAllSearchColumns(true)}>Marcar Todas</DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => handleToggleAllSearchColumns(false)}>Desmarcar Todas</DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  {allHeaders.map(header => (
-                  <DropdownMenuCheckboxItem
-                      key={header}
-                      checked={searchColumns.has(header)}
-                      onSelect={(e) => e.preventDefault()}
-                      onCheckedChange={(checked) => handleSearchColumnChange(header, checked)}
-                  >
-                      {header.charAt(0).toUpperCase() + header.slice(1)}
-                  </DropdownMenuCheckboxItem>
-                  ))}
+                  <div className="max-h-64 overflow-y-auto">
+                    {allHeaders.map(header => (
+                    <DropdownMenuCheckboxItem
+                        key={header}
+                        checked={searchColumns.has(header)}
+                        onSelect={(e) => e.preventDefault()}
+                        onCheckedChange={(checked) => handleSearchColumnChange(header, checked)}
+                    >
+                        {header.charAt(0).toUpperCase() + header.slice(1)}
+                    </DropdownMenuCheckboxItem>
+                    ))}
+                  </div>
               </DropdownMenuContent>
             </DropdownMenu>
           </CardContent>
@@ -701,22 +703,24 @@ export default function DataManagementPage() {
                           <span>Columnas</span>
                           </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" className="w-64">
                           <DropdownMenuLabel>Columnas Visibles</DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onSelect={() => handleToggleAllColumns(true)}>Marcar Todas</DropdownMenuItem>
                           <DropdownMenuItem onSelect={() => handleToggleAllColumns(false)}>Desmarcar Todas</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          {allHeaders.map(header => (
-                          <DropdownMenuCheckboxItem
-                              key={header}
-                              checked={visibleHeaders.has(header)}
-                              onSelect={(e) => e.preventDefault()}
-                              onCheckedChange={(checked) => handleColumnVisibilityChange(header, checked)}
-                          >
-                              {header.charAt(0).toUpperCase() + header.slice(1)}
-                          </DropdownMenuCheckboxItem>
-                          ))}
+                          <div className="max-h-64 overflow-y-auto">
+                            {allHeaders.map(header => (
+                            <DropdownMenuCheckboxItem
+                                key={header}
+                                checked={visibleHeaders.has(header)}
+                                onSelect={(e) => e.preventDefault()}
+                                onCheckedChange={(checked) => handleColumnVisibilityChange(header, checked)}
+                            >
+                                {header.charAt(0).toUpperCase() + header.slice(1)}
+                            </DropdownMenuCheckboxItem>
+                            ))}
+                           </div>
                       </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
@@ -858,3 +862,5 @@ export default function DataManagementPage() {
     </div>
   );
 }
+
+    
