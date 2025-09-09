@@ -103,6 +103,8 @@ export default function DataManagementPage() {
   const [itemsPerPage, setItemsPerPage] = React.useState(10);
   const [allHeaders, setAllHeaders] = React.useState<string[]>([]);
   const [visibleHeaders, setVisibleHeaders] = React.useState<Set<string>>(new Set());
+  const [searchColumns, setSearchColumns] = React.useState<Set<string>>(new Set());
+
 
   const fetchProducts = React.useCallback(async () => {
     setIsLoading(true);
@@ -123,8 +125,11 @@ export default function DataManagementPage() {
         if (visibleHeaders.size === 0 && headersToUse.length > 0) {
             setVisibleHeaders(new Set(headersToUse));
         } else if (visibleHeaders.size === 0 && headersToUse.length === 0) {
-            // Handle case where there are no products and no stored headers
             setVisibleHeaders(new Set());
+        }
+        
+        if (searchColumns.size === 0 && headersToUse.length > 0) {
+            setSearchColumns(new Set(headersToUse));
         }
 
     } catch (error) {
@@ -279,27 +284,32 @@ export default function DataManagementPage() {
     reader.readAsArrayBuffer(uploadFile);
   };
   
-  const handleDownloadExcel = async () => {
+    const handleDownloadExcel = async () => {
+      const dataToExport = filteredProducts;
+
+      if (dataToExport.length === 0) {
+          toast({
+              title: "No hay datos",
+              description: "No hay inmobiliarios que coincidan con la búsqueda actual para exportar.",
+          });
+          return;
+      }
+
       try {
-        const querySnapshot = await getDocs(collection(db, "products"));
-        const allProducts = querySnapshot.docs.map(doc => {
-            const data = doc.data();
-            delete data.firebaseId; 
-            return data;
-        });
+          const orderedData = dataToExport.map(product => {
+              const orderedProduct: Product = {};
+              allHeaders.forEach(header => {
+                  if (header in product) {
+                      orderedProduct[header] = product[header];
+                  }
+              });
+              return orderedProduct;
+          });
 
-        if (allProducts.length === 0) {
-            toast({
-                title: "No hay datos",
-                description: "No hay inmobiliarios en la base de datos para exportar.",
-            });
-            return;
-        }
-
-        const worksheet = XLSX.utils.json_to_sheet(allProducts);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Inmobiliarios");
-        XLSX.writeFile(workbook, "inmobiliarios.xlsx");
+          const worksheet = XLSX.utils.json_to_sheet(orderedData, { header: allHeaders });
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, "Inmobiliarios");
+          XLSX.writeFile(workbook, "inmobiliarios.xlsx");
       } catch (error) {
           console.error("Error downloading excel: ", error);
           toast({
@@ -309,6 +319,7 @@ export default function DataManagementPage() {
           });
       }
   };
+
 
   const handleDeleteAllData = async () => {
     const user = auth.currentUser;
@@ -430,12 +441,15 @@ export default function DataManagementPage() {
 
   const filteredProducts = React.useMemo(() => {
     setCurrentPage(1);
+    if (!searchTerm) {
+        return products;
+    }
     return products.filter(product =>
-      Object.values(product).some(value =>
-        String(value).toLowerCase().includes(searchTerm.toLowerCase())
-      )
+        Array.from(searchColumns).some(header =>
+            String(product[header]).toLowerCase().includes(searchTerm.toLowerCase())
+        )
     );
-  }, [products, searchTerm]);
+  }, [products, searchTerm, searchColumns]);
 
   const paginatedProducts = React.useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -462,6 +476,26 @@ export default function DataManagementPage() {
     } else {
         setVisibleHeaders(new Set());
     }
+  };
+  
+    const handleSearchColumnChange = (header: string, checked: boolean) => {
+    setSearchColumns(prev => {
+        const newSet = new Set(prev);
+        if (checked) {
+            newSet.add(header);
+        } else {
+            newSet.delete(header);
+        }
+        return newSet;
+    });
+  };
+
+  const handleToggleAllSearchColumns = (selectAll: boolean) => {
+      if (selectAll) {
+          setSearchColumns(new Set(allHeaders));
+      } else {
+          setSearchColumns(new Set());
+      }
   };
 
 
@@ -610,17 +644,42 @@ export default function DataManagementPage() {
           <CardHeader>
             <CardTitle>Búsqueda</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input 
                 type="search" 
-                placeholder="Buscar en todos los datos..." 
+                placeholder="Buscar..." 
                 className="pl-8 w-full" 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full">
+                  <ListFilter className="mr-2 h-4 w-4" />
+                  Filtros de Búsqueda ({searchColumns.size})
+                  </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-64">
+                  <DropdownMenuLabel>Buscar en columnas</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={() => handleToggleAllSearchColumns(true)}>Marcar Todas</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => handleToggleAllSearchColumns(false)}>Desmarcar Todas</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {allHeaders.map(header => (
+                  <DropdownMenuCheckboxItem
+                      key={header}
+                      checked={searchColumns.has(header)}
+                      onSelect={(e) => e.preventDefault()}
+                      onCheckedChange={(checked) => handleSearchColumnChange(header, checked)}
+                  >
+                      {header.charAt(0).toUpperCase() + header.slice(1)}
+                  </DropdownMenuCheckboxItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </CardContent>
         </Card>
       </div>
@@ -799,3 +858,4 @@ export default function DataManagementPage() {
     </div>
   );
 }
+
