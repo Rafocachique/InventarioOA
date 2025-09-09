@@ -184,6 +184,14 @@ export default function AdvancedSearchPage() {
       doc.save("busqueda_avanzada.pdf");
     }
   }
+  
+  const handleToggleAllSearchable = (selectAll: boolean) => {
+    if (selectAll) {
+        setSearchableHeaders(new Set(allHeaders));
+    } else {
+        setSearchableHeaders(new Set());
+    }
+  };
 
   return (
     <div className="grid flex-1 grid-cols-1 gap-4 md:gap-8 lg:grid-cols-3">
@@ -215,13 +223,17 @@ export default function AdvancedSearchPage() {
                         Columnas ({searchableHeaders.size})
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuContent align="end" className="w-56 max-h-96 overflow-y-auto">
                         <DropdownMenuLabel>Buscar en Columnas</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onSelect={() => handleToggleAllSearchable(true)}>Marcar Todas</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleToggleAllSearchable(false)}>Desmarcar Todas</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         {allHeaders.map(header => (
                         <DropdownMenuCheckboxItem
                             key={header}
                             checked={searchableHeaders.has(header)}
+                             onSelect={(e) => e.preventDefault()}
                             onCheckedChange={(checked) => {
                             setSearchableHeaders(prev => {
                                 const newSet = new Set(prev);
@@ -381,5 +393,3 @@ export default function AdvancedSearchPage() {
     </div>
   );
 }
-
-    
