@@ -65,27 +65,11 @@ export default function AdvancedSearchPage() {
   const [visibleTableHeaders, setVisibleTableHeaders] = React.useState<Set<string>>(new Set());
   
   const [globalSearchTerm, setGlobalSearchTerm] = React.useState("");
-  const [columnFilters, setColumnFilters] = React.useState<Record<string, string>>({});
   
   const [currentPage, setCurrentPage] = React.useState(1);
   const [itemsPerPage, setItemsPerPage] = React.useState(10);
   
   const { toast } = useToast();
-
-  const uniqueColumnValues = React.useMemo(() => {
-    const uniqueValues: Record<string, Set<string>> = {};
-    if (!allProducts.length) return uniqueValues;
-
-    const potentialSelectColumns = ['estado', 'dependencia', 'sede'];
-
-    potentialSelectColumns.forEach(header => {
-      if (allHeaders.includes(header)) {
-        uniqueValues[header] = new Set(allProducts.map(p => p[header]).filter(Boolean));
-      }
-    });
-    return uniqueValues;
-  }, [allProducts, allHeaders]);
-
 
   React.useEffect(() => {
     const fetchProducts = async () => {
@@ -119,37 +103,30 @@ export default function AdvancedSearchPage() {
     fetchProducts();
   }, [toast]);
   
-  const handleColumnFilterChange = (header: string, value: string) => {
-    setColumnFilters(prev => ({...prev, [header]: value}));
-  }
 
   const filteredProducts = React.useMemo(() => {
     setCurrentPage(1); // Reset page on filter change
     return allProducts.filter(product => {
-      // Global search logic (uses partial match)
-      const matchesGlobalSearch = globalSearchTerm === "" || Array.from(searchableHeaders).some(header => {
-        const value = product[header];
-        return value !== null && value !== undefined && String(value).toLowerCase().includes(globalSearchTerm.toLowerCase());
-      });
+      if (globalSearchTerm === "") return true;
 
-      // Per-column filter logic
-      const matchesColumnFilters = Object.entries(columnFilters).every(([header, filterValue]) => {
-        if (!filterValue) return true;
+      const isExactMatchMode = searchableHeaders.size === 1 && searchableHeaders.has('CNUME');
+      const searchTermLower = globalSearchTerm.toLowerCase().trim();
+
+      return Array.from(searchableHeaders).some(header => {
         const value = product[header];
-        const productValueStr = String(value ?? '').toLowerCase().trim();
-        const filterValueStr = String(filterValue).toLowerCase().trim();
-        
-        // Exact match for 'CNUME', partial match for others
-        if (header.toUpperCase() === 'CNUME') {
-            return productValueStr === filterValueStr;
+        if (value === null || value === undefined) return false;
+
+        const valueStr = String(value).toLowerCase().trim();
+
+        if (isExactMatchMode && header.toUpperCase() === 'CNUME') {
+          return valueStr === searchTermLower;
         } else {
-            return productValueStr.includes(filterValueStr);
+          return valueStr.includes(searchTermLower);
         }
       });
-      
-      return matchesGlobalSearch && matchesColumnFilters;
     });
-  }, [allProducts, globalSearchTerm, searchableHeaders, columnFilters]);
+  }, [allProducts, globalSearchTerm, searchableHeaders]);
+
 
   const paginatedProducts = React.useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -216,17 +193,16 @@ export default function AdvancedSearchPage() {
                 <CardHeader>
                 <CardTitle>Filtros de Búsqueda</CardTitle>
                 <CardDescription>
-                    Busque globalmente en columnas o filtre por cada una.
+                    Busque en las columnas seleccionadas. Si solo selecciona 'CNUME', la búsqueda será exacta.
                 </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                {/* Global Search */}
                 <div className="flex flex-col sm:flex-row gap-4">
                     <div className="relative flex-grow">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                         type="search"
-                        placeholder="Buscar en columnas..."
+                        placeholder="Buscar..."
                         className="pl-8 w-full"
                         value={globalSearchTerm}
                         onChange={(e) => setGlobalSearchTerm(e.target.value)}
@@ -264,38 +240,6 @@ export default function AdvancedSearchPage() {
                         ))}
                     </DropdownMenuContent>
                     </DropdownMenu>
-                </div>
-
-                {/* Per-column Filters */}
-                <div>
-                    <h3 className="text-base font-medium mb-4">Filtros por Columna</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {allHeaders.map(header => (
-                        <div key={header} className="space-y-2">
-                        <Label htmlFor={`filter-${header}`}>{header}</Label>
-                        {uniqueColumnValues[header] ? (
-                            <Select onValueChange={(value) => handleColumnFilterChange(header, value === 'all' ? '' : value)} defaultValue="all">
-                                <SelectTrigger id={`filter-${header}`}>
-                                    <SelectValue placeholder="Seleccionar..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todos</SelectItem>
-                                    {Array.from(uniqueColumnValues[header]).map(val => (
-                                        <SelectItem key={val} value={val}>{val}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        ) : (
-                            <Input
-                                id={`filter-${header}`}
-                                placeholder={`Filtrar por ${header}...`}
-                                value={columnFilters[header] || ""}
-                                onChange={(e) => handleColumnFilterChange(header, e.target.value)}
-                            />
-                        )}
-                        </div>
-                    ))}
-                    </div>
                 </div>
                 </CardContent>
             </Card>
@@ -427,3 +371,4 @@ export default function AdvancedSearchPage() {
   );
 }
 
+    
