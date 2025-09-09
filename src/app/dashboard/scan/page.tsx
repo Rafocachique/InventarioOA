@@ -390,24 +390,30 @@ const handleSaveChanges = async (productToSave: EditableProduct | null) => {
 
 
   const handleExportHistory = () => {
-      if (filteredHistory.length === 0) {
-          toast({ title: "No hay datos", description: "No hay escaneos para las fechas seleccionadas." });
-          return;
-      }
+    if (filteredHistory.length === 0) {
+      toast({ title: "No hay datos", description: "No hay escaneos para las fechas seleccionadas." });
+      return;
+    }
+    
+    const exportHeaders = [...scanHistoryHeaders, 'scannedAt', 'scannedBy'];
 
-      const dataToExport = filteredHistory.map(scan => {
-          const { firebaseId, scanId, scannedAt, ...rest } = scan;
-          return {
-              ...rest,
-              scannedAt: scannedAt.toDate().toLocaleString('es-ES')
-          };
-      });
+    const dataToExport = filteredHistory.map(scan => {
+        const orderedScan: {[key: string]: any} = {};
+        exportHeaders.forEach(header => {
+            if (header === 'scannedAt') {
+                orderedScan[header] = scan.scannedAt.toDate().toLocaleString('es-ES');
+            } else {
+                orderedScan[header] = scan[header];
+            }
+        });
+        return orderedScan;
+    });
 
-      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Historial de Escaneos");
-      const excelFileName = `historial_escaneos.xlsx`;
-      XLSX.writeFile(workbook, excelFileName);
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport, { header: exportHeaders });
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Historial de Escaneos");
+    const excelFileName = `historial_escaneos.xlsx`;
+    XLSX.writeFile(workbook, excelFileName);
   };
 
   const handleEditRecord = async (record: ScanRecord) => {
