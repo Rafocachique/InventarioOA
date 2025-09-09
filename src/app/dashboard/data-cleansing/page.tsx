@@ -364,7 +364,7 @@ export default function DataCleansingPage() {
 
 
   return (
-    <div className="grid flex-1 grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="grid flex-1 grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-8">
       
       <div className="flex flex-col gap-8 lg:col-span-1">
         <Card>
@@ -448,7 +448,7 @@ export default function DataCleansingPage() {
                 </div>
             </CardHeader>
             <CardContent className="flex-grow p-0 flex flex-col">
-                 <div className="overflow-auto max-h-[calc(100vh-25rem)]">
+                 <div className="relative h-full w-full overflow-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
