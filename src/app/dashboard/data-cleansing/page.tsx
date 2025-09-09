@@ -115,7 +115,7 @@ export default function DataCleansingPage() {
         querySnapshot.docs.forEach(doc => {
             const data = doc.data();
             if (data.codbien) {
-                existingProductsMap.set(String(data.codbien), doc.id);
+                existingProductsMap.set(String(data.codbien).trim(), doc.id);
             }
         });
         
@@ -127,13 +127,20 @@ export default function DataCleansingPage() {
         const codbienKey = headersFromExcel.find(h => h.toLowerCase() === 'codbien') || 'codbien';
 
         newProductsData.forEach((newProduct, index) => {
-            const codbienValue = String(newProduct[codbienKey]).trim();
-            if (existingProductsMap.has(codbienValue)) {
+            const codbienValue = String(newProduct[codbienKey] || '').trim();
+            if (codbienValue && existingProductsMap.has(codbienValue)) {
                 const firebaseId = existingProductsMap.get(codbienValue)!;
                 const docRef = doc(db, "products", firebaseId);
                 
                 const dataToUpdate = { ...newProduct };
-                protectedColumns.forEach(col => delete (dataToUpdate as any)[col]);
+                // Remove protected columns from the update object
+                protectedColumns.forEach(col => {
+                    const keyToDelete = Object.keys(dataToUpdate).find(k => k.toLowerCase() === col.toLowerCase());
+                    if(keyToDelete) {
+                        delete (dataToUpdate as any)[keyToDelete];
+                    }
+                });
+
 
                 batch.update(docRef, dataToUpdate);
                 updatedProducts.push({ firebaseId, ...newProduct });
@@ -144,7 +151,9 @@ export default function DataCleansingPage() {
             setProgress(Math.round(((index + 1) / newProductsData.length) * 100));
         });
 
-        await batch.commit();
+        if (updatedProducts.length > 0) {
+            await batch.commit();
+        }
 
         toast({
           title: "Proceso Completado",
@@ -168,7 +177,7 @@ export default function DataCleansingPage() {
   };
   
   const handleEditProduct = (product: Product) => {
-    setEditingProduct(product);
+    setEditingProduct({ CNUME: "", nombre_ofi: "", oficina: "", ...product });
   }
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -182,7 +191,9 @@ export default function DataCleansingPage() {
     setIsProcessing(true);
     try {
         const newDocRef = doc(collection(db, "products"));
-        await setDoc(newDocRef, editingProduct);
+        // Ensure no firebaseId is saved
+        const { firebaseId, ...dataToSave } = editingProduct;
+        await setDoc(newDocRef, dataToSave);
 
         toast({
             title: "Inmobiliario Guardado",
@@ -306,8 +317,7 @@ export default function DataCleansingPage() {
                     value={editingProduct[key] ?? ''}
                     onChange={handleInputChange}
                     className="col-span-3" 
-                    // Make standardization fields editable, others readonly
-                    readOnly={!['CNUME', 'nombre_ofi', 'oficina'].includes(key)}
+                    readOnly={!['CNUME', 'nombre_ofi', 'oficina'].includes(key) && key in (uploadResult?.notFound[0] || {})}
                     />
                 </div>
               ))}
@@ -326,5 +336,7 @@ export default function DataCleansingPage() {
     </div>
   );
 }
+
+    
 
     
