@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'ScanCheck Pro',
+  title: 'Inventario y Escaneo OA',
   description: 'Gestión de inventario y escaneo de datos',
 };
 

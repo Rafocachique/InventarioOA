@@ -47,7 +47,7 @@ export default function LoginPage() {
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <div className="absolute top-8 left-8 flex items-center gap-2 text-2xl font-bold text-primary">
           <CheckSquare className="h-8 w-8" />
-          <h1 className="font-headline">ScanCheck Pro</h1>
+          <h1 className="font-headline">Inventario - Oficina de Administración</h1>
         </div>
         <Card className="w-full max-w-sm">
           <CardHeader>

@@ -203,7 +203,6 @@ export default function DashboardLayout({
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={handleOpenProfileDialog}>Mi Perfil</DropdownMenuItem>
-                <DropdownMenuItem disabled>Ajustes</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={handleLogout}>
                     Cerrar Sesión
